@@ -1,5 +1,5 @@
-const pool = require("../config/database");
-const bcrypt = require("bcryptjs");
+import pool from "../config/database.js";
+import bcrypt from "bcryptjs";
 
 async function createTestUsers() {
   console.log("🔍 Creating test users for all 4 developers...\n");

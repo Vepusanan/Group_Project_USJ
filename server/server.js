@@ -1,8 +1,11 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import dotenv from "dotenv";
+import pool from "./config/database.js";
+import authRoutes from "./routes/auth.js";
 
-require("dotenv").config({ quiet: true });
+dotenv.config({ quiet: true });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -20,9 +23,6 @@ if (process.env.NODE_ENV === "development") {
     next();
   });
 }
-
-// Test database connection
-const pool = require("./config/database");
 
 // Health check route
 app.get("/api/health", async (req, res) => {
@@ -43,10 +43,10 @@ app.get("/api/health", async (req, res) => {
 });
 
 // Routes
-app.use('/api/auth', require('./routes/auth'));  
-// app.use('/api/profiles', require('./routes/profiles'));
-// app.use('/api/search', require('./routes/search'));
-// app.use('/api/connections', require('./routes/connections'));
+app.use("/api/auth", authRoutes);
+// app.use("/api/profiles", profilesRoutes);
+// app.use("/api/search", searchRoutes);
+// app.use("/api/connections", connectionsRoutes);
 
 // 404 handler
 app.use((req, res) => {
