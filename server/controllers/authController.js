@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import pool from "../config/database.js";
 import { sendVerificationEmail } from "../utils/emailServices.js";
+import { lockAccountIfNecessary } from "../utils/loginSecurity.js";
 //auth business logic
 
 // Register new user
@@ -153,23 +154,24 @@ export const resendVerification = async (req, res) => {
 
     // 1. Check if email is provided
     if (!email) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Email is required.' 
+      return res.status(400).json({
+        success: false,
+        error: "Email is required.",
       });
     }
 
     // 2. Check if user exists
     const result = await pool.query(
-      'SELECT id, email_verified FROM users WHERE email = $1',
+      "SELECT id, email_verified FROM users WHERE email = $1",
       [email.toLowerCase()]
     );
 
     if (result.rows.length === 0) {
       // Return a non-specific success message to avoid user enumeration attacks
-      return res.status(200).json({ 
-        success: true, 
-        message: 'If the email address is associated with an unverified account, a new verification link has been sent.' 
+      return res.status(200).json({
+        success: true,
+        message:
+          "If the email address is associated with an unverified account, a new verification link has been sent.",
       });
     }
 
@@ -179,7 +181,7 @@ export const resendVerification = async (req, res) => {
     if (user.email_verified) {
       return res.status(200).json({
         success: true,
-        message: 'This account is already verified.'
+        message: "This account is already verified.",
       });
     }
 
@@ -187,10 +189,10 @@ export const resendVerification = async (req, res) => {
     const newVerificationToken = jwt.sign(
       { email: email.toLowerCase() },
       process.env.JWT_VERIFY_SECRET,
-      { expiresIn: '24h' } // Reset expiration to 24 hours from now
+      { expiresIn: "24h" } // Reset expiration to 24 hours from now
     );
 
-    const tokenExpiration = new Date(Date.now() + (24 * 60 * 60 * 1000));
+    const tokenExpiration = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // 5. Update user with new token and expiration
     await pool.query(
@@ -206,14 +208,13 @@ export const resendVerification = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'A new verification link has been sent to your email address.'
+      message: "A new verification link has been sent to your email address.",
     });
-    
   } catch (error) {
-    console.error('Resend verification error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Server error while processing request.' 
+    console.error("Resend verification error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while processing request.",
     });
   }
 };
@@ -232,9 +233,10 @@ export const login = async (req, res) => {
     }
 
     // Find user
-    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-      email.toLowerCase(),
-    ]);
+    const result = await pool.query(
+      "SELECT id, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until FROM users WHERE email = $1",
+      [email.toLowerCase()]
+    );
 
     if (result.rows.length === 0) {
       return res.status(401).json({
@@ -249,6 +251,21 @@ export const login = async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
+      // --- THIS BLOCK MUST EXECUTE ON FAILURE ---
+      const failedResult = await lockAccountIfNecessary(
+        user.id,
+        user.failed_login_attempts,
+        user.email
+      );
+      // Check if the failure triggered a lock
+      if (failedResult.locked) {
+        return res.status(403).json({
+          success: false,
+          error: "Too many failed login attempts. Account locked for 1 hour.",
+          lockedUntil: failedResult.lockUntil.toISOString(),
+        });
+      }
+      // Return generic error for security
       return res.status(401).json({
         success: false,
         error: "Invalid email or password",
@@ -295,5 +312,56 @@ export const login = async (req, res) => {
       success: false,
       error: "Server error during login",
     });
+  }
+};
+
+// Function to generate a new short-lived access token
+const generateAccessToken = (user) => {
+  return jwt.sign(
+    { userId: user.id, email: user.email, userType: user.user_type },
+    process.env.JWT_SECRET,
+    { expiresIn: "15m" } // Standard short-lived access token
+  );
+};
+
+export const refreshToken = async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res
+      .status(401)
+      .json({ success: false, error: "Refresh token missing." });
+  }
+
+  try {
+    // 1. Find the session and ensure it's not expired
+    const sessionResult = await pool.query(
+      `SELECT s.user_id, s.expires_at, u.email, u.user_type 
+             FROM sessions s
+             JOIN users u ON s.user_id = u.id
+             WHERE s.refresh_token = $1 AND s.expires_at > NOW()`,
+      [refreshToken]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res
+        .status(401)
+        .json({ success: false, error: "Invalid or expired session." });
+    }
+
+    const session = sessionResult.rows[0];
+
+    // 2. Generate a new access token
+    const newAccessToken = generateAccessToken(session);
+
+    res.json({
+      success: true,
+      accessToken: newAccessToken,
+    });
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    res
+      .status(500)
+      .json({ success: false, error: "Server error during token refresh." });
   }
 };
