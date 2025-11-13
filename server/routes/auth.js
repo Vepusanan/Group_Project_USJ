@@ -1,11 +1,12 @@
-import express from 'express';
-import { register, login } from '../controllers/authController.js';
+import express from "express";
+import { register, login, verifyEmail, resendVerification } from "../controllers/authController.js";
 
 const router = express.Router();
 
 // Public routes
 router.post("/register", register);
 router.post("/login", login);
-
+router.get("/verify-email", verifyEmail);
+router.post("/resend-verification", resendVerification);
 
 export default router;
