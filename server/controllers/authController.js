@@ -3,14 +3,29 @@ import jwt from "jsonwebtoken";
 import pool from "../config/database.js";
 import { sendVerificationEmail } from "../utils/emailServices.js";
 import { lockAccountIfNecessary } from "../utils/loginSecurity.js";
+import crypto from "crypto";
 //auth business logic
+
+// Helper function to generate a secure refresh token
+const generateRefreshToken = () => {
+  // Generate a long, cryptographically secure random string
+  return crypto.randomBytes(64).toString("hex");
+};
+
+// Function to generate a new short-lived access token (15m)
+const generateAccessToken = (user) => {
+  return jwt.sign(
+    { userId: user.id, email: user.email, userType: user.user_type },
+    process.env.JWT_SECRET,
+    { expiresIn: "15m" } // Standard short-lived access token
+  );
+};
 
 // Register new user
 export const register = async (req, res) => {
   try {
-    const { email, password, fullName, userType } = req.body;
+    const { email, password, fullName, userType } = req.body; // Validation
 
-    // Validation
     if (!email || !password || !fullName || !userType) {
       return res.status(400).json({
         success: false,
@@ -23,9 +38,8 @@ export const register = async (req, res) => {
         success: false,
         error: "User type must be startup or investor",
       });
-    }
+    } // Check if user exists
 
-    // Check if user exists
     const existingUser = await pool.query(
       "SELECT id FROM users WHERE email = $1",
       [email.toLowerCase()]
@@ -36,25 +50,22 @@ export const register = async (req, res) => {
         success: false,
         error: "User already exists",
       });
-    }
+    } // Hash password
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10); // 1. Generate verification token (JWT valid for 24 hours)
 
-    // 1. Generate verification token (JWT valid for 24 hours)
     const verificationToken = jwt.sign(
       { email: email.toLowerCase() },
       process.env.JWT_VERIFY_SECRET, // Use a separate secret for verification
       { expiresIn: "24h" }
     );
 
-    const tokenExpiration = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+    const tokenExpiration = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now // 2. Insert user with token and set email_verified to false
 
-    // 2. Insert user with token and set email_verified to false
     const result = await pool.query(
       `INSERT INTO users (email, password_hash, full_name, user_type, email_verified, email_verification_token, email_verification_token_expires) 
-       VALUES ($1, $2, $3, $4, false, $5, $6) 
-       RETURNING id, email, full_name, user_type, created_at, email_verification_token, email_verification_token_expires`,
+       VALUES ($1, $2, $3, $4, false, $5, $6) 
+       RETURNING id, email, full_name, user_type, created_at, email_verification_token, email_verification_token_expires`,
       [
         email.toLowerCase(),
         hashedPassword,
@@ -65,9 +76,8 @@ export const register = async (req, res) => {
       ]
     );
 
-    const user = result.rows[0];
+    const user = result.rows[0]; // 3. Send verification email
 
-    // 3. Send verification email
     await sendVerificationEmail(user.email, verificationToken);
 
     res.status(201).json({
@@ -84,8 +94,6 @@ export const register = async (req, res) => {
     });
   } catch (error) {
     console.error("Registration error:", error);
-    // You might want to delete the user record if the email failed to send,
-    // but typically you let them try again or resend the email later.
     res.status(500).json({
       success: false,
       error: "Server error during registration",
@@ -100,18 +108,16 @@ export const verifyEmail = async (req, res) => {
 
     if (!token) {
       return res.status(400).send("Verification failed: Token is missing.");
-    }
+    } // 1. Verify the token's signature and expiration
 
-    // 1. Verify the token's signature and expiration
     const decoded = jwt.verify(token, process.env.JWT_VERIFY_SECRET);
-    const userEmail = decoded.email;
+    const userEmail = decoded.email; // 2. Find the user by token and ensure it's not expired
 
-    // 2. Find the user by token and ensure it's not expired
     const result = await pool.query(
       `SELECT * FROM users 
-       WHERE email = $1 
-         AND email_verification_token = $2 
-         AND email_verification_token_expires > NOW()`,
+       WHERE email = $1 
+         AND email_verification_token = $2 
+         AND email_verification_token_expires > NOW()`,
       [userEmail, token]
     );
 
@@ -120,20 +126,17 @@ export const verifyEmail = async (req, res) => {
       return res
         .status(401)
         .send("Verification failed: Invalid or expired token.");
-    }
+    } // 3. Update the user record: set email_verified to true and clear token fields
 
-    // 3. Update the user record: set email_verified to true and clear token fields
     await pool.query(
       `UPDATE users 
-       SET email_verified = true, 
-           email_verification_token = NULL, 
-           email_verification_token_expires = NULL 
-       WHERE id = $1`,
+       SET email_verified = true, 
+           email_verification_token = NULL, 
+           email_verification_token_expires = NULL 
+       WHERE id = $1`,
       [result.rows[0].id]
-    );
+    ); // Redirect or send a success message (redirect is common for verification links)
 
-    // Redirect or send a success message (redirect is common for verification links)
-    // You can redirect to your frontend login page or a success page
     res.send("Email verified successfully! You can now log in.");
   } catch (error) {
     console.error("Email verification error:", error);
@@ -141,26 +144,31 @@ export const verifyEmail = async (req, res) => {
       return res.status(401).send("Verification failed: Token has expired.");
     }
     if (error.name === "JsonWebTokenError") {
-      return res.status(401).send("Verification failed: Invalid token.");
+      return res
+        .status(401)
+        .json({ success: false, error: "Verification failed: Invalid token." });
     }
-    res.status(500).send("Server error during email verification.");
+    res
+      .status(500)
+      .json({
+        success: false,
+        error: "Server error during email verification.",
+      });
   }
 };
 
 // Resend verification email
 export const resendVerification = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email } = req.body; // 1. Check if email is provided
 
-    // 1. Check if email is provided
     if (!email) {
       return res.status(400).json({
         success: false,
         error: "Email is required.",
       });
-    }
+    } // 2. Check if user exists
 
-    // 2. Check if user exists
     const result = await pool.query(
       "SELECT id, email_verified FROM users WHERE email = $1",
       [email.toLowerCase()]
@@ -175,35 +183,31 @@ export const resendVerification = async (req, res) => {
       });
     }
 
-    const user = result.rows[0];
+    const user = result.rows[0]; // 3. Check if user is already verified
 
-    // 3. Check if user is already verified
     if (user.email_verified) {
       return res.status(200).json({
         success: true,
         message: "This account is already verified.",
       });
-    }
+    } // 4. Generate new token
 
-    // 4. Generate new token
     const newVerificationToken = jwt.sign(
       { email: email.toLowerCase() },
       process.env.JWT_VERIFY_SECRET,
       { expiresIn: "24h" } // Reset expiration to 24 hours from now
     );
 
-    const tokenExpiration = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const tokenExpiration = new Date(Date.now() + 24 * 60 * 60 * 1000); // 5. Update user with new token and expiration
 
-    // 5. Update user with new token and expiration
     await pool.query(
       `UPDATE users 
-       SET email_verification_token = $1, 
-           email_verification_token_expires = $2 
-       WHERE id = $3`,
+       SET email_verification_token = $1, 
+           email_verification_token_expires = $2 
+       WHERE id = $3`,
       [newVerificationToken, tokenExpiration, user.id]
-    );
+    ); // 6. Send new verification email
 
-    // 6. Send new verification email
     await sendVerificationEmail(email.toLowerCase(), newVerificationToken);
 
     res.status(200).json({
@@ -222,17 +226,15 @@ export const resendVerification = async (req, res) => {
 // User Login
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body; // <-- Capture rememberMe // Validation
 
-    // Validation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
         error: "Email and password are required",
       });
-    }
+    } // Find user
 
-    // Find user
     const result = await pool.query(
       "SELECT id, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until FROM users WHERE email = $1",
       [email.toLowerCase()]
@@ -247,34 +249,51 @@ export const login = async (req, res) => {
 
     const user = result.rows[0];
 
-    // Check password
+    // Check Lock Status (already implemented in earlier steps)
+    if (
+      user.account_locked_until &&
+      new Date(user.account_locked_until) > new Date()
+    ) {
+      return res.status(403).json({
+        success: false,
+        error:
+          "Account is locked due to too many failed login attempts. Try again later.",
+        lockedUntil: user.account_locked_until,
+      });
+    } // Check password
+
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
-      // --- THIS BLOCK MUST EXECUTE ON FAILURE ---
+      // --- HANDLE FAILED LOGIN ---
       const failedResult = await lockAccountIfNecessary(
         user.id,
         user.failed_login_attempts,
         user.email
-      );
-      // Check if the failure triggered a lock
+      ); // Check if the failure triggered a lock
       if (failedResult.locked) {
         return res.status(403).json({
           success: false,
           error: "Too many failed login attempts. Account locked for 1 hour.",
           lockedUntil: failedResult.lockUntil.toISOString(),
         });
-      }
-      // Return generic error for security
+      } // Return generic error for security
       return res.status(401).json({
         success: false,
         error: "Invalid email or password",
       });
-    }
+    } // 1. Reset failed attempts on success
 
-    // 1. Check if the email is verified
+    // --- START SUCCESS PATH ---
+
+    if (user.failed_login_attempts > 0) {
+      await pool.query(
+        "UPDATE users SET failed_login_attempts = 0, account_locked_until = NULL WHERE id = $1",
+        [user.id]
+      );
+    } // 2. Check if the email is verified
+
     if (!user.email_verified) {
-      // You can also send a response that allows the user to trigger a resend email action
       return res.status(403).json({
         success: false,
         error:
@@ -283,27 +302,39 @@ export const login = async (req, res) => {
       });
     }
 
-    // Generate JWT token (only if verified)
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        userType: user.user_type,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+    // 3. Generate Access Token (15 min)
+    const accessToken = generateAccessToken(user);
+
+    // 4. Generate and Store Refresh Token (Session Management)
+    const refreshToken = generateRefreshToken();
+    const isRemembered = !!rememberMe; // Ensure it's a boolean
+
+    const sessionDuration = isRemembered
+      ? 30 * 24 * 60 * 60 * 1000 // 30 days
+      : 24 * 60 * 60 * 1000; // 24 hours
+
+    const expiresAt = new Date(Date.now() + sessionDuration);
+    const clientIp = req.ip || req.connection.remoteAddress;
+
+    await pool.query(
+      `INSERT INTO sessions (user_id, refresh_token, is_remembered, expires_at, client_ip)
+         VALUES ($1, $2, $3, $4, $5)`,
+      [user.id, refreshToken, isRemembered, expiresAt, clientIp]
     );
 
+    // 5. Return Access Token, Refresh Token, and User Data
     res.json({
       success: true,
       message: "Login successful",
-      token,
+      accessToken, // The short-lived 15m token
+      refreshToken, // The long-lived refresh token
       user: {
         id: user.id,
         email: user.email,
         fullName: user.full_name,
         userType: user.user_type,
         emailVerified: user.email_verified,
+        sessionExpires: expiresAt.toISOString(), // New: Expiry for the frontend
       },
     });
   } catch (error) {
@@ -315,14 +346,7 @@ export const login = async (req, res) => {
   }
 };
 
-// Function to generate a new short-lived access token
-const generateAccessToken = (user) => {
-  return jwt.sign(
-    { userId: user.id, email: user.email, userType: user.user_type },
-    process.env.JWT_SECRET,
-    { expiresIn: "15m" } // Standard short-lived access token
-  );
-};
+// ... (refreshToken function is already correct below) ...
 
 export const refreshToken = async (req, res) => {
   const { refreshToken } = req.body;
@@ -336,10 +360,10 @@ export const refreshToken = async (req, res) => {
   try {
     // 1. Find the session and ensure it's not expired
     const sessionResult = await pool.query(
-      `SELECT s.user_id, s.expires_at, u.email, u.user_type 
-             FROM sessions s
-             JOIN users u ON s.user_id = u.id
-             WHERE s.refresh_token = $1 AND s.expires_at > NOW()`,
+      `SELECT s.user_id, s.expires_at, u.email, u.user_type, u.full_name 
+             FROM sessions s
+             JOIN users u ON s.user_id = u.id
+             WHERE s.refresh_token = $1 AND s.expires_at > NOW()`,
       [refreshToken]
     );
 
@@ -349,14 +373,14 @@ export const refreshToken = async (req, res) => {
         .json({ success: false, error: "Invalid or expired session." });
     }
 
-    const session = sessionResult.rows[0];
+    const user = sessionResult.rows[0]; // Renamed 'session' to 'user' for clarity on token generation // 2. Generate a new access token
 
-    // 2. Generate a new access token
-    const newAccessToken = generateAccessToken(session);
+    const newAccessToken = generateAccessToken(user);
 
     res.json({
       success: true,
       accessToken: newAccessToken,
+      // Optionally return the session expiry, but it wasn't refreshed, so it remains the same
     });
   } catch (error) {
     console.error("Refresh token error:", error);
