@@ -4,6 +4,8 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import pool from "./config/database.js";
 import authRoutes from "./routes/auth.js";
+import cron from "node-cron";
+import { deleteStaleUnverifiedUsers } from "./utils/cleanup.js";
 
 dotenv.config({ quiet: true });
 
@@ -62,6 +64,27 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Schedule the cleanup job to run every day at 2:00 AM (0 2 * * *)
+cron.schedule(
+  "0 2 * * *",
+  async () => {
+    console.log(
+      "⏳ Starting scheduled cleanup job (deleting stale unverified accounts)..."
+    );
+    try {
+      await deleteStaleUnverifiedUsers();
+      console.log("✅ Scheduled cleanup job finished successfully.");
+    } catch (error) {
+      console.error("❌ Scheduled cleanup job failed.");
+    }
+  },
+  {
+    scheduled: true,
+    timezone: "Asia/Colombo", // Set the timezone appropriate for your deployment environment
+  }
+);
+
+// Start the server only after cron is set up (usually in app.listen)
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV}`);
