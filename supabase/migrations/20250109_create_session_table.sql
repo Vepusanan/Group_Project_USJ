@@ -7,3 +7,8 @@ CREATE TABLE sessions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     client_ip VARCHAR(45) -- Stores IP address for session security
 );
+
+
+-- updated again
+ALTER TABLE sessions
+ADD COLUMN device_info VARCHAR(255); -- e.g., 'Chrome 110 on Windows 10'
