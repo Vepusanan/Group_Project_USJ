@@ -4,6 +4,11 @@ import pool from "../config/database.js";
 import { sendVerificationEmail } from "../utils/emailServices.js";
 import { lockAccountIfNecessary } from "../utils/loginSecurity.js";
 import crypto from "crypto";
+import {
+  sendPasswordResetEmail,
+  sendPasswordChangeConfirmationEmail,
+} from "../utils/emailServices.js";
+
 //auth business logic
 
 // Helper function to generate a secure refresh token
@@ -148,12 +153,10 @@ export const verifyEmail = async (req, res) => {
         .status(401)
         .json({ success: false, error: "Verification failed: Invalid token." });
     }
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: "Server error during email verification.",
-      });
+    res.status(500).json({
+      success: false,
+      error: "Server error during email verification.",
+    });
   }
 };
 
@@ -387,5 +390,147 @@ export const refreshToken = async (req, res) => {
     res
       .status(500)
       .json({ success: false, error: "Server error during token refresh." });
+  }
+};
+
+// Helper function to generate a secure, short-lived token string
+const generateResetToken = () => {
+  return crypto.randomBytes(32).toString("hex");
+};
+
+export const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  // 1. Validate email input
+  if (!email) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Email is required." });
+  }
+
+  try {
+    // 2. Check if user exists (select ID only)
+    const userResult = await pool.query(
+      "SELECT id FROM users WHERE email = $1",
+      [email.toLowerCase()]
+    );
+
+    // --- IMPORTANT: Don't reveal if email exists ---
+    if (userResult.rows.length === 0) {
+      // Success response even if user not found, preventing enumeration attack
+      return res.status(200).json({
+        success: true,
+        message:
+          "If a matching account exists, a password reset email has been sent.",
+      });
+    }
+
+    const userId = userResult.rows[0].id;
+    const resetToken = generateResetToken();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+    // 3. Store token in the database
+    await pool.query(
+      `INSERT INTO password_reset_tokens (token, user_id, expires_at)
+             VALUES ($1, $2, $3)`,
+      [resetToken, userId, expiresAt]
+    );
+
+    // 4. Send reset email (Await is safe here, but can be non-blocking in production)
+    await sendPasswordResetEmail(email.toLowerCase(), resetToken);
+
+    // 5. Final success response (same as above)
+    res.status(200).json({
+      success: true,
+      message:
+        "If a matching account exists, a password reset email has been sent.",
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        error: "Server error while processing reset request.",
+      });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Token and new password are required." });
+  }
+
+  try {
+    // 1. Validate token existence, expiry, and usage
+    const tokenResult = await pool.query(
+      `SELECT user_id, expires_at, used_at FROM password_reset_tokens
+             WHERE token = $1`,
+      [token]
+    );
+
+    if (tokenResult.rows.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Invalid reset token." });
+    }
+
+    const resetRecord = tokenResult.rows[0];
+
+    if (resetRecord.used_at) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Reset token has already been used." });
+    }
+
+    if (resetRecord.expires_at < new Date()) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Reset token has expired." });
+    }
+
+    const userId = resetRecord.user_id;
+
+    // 2. Hash the new password
+    const newHashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // 3. Update the user's password hash and get the user's email
+    const updateResult = await pool.query(
+      "UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING email",
+      [newHashedPassword, userId]
+    );
+
+    const userEmail = updateResult.rows[0].email;
+
+    // 4. Invalidate the token (one-time use)
+    await pool.query(
+      "UPDATE password_reset_tokens SET used_at = NOW() WHERE token = $1",
+      [token]
+    );
+
+    // 5. Terminate all active sessions (security measure)
+    await pool.query("DELETE FROM sessions WHERE user_id = $1", [userId]);
+
+    // 6. Send confirmation email
+    await sendPasswordChangeConfirmationEmail(userEmail);
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Password reset successful. You can now log in.",
+      });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        error: "Server error while resetting password.",
+      });
   }
 };
