@@ -1,13 +1,14 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import pool from "../config/database.js";
-import { sendVerificationEmail } from "../utils/emailServices.js";
 import { lockAccountIfNecessary } from "../utils/loginSecurity.js";
 import crypto from "crypto";
 import {
+  sendVerificationEmail,
   sendPasswordResetEmail,
   sendPasswordChangeConfirmationEmail,
 } from "../utils/emailServices.js";
+import { UAParser } from "ua-parser-js";
 
 //auth business logic
 
@@ -68,9 +69,17 @@ export const register = async (req, res) => {
     const tokenExpiration = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now // 2. Insert user with token and set email_verified to false
 
     const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, user_type, email_verified, email_verification_token, email_verification_token_expires) 
-       VALUES ($1, $2, $3, $4, false, $5, $6) 
-       RETURNING id, email, full_name, user_type, created_at, email_verification_token, email_verification_token_expires`,
+      `INSERT INTO users (
+     email, 
+     password_hash, 
+     full_name, 
+     user_type, 
+     email_verified, 
+     email_verification_token, 
+     email_verification_token_expires
+   )
+   VALUES ($1, $2, $3, $4, false, $5, $6)
+   RETURNING id, email, full_name, user_type, created_at, email_verification_token, email_verification_token_expires`,
       [
         email.toLowerCase(),
         hashedPassword,
@@ -119,10 +128,10 @@ export const verifyEmail = async (req, res) => {
     const userEmail = decoded.email; // 2. Find the user by token and ensure it's not expired
 
     const result = await pool.query(
-      `SELECT * FROM users 
-       WHERE email = $1 
-         AND email_verification_token = $2 
-         AND email_verification_token_expires > NOW()`,
+      `SELECT * FROM users
+ WHERE email = $1
+   AND email_verification_token = $2
+   AND email_verification_token_expires > NOW()`,
       [userEmail, token]
     );
 
@@ -134,11 +143,11 @@ export const verifyEmail = async (req, res) => {
     } // 3. Update the user record: set email_verified to true and clear token fields
 
     await pool.query(
-      `UPDATE users 
-       SET email_verified = true, 
-           email_verification_token = NULL, 
-           email_verification_token_expires = NULL 
-       WHERE id = $1`,
+      `UPDATE users
+ SET email_verified = true,
+     email_verification_token = NULL,
+     email_verification_token_expires = NULL
+ WHERE id = $1`,
       [result.rows[0].id]
     ); // Redirect or send a success message (redirect is common for verification links)
 
@@ -204,10 +213,10 @@ export const resendVerification = async (req, res) => {
     const tokenExpiration = new Date(Date.now() + 24 * 60 * 60 * 1000); // 5. Update user with new token and expiration
 
     await pool.query(
-      `UPDATE users 
-       SET email_verification_token = $1, 
-           email_verification_token_expires = $2 
-       WHERE id = $3`,
+      `UPDATE users
+ SET email_verification_token = $1,
+     email_verification_token_expires = $2
+ WHERE id = $3`,
       [newVerificationToken, tokenExpiration, user.id]
     ); // 6. Send new verification email
 
@@ -229,14 +238,14 @@ export const resendVerification = async (req, res) => {
 // User Login
 export const login = async (req, res) => {
   try {
-    const { email, password, rememberMe } = req.body; // <-- Capture rememberMe // Validation
+    const { email, password, rememberMe } = req.body; // Capture rememberMe
 
     if (!email || !password) {
       return res.status(400).json({
         success: false,
         error: "Email and password are required",
       });
-    } // Find user
+    }
 
     const result = await pool.query(
       "SELECT id, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until FROM users WHERE email = $1",
@@ -252,7 +261,6 @@ export const login = async (req, res) => {
 
     const user = result.rows[0];
 
-    // Check Lock Status (already implemented in earlier steps)
     if (
       user.account_locked_until &&
       new Date(user.account_locked_until) > new Date()
@@ -263,81 +271,85 @@ export const login = async (req, res) => {
           "Account is locked due to too many failed login attempts. Try again later.",
         lockedUntil: user.account_locked_until,
       });
-    } // Check password
+    }
 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
-      // --- HANDLE FAILED LOGIN ---
+      // Handle Failed Login
       const failedResult = await lockAccountIfNecessary(
         user.id,
         user.failed_login_attempts,
         user.email
-      ); // Check if the failure triggered a lock
+      );
       if (failedResult.locked) {
         return res.status(403).json({
           success: false,
           error: "Too many failed login attempts. Account locked for 1 hour.",
           lockedUntil: failedResult.lockUntil.toISOString(),
         });
-      } // Return generic error for security
+      }
       return res.status(401).json({
         success: false,
         error: "Invalid email or password",
       });
-    } // 1. Reset failed attempts on success
-
-    // --- START SUCCESS PATH ---
+    } // --- START SUCCESS PATH ---
 
     if (user.failed_login_attempts > 0) {
       await pool.query(
         "UPDATE users SET failed_login_attempts = 0, account_locked_until = NULL WHERE id = $1",
         [user.id]
       );
-    } // 2. Check if the email is verified
+    }
 
     if (!user.email_verified) {
       return res.status(403).json({
         success: false,
         error:
           "Account is not verified. Please check your email for the verification link.",
-        emailVerified: false, // <-- Add this flag for frontend handling
+        emailVerified: false,
       });
     }
 
-    // 3. Generate Access Token (15 min)
     const accessToken = generateAccessToken(user);
 
-    // 4. Generate and Store Refresh Token (Session Management)
     const refreshToken = generateRefreshToken();
-    const isRemembered = !!rememberMe; // Ensure it's a boolean
+    const isRemembered = !!rememberMe;
 
     const sessionDuration = isRemembered
-      ? 30 * 24 * 60 * 60 * 1000 // 30 days
-      : 24 * 60 * 60 * 1000; // 24 hours
+      ? 30 * 24 * 60 * 60 * 1000
+      : 24 * 60 * 60 * 1000;
 
     const expiresAt = new Date(Date.now() + sessionDuration);
-    const clientIp = req.ip || req.connection.remoteAddress;
+    const clientIp = req.ip || req.connection.remoteAddress; // --- DEVICE INFO PARSING (NEW LOGIC) ---
 
+    const userAgentString = req.headers["user-agent"] || "";
+    let deviceInfo = "Unknown Device/Browser";
+
+    if (userAgentString) {
+      const parser = new UAParser(userAgentString);
+      const browser = parser.getBrowser();
+      const os = parser.getOS();
+      deviceInfo = `${browser.name || "Unknown Browser"} on ${
+        os.name || "Unknown OS"
+      } ${os.version || ""}`.trim();
+    } // --- END DEVICE INFO PARSING --- // FIX: Re-write SQL string completely to eliminate hidden syntax error
     await pool.query(
-      `INSERT INTO sessions (user_id, refresh_token, is_remembered, expires_at, client_ip)
-         VALUES ($1, $2, $3, $4, $5)`,
-      [user.id, refreshToken, isRemembered, expiresAt, clientIp]
+      `INSERT INTO sessions (user_id, refresh_token, is_remembered, expires_at, client_ip, device_info) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [user.id, refreshToken, isRemembered, expiresAt, clientIp, deviceInfo]
     );
-
-    // 5. Return Access Token, Refresh Token, and User Data
     res.json({
       success: true,
       message: "Login successful",
-      accessToken, // The short-lived 15m token
-      refreshToken, // The long-lived refresh token
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
         fullName: user.full_name,
         userType: user.user_type,
         emailVerified: user.email_verified,
-        sessionExpires: expiresAt.toISOString(), // New: Expiry for the frontend
+        sessionExpires: expiresAt.toISOString(),
       },
     });
   } catch (error) {
@@ -363,10 +375,10 @@ export const refreshToken = async (req, res) => {
   try {
     // 1. Find the session and ensure it's not expired
     const sessionResult = await pool.query(
-      `SELECT s.user_id, s.expires_at, u.email, u.user_type, u.full_name 
-             FROM sessions s
-             JOIN users u ON s.user_id = u.id
-             WHERE s.refresh_token = $1 AND s.expires_at > NOW()`,
+      `SELECT s.user_id, s.expires_at, u.email, u.user_type, u.full_name
+ FROM sessions s
+ JOIN users u ON s.user_id = u.id
+ WHERE s.refresh_token = $1 AND s.expires_at > NOW()`,
       [refreshToken]
     );
 
@@ -447,12 +459,10 @@ export const forgotPassword = async (req, res) => {
     });
   } catch (error) {
     console.error("Forgot password error:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: "Server error while processing reset request.",
-      });
+    res.status(500).json({
+      success: false,
+      error: "Server error while processing reset request.",
+    });
   }
 };
 
@@ -518,19 +528,119 @@ export const resetPassword = async (req, res) => {
     // 6. Send confirmation email
     await sendPasswordChangeConfirmationEmail(userEmail);
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Password reset successful. You can now log in.",
-      });
+    res.status(200).json({
+      success: true,
+      message: "Password reset successful. You can now log in.",
+    });
   } catch (error) {
     console.error("Reset password error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while resetting password.",
+    });
+  }
+};
+
+export const logout = async (req, res) => {
+  // The user is authenticated via the Access Token and req.user is set.
+  // The client sends the Refresh Token in the body to identify the session to delete.
+  const { refreshToken } = req.body;
+  const userId = req.user.id; // User ID obtained from the Access Token
+
+  if (!refreshToken) {
+    return res.status(400).json({
+      success: false,
+      error: "Refresh token is required to log out this session.",
+    });
+  }
+
+  try {
+    // Delete the specific session matching the user and the provided refresh token.
+    const result = await pool.query(
+      "DELETE FROM sessions WHERE user_id = $1 AND refresh_token = $2 RETURNING id",
+      [userId, refreshToken]
+    );
+
+    if (result.rowCount === 0) {
+      // The session might already be deleted or the token was invalid/expired.
+      return res.status(404).json({
+        success: false,
+        error: "Active session not found or already logged out.",
+      });
+    }
+
+    // Note: The client must also delete the stored Access Token and Refresh Token locally.
+    res.status(200).json({
+      success: true,
+      message: "Logged out successfully from current device.",
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
     res
       .status(500)
-      .json({
-        success: false,
-        error: "Server error while resetting password.",
-      });
+      .json({ success: false, error: "Server error during logout." });
+  }
+};
+
+export const logoutAll = async (req, res) => {
+  // The user is identified via the Access Token by the 'protect' middleware.
+  const userId = req.user.id;
+
+  try {
+    // Delete ALL refresh tokens associated with the user ID.
+    const result = await pool.query(
+      "DELETE FROM sessions WHERE user_id = $1 RETURNING id",
+      [userId]
+    );
+
+    // All subsequent refresh token usage will fail immediately.
+    res.status(200).json({
+      success: true,
+      message: `Successfully logged out from ${result.rowCount} active sessions.`,
+    });
+  } catch (error) {
+    console.error("Logout all error:", error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error during "Logout All" request.',
+    });
+  }
+};
+
+export const getActiveSessions = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    // Select relevant session data, excluding the refresh_token itself for security.
+    const result = await pool.query(
+      `SELECT 
+                id, 
+                is_remembered, 
+                expires_at, 
+                created_at, 
+                client_ip,
+                device_info 
+             FROM sessions 
+             WHERE user_id = $1 
+             ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    // Note: The client_ip often only shows the IP of the proxy/VPN/load balancer.
+    // You would typically use a library like 'ua-parser-js' on the server
+    // to convert the User-Agent header (sent in req.headers) into device info
+    // before saving it to the database for display here.
+
+    res.status(200).json({
+      success: true,
+      sessions: result.rows,
+      count: result.rowCount,
+    });
+  } catch (error) {
+    console.error("Get sessions error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while retrieving sessions.",
+    });
   }
 };
