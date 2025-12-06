@@ -1,5 +1,6 @@
-import { createStartupProfile, getStartupProfileById, updateStartupProfile, getStartupProfileByUserId } from "../models/StartupProfiles.js";
-import { uploadStartupLogo, uploadMultipleDocuments, deleteFromSupabase, extractFilePathFromUrl, BUCKETS } from "../utils/supabaseStorage.js";
+import { createStartupProfile, getStartupProfileById, updateStartupProfile, getStartupProfileByUserId } from "../repositories/StartupProfileRepository.js";
+import { createInvestorProfile, getInvestorProfileById, updateInvestorProfile, getInvestorProfileByUserId } from "../repositories/InvestorProfileRepository.js";
+import { uploadStartupLogo, uploadInvestorPhoto, uploadMultipleDocuments, deleteFromSupabase, extractFilePathFromUrl, BUCKETS } from "../utils/supabaseStorage.js";
 
 // Create startup profile
 export const createProfile = async (req, res, next) => {
@@ -330,6 +331,275 @@ export const uploadDocuments = async (req, res, next) => {
 			data: updated,
 			newDocuments: newDocuments
 		});
+	} catch (err) {
+		next(err);
+	}
+};
+
+// ===================== INVESTOR PROFILE CONTROLLERS =====================
+
+// Create investor profile
+export const createInvestorProfileController = async (req, res, next) => {
+	try {
+		// only investor users can create investor profiles
+		if (!req.user || req.user.user_type !== "investor") {
+			return res.status(403).json({ error: "Only investor users can create investor profiles" });
+		}
+
+		// Minimal validation
+		const { name } = req.body;
+		if (!name) {
+			return res.status(400).json({ error: "name is required" });
+		}
+
+		// Parse JSON fields from form-data (they come as strings)
+		const jsonFields = ['industries', 'geography', 'investment_stage', 'investment_structure', 
+		                    'portfolio_companies', 'notable_exits'];
+		for (const field of jsonFields) {
+			if (req.body[field]) {
+				// Only parse if it's a string, leave objects as-is
+				if (typeof req.body[field] === 'string') {
+					try {
+						req.body[field] = JSON.parse(req.body[field]);
+					} catch (e) {
+						return res.status(400).json({ 
+							error: `Invalid JSON format for ${field}`,
+							details: e.message 
+						});
+					}
+				}
+				// If it's already an object or array, leave it as-is
+			}
+		}
+
+		// Parse boolean fields
+		if (req.body.follow_on_investment !== undefined) {
+			if (typeof req.body.follow_on_investment === 'string') {
+				req.body.follow_on_investment = req.body.follow_on_investment === 'true';
+			}
+		}
+		if (req.body.is_actively_investing !== undefined) {
+			if (typeof req.body.is_actively_investing === 'string') {
+				req.body.is_actively_investing = req.body.is_actively_investing === 'true';
+			}
+		}
+
+		// Parse numeric fields
+		if (req.body.investment_size_min) {
+			req.body.investment_size_min = parseFloat(req.body.investment_size_min);
+		}
+		if (req.body.investment_size_max) {
+			req.body.investment_size_max = parseFloat(req.body.investment_size_max);
+		}
+		if (req.body.years_of_experience) {
+			req.body.years_of_experience = parseInt(req.body.years_of_experience);
+		}
+		if (req.body.total_investments) {
+			req.body.total_investments = parseInt(req.body.total_investments);
+		}
+
+		// First create the profile to get an ID for file naming
+		const tempProfile = await createInvestorProfile(req.user.id, req.body);
+		const investorId = tempProfile.id;
+
+		// Handle photo upload to Supabase
+		if (req.files && req.files.photo && req.files.photo[0]) {
+			try {
+				const photoUrl = await uploadInvestorPhoto(req.files.photo[0].path, investorId);
+				req.body.photo_url = photoUrl;
+			} catch (error) {
+				console.error('Photo upload failed:', error);
+				// Continue without photo if upload fails
+			}
+		}
+
+		// Update profile with file URLs if any were uploaded
+		if (req.body.photo_url) {
+			const updated = await updateInvestorProfile(investorId, req.user.id, {
+				photo_url: req.body.photo_url
+			});
+			return res.status(201).json({ success: true, data: updated });
+		}
+
+		// Return the temporary profile if no files were uploaded
+		res.status(201).json({ success: true, data: tempProfile });
+	} catch (err) {
+		next(err);
+	}
+};
+
+// Update investor profile
+export const updateInvestorProfileController = async (req, res, next) => {
+	try {
+		const profileId = req.params.id;
+		if (!req.user) return res.status(401).json({ error: "Not authorized" });
+
+		// Parse JSON fields from form-data (they come as strings)
+		const jsonFields = ['industries', 'geography', 'investment_stage', 'investment_structure', 
+		                    'portfolio_companies', 'notable_exits'];
+		for (const field of jsonFields) {
+			if (req.body[field]) {
+				// Only parse if it's a string, leave objects as-is
+				if (typeof req.body[field] === 'string') {
+					try {
+						req.body[field] = JSON.parse(req.body[field]);
+					} catch (e) {
+						return res.status(400).json({ 
+							error: `Invalid JSON format for ${field}`,
+							details: e.message 
+						});
+					}
+				}
+				// If it's already an object or array, leave it as-is
+			}
+		}
+
+		// Parse boolean fields
+		if (req.body.follow_on_investment !== undefined) {
+			if (typeof req.body.follow_on_investment === 'string') {
+				req.body.follow_on_investment = req.body.follow_on_investment === 'true';
+			}
+		}
+		if (req.body.is_actively_investing !== undefined) {
+			if (typeof req.body.is_actively_investing === 'string') {
+				req.body.is_actively_investing = req.body.is_actively_investing === 'true';
+			}
+		}
+
+		// Parse numeric fields
+		if (req.body.investment_size_min) {
+			req.body.investment_size_min = parseFloat(req.body.investment_size_min);
+		}
+		if (req.body.investment_size_max) {
+			req.body.investment_size_max = parseFloat(req.body.investment_size_max);
+		}
+		if (req.body.years_of_experience) {
+			req.body.years_of_experience = parseInt(req.body.years_of_experience);
+		}
+		if (req.body.total_investments) {
+			req.body.total_investments = parseInt(req.body.total_investments);
+		}
+
+		// Get existing profile for cleanup if needed
+		const existingProfile = await getInvestorProfileById(profileId);
+		if (!existingProfile || existingProfile.user_id !== req.user.id) {
+			return res.status(404).json({ error: "Profile not found or not owned by user" });
+		}
+
+		// Handle new photo upload to Supabase
+		if (req.files && req.files.photo && req.files.photo[0]) {
+			try {
+				// Delete old photo if it exists
+				if (existingProfile.photo_url) {
+					const oldPhotoPath = extractFilePathFromUrl(existingProfile.photo_url, BUCKETS.INVESTOR_PHOTOS);
+					if (oldPhotoPath) {
+						await deleteFromSupabase(BUCKETS.INVESTOR_PHOTOS, oldPhotoPath);
+					}
+				}
+				
+				const photoUrl = await uploadInvestorPhoto(req.files.photo[0].path, profileId);
+				req.body.photo_url = photoUrl;
+			} catch (error) {
+				console.error('Photo upload failed:', error);
+				// Continue without updating photo if upload fails
+			}
+		}
+
+		const updated = await updateInvestorProfile(profileId, req.user.id, req.body);
+		if (!updated) return res.status(404).json({ error: "Profile not found or not owned by user" });
+		res.json({ success: true, data: updated });
+	} catch (err) {
+		next(err);
+	}
+};
+
+// Get investor profile by ID
+export const getInvestorProfileController = async (req, res, next) => {
+	try {
+		const profileId = req.params.id;
+		const profile = await getInvestorProfileById(profileId);
+		if (!profile) return res.status(404).json({ error: "Profile not found" });
+
+		// Parse JSON fields before returning
+		const parseJsonField = (field) => {
+			if (!field) return null;
+			if (typeof field === 'string') {
+				try {
+					return JSON.parse(field);
+				} catch (e) {
+					return field;
+				}
+			}
+			return field;
+		};
+
+		// Determine what to show: public fields always; private fields only to owner or connected startups.
+		const publicFields = {
+			id: profile.id,
+			name: profile.name,
+			firm_name: profile.firm_name,
+			photo_url: profile.photo_url,
+			city: profile.city,
+			country: profile.country,
+			website: profile.website,
+			linkedin: profile.linkedin,
+			investor_type: profile.investor_type,
+			years_of_experience: profile.years_of_experience,
+			investment_thesis: profile.investment_thesis,
+			industries: parseJsonField(profile.industries),
+			geography: parseJsonField(profile.geography),
+			investment_stage: parseJsonField(profile.investment_stage),
+			investment_size_min: profile.investment_size_min,
+			investment_size_max: profile.investment_size_max,
+			portfolio_companies: parseJsonField(profile.portfolio_companies),
+			total_investments: profile.total_investments,
+			is_actively_investing: profile.is_actively_investing,
+		};
+
+		if (req.user && req.user.id === profile.user_id) {
+			// owner gets full profile
+			const full = { ...profile };
+			for (const key of ["industries", "geography", "investment_stage", "investment_structure", 
+			                   "portfolio_companies", "notable_exits"]) {
+				full[key] = parseJsonField(full[key]);
+			}
+			return res.json({ success: true, data: full });
+		}
+
+		// TODO: Check connection status and return private fields if connected
+		// For now: return public fields only
+		res.json({ success: true, data: publicFields });
+	} catch (err) {
+		next(err);
+	}
+};
+
+// Get current investor user's profile
+export const getMyInvestorProfile = async (req, res, next) => {
+	try {
+		if (!req.user) return res.status(401).json({ error: "Not authorized" });
+		const profile = await getInvestorProfileByUserId(req.user.id);
+		if (!profile) return res.status(404).json({ error: "Profile not found" });
+
+		// Parse JSON fields
+		const parseJsonField = (field) => {
+			if (!field) return null;
+			if (typeof field === 'string') {
+				try {
+					return JSON.parse(field);
+				} catch (e) {
+					return field;
+				}
+			}
+			return field;
+		};
+
+		const full = { ...profile };
+		for (const key of ["industries", "geography", "investment_stage", "investment_structure", 
+		                   "portfolio_companies", "notable_exits"]) {
+			full[key] = parseJsonField(full[key]);
+		}
+		res.json({ success: true, data: full });
 	} catch (err) {
 		next(err);
 	}

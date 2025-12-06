@@ -23,7 +23,8 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 // Storage bucket names (using your existing bucket names)
 export const BUCKETS = {
   STARTUP_LOGOS: 'startup_logo',
-  DOCUMENTS: 'startup_documents'
+  DOCUMENTS: 'startup_documents',
+  INVESTOR_PHOTOS: 'investor_photos'
 };
 
 /**
@@ -120,6 +121,48 @@ export async function uploadStartupLogo(filePath, startupId) {
     return result.publicUrl;
   } catch (error) {
     console.error('Error uploading startup logo:', error);
+    throw error;
+  }
+}
+
+/**
+ * Upload and process investor photo
+ * @param {string} filePath - Local file path
+ * @param {string} investorId - Investor profile ID for naming
+ * @returns {Promise<string>} Public URL of uploaded photo
+ */
+export async function uploadInvestorPhoto(filePath, investorId) {
+  try {
+    // Process image with sharp to ensure consistent size
+    const processedPath = filePath.replace(/(\.[^.]+)$/, '_processed$1');
+    await sharp(filePath)
+      .resize({ 
+        width: 400, 
+        height: 400, 
+        fit: 'cover',
+        withoutEnlargement: false 
+      })
+      .jpeg({ quality: 85 })
+      .toFile(processedPath);
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const fileName = `photo_${investorId}_${timestamp}.jpg`;
+
+    // Upload to investor_photos bucket
+    const result = await uploadToSupabase(BUCKETS.INVESTOR_PHOTOS, processedPath, fileName);
+
+    // Clean up temporary files
+    try {
+      fs.unlinkSync(filePath);
+      fs.unlinkSync(processedPath);
+    } catch (cleanupError) {
+      console.warn('Warning: Could not clean up temporary files:', cleanupError.message);
+    }
+
+    return result.publicUrl;
+  } catch (error) {
+    console.error('Error uploading investor photo:', error);
     throw error;
   }
 }
