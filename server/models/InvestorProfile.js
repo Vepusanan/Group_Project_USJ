@@ -37,6 +37,10 @@ export class InvestorProfile {
     this.investment_criteria = data.investment_criteria;
     this.red_flags = data.red_flags;
     this.ideal_founder_profile = data.ideal_founder_profile;
+    this.notable_achievements = data.notable_achievements;
+    this.value_add = data.value_add;
+    this.network_resources = data.network_resources;
+    this.social_media = data.social_media;
     this.contact_email = data.contact_email;
     this.contact_phone = data.contact_phone;
     this.preferred_contact_method = data.preferred_contact_method;
@@ -70,6 +74,10 @@ export class InvestorProfile {
       investment_size_max: this.investment_size_max,
       portfolio_companies: this.portfolio_companies,
       total_investments: this.total_investments,
+      notable_achievements: this.notable_achievements,
+      value_add: this.value_add,
+      network_resources: this.network_resources,
+      social_media: this.social_media,
       is_actively_investing: this.is_actively_investing,
     };
   }
@@ -78,7 +86,7 @@ export class InvestorProfile {
    * Parse JSON fields from database strings
    * @param {Array} fields - Field names to parse
    */
-  parseJsonFields(fields = ["industries", "geography", "investment_stage", "investment_structure", "portfolio_companies", "notable_exits"]) {
+  parseJsonFields(fields = ["industries", "geography", "investment_stage", "investment_structure", "portfolio_companies", "notable_exits", "network_resources", "social_media"]) {
     for (const field of fields) {
       if (this[field] && typeof this[field] === 'string') {
         try {

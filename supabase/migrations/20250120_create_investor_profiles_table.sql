@@ -43,6 +43,12 @@ CREATE TABLE IF NOT EXISTS public.investor_profiles (
   red_flags TEXT, -- Deal-breakers or things to avoid
   ideal_founder_profile TEXT, -- What they look for in founders
   
+  -- Value proposition fields
+  notable_achievements TEXT, -- Key achievements, awards, recognitions
+  value_add TEXT, -- How the investor adds value beyond capital
+  network_resources JSONB, -- array: [{type, description}, ...] - Network connections and resources
+  social_media JSONB, -- object: {twitter, facebook, medium, youtube, etc.}
+  
   -- Contact info fields
   contact_email VARCHAR(255),
   contact_phone VARCHAR(50),

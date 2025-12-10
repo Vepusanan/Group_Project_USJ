@@ -15,8 +15,8 @@ const safeStringify = (value) => {
  */
 export async function createStartupProfile(userId, payload) {
   const q = `INSERT INTO startup_profiles
-    (user_id, company_name, founders, logo_url, city, country, website, linkedin, tagline, description, industry, founded_date, stage, team, funding, traction, documents, contact_email, contact_phone)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+    (user_id, company_name, founders, logo_url, city, country, website, linkedin, tagline, description, industry, founded_date, stage, team, funding, traction, documents, primary_contact_name, contact_email, contact_phone, social_media)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
     RETURNING *`;
 
   const values = [
@@ -37,8 +37,10 @@ export async function createStartupProfile(userId, payload) {
     safeStringify(payload.funding),
     safeStringify(payload.traction),
     safeStringify(payload.documents),
+    payload.primary_contact_name || null,
     payload.contact_email || null,
     payload.contact_phone || null,
+    safeStringify(payload.social_media),
   ];
 
   const result = await pool.query(q, values);
@@ -92,8 +94,10 @@ export async function updateStartupProfile(id, userId, updates) {
     "funding",
     "traction",
     "documents",
+    "primary_contact_name",
     "contact_email",
     "contact_phone",
+    "social_media",
   ];
 
   const sets = [];
@@ -103,7 +107,7 @@ export async function updateStartupProfile(id, userId, updates) {
   for (const key of allowed) {
     if (Object.prototype.hasOwnProperty.call(updates, key)) {
       let val = updates[key];
-      if (["founders", "team", "funding", "traction", "documents"].includes(key) && val !== undefined) {
+      if (["founders", "team", "funding", "traction", "documents", "social_media"].includes(key) && val !== undefined) {
         val = safeStringify(val);
       }
       sets.push(`${key} = $${idx}`);
