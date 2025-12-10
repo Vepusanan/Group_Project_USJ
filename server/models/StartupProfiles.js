@@ -28,8 +28,10 @@ export class StartupProfile {
     this.funding = data.funding;
     this.traction = data.traction;
     this.documents = data.documents;
+    this.primary_contact_name = data.primary_contact_name;
     this.contact_email = data.contact_email;
     this.contact_phone = data.contact_phone;
+    this.social_media = data.social_media;
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
   }
@@ -52,6 +54,7 @@ export class StartupProfile {
       linkedin: this.linkedin,
       stage: this.stage,
       traction: this.traction,
+      social_media: this.social_media,
     };
   }
 
@@ -59,7 +62,7 @@ export class StartupProfile {
    * Parse JSON fields from database strings
    * @param {Array} fields - Field names to parse
    */
-  parseJsonFields(fields = ["founders", "team", "funding", "traction", "documents"]) {
+  parseJsonFields(fields = ["founders", "team", "funding", "traction", "documents", "social_media"]) {
     for (const field of fields) {
       if (this[field] && typeof this[field] === 'string') {
         try {

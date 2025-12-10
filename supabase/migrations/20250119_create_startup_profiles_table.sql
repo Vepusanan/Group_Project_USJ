@@ -35,8 +35,10 @@ CREATE TABLE IF NOT EXISTS public.startup_profiles (
   documents JSONB, -- array: [{name, url}, {name, url}, ...]
   
   -- Contact info
+  primary_contact_name VARCHAR(255), -- Name of primary contact person
   contact_email VARCHAR(255),
   contact_phone VARCHAR(50),
+  social_media JSONB, -- object: {twitter, facebook, instagram, medium, youtube, etc.}
   
   -- Timestamps
   created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
