@@ -1,6 +1,8 @@
 import { createStartupProfile, getStartupProfileById, updateStartupProfile, getStartupProfileByUserId } from "../repositories/StartupProfileRepository.js";
 import { createInvestorProfile, getInvestorProfileById, updateInvestorProfile, getInvestorProfileByUserId } from "../repositories/InvestorProfileRepository.js";
 import { uploadStartupLogo, uploadInvestorPhoto, uploadMultipleDocuments, deleteFromSupabase, extractFilePathFromUrl, BUCKETS } from "../utils/supabaseStorage.js";
+import { StartupProfile } from "../models/StartupProfiles.js";
+import { InvestorProfile } from "../models/InvestorProfile.js";
 
 // Create startup profile
 export const createProfile = async (req, res, next) => {
@@ -600,6 +602,75 @@ export const getMyInvestorProfile = async (req, res, next) => {
 			full[key] = parseJsonField(full[key]);
 		}
 		res.json({ success: true, data: full });
+	} catch (err) {
+		next(err);
+	}
+};
+
+// Get profile completion status
+export const getProfileCompletion = async (req, res, next) => {
+	try {
+		if (!req.user) {
+			return res.status(401).json({ error: "Not authorized" });
+		}
+
+		const userType = req.user.user_type;
+		let profile = null;
+		let completionData = null;
+
+		if (userType === 'startup') {
+			// Get startup profile
+			profile = await getStartupProfileByUserId(req.user.id);
+			
+			if (!profile) {
+				return res.status(404).json({ 
+					error: "Profile not found",
+					message: "Please create a profile first"
+				});
+			}
+
+			// Create StartupProfile instance and parse JSON fields
+			const startupProfile = new StartupProfile(profile);
+			startupProfile.parseJsonFields();
+			
+			// Calculate completion
+			completionData = startupProfile.calculateCompletion();
+
+		} else if (userType === 'investor') {
+			// Get investor profile
+			profile = await getInvestorProfileByUserId(req.user.id);
+			
+			if (!profile) {
+				return res.status(404).json({ 
+					error: "Profile not found",
+					message: "Please create a profile first"
+				});
+			}
+
+			// Create InvestorProfile instance and parse JSON fields
+			const investorProfile = new InvestorProfile(profile);
+			investorProfile.parseJsonFields();
+			
+			// Calculate completion
+			completionData = investorProfile.calculateCompletion();
+
+		} else {
+			return res.status(400).json({ 
+				error: "Invalid user type",
+				message: "User must be either startup or investor"
+			});
+		}
+
+		res.json({ 
+			success: true, 
+			data: {
+				userType: userType,
+				completionPercentage: completionData.completionPercentage,
+				isComplete: completionData.isComplete,
+				incompleteSections: completionData.incompleteSections
+			}
+		});
+
 	} catch (err) {
 		next(err);
 	}

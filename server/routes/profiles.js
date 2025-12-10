@@ -8,6 +8,7 @@ import {
 	getMyStartupProfile,
 	deleteDocument,
 	uploadDocuments,
+	getProfileCompletion,
 } from "../controllers/profileController.js";
 
 const router = express.Router();
@@ -26,6 +27,7 @@ const multerFields = upload.fields([
 
 router.post("/", protect, multerFields, createProfile);
 router.get("/me", protect, getMyStartupProfile); // Must be BEFORE /:id route
+router.get("/completion", protect, getProfileCompletion); // Profile completion status
 router.put("/:id", protect, multerFields, updateProfile);
 router.get("/:id", getProfile);
 
