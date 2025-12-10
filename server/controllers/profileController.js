@@ -354,7 +354,7 @@ export const createInvestorProfileController = async (req, res, next) => {
 
 		// Parse JSON fields from form-data (they come as strings)
 		const jsonFields = ['industries', 'geography', 'investment_stage', 'investment_structure', 
-		                    'portfolio_companies', 'notable_exits'];
+		                    'portfolio_companies', 'notable_exits', 'network_resources', 'social_media'];
 		for (const field of jsonFields) {
 			if (req.body[field]) {
 				// Only parse if it's a string, leave objects as-is
@@ -436,7 +436,7 @@ export const updateInvestorProfileController = async (req, res, next) => {
 
 		// Parse JSON fields from form-data (they come as strings)
 		const jsonFields = ['industries', 'geography', 'investment_stage', 'investment_structure', 
-		                    'portfolio_companies', 'notable_exits'];
+		                    'portfolio_companies', 'notable_exits', 'network_resources', 'social_media'];
 		for (const field of jsonFields) {
 			if (req.body[field]) {
 				// Only parse if it's a string, leave objects as-is

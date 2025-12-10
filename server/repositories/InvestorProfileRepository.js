@@ -21,9 +21,10 @@ export async function createInvestorProfile(userId, payload) {
      investment_structure, follow_on_investment, investment_timeline, 
      portfolio_companies, notable_exits, total_investments, 
      investment_criteria, red_flags, ideal_founder_profile, 
+     notable_achievements, value_add, network_resources, social_media, 
      contact_email, contact_phone, preferred_contact_method, 
      is_actively_investing, profile_visibility)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35)
     RETURNING *`;
 
   const values = [
@@ -53,6 +54,10 @@ export async function createInvestorProfile(userId, payload) {
     payload.investment_criteria || null,
     payload.red_flags || null,
     payload.ideal_founder_profile || null,
+    payload.notable_achievements || null,
+    payload.value_add || null,
+    safeStringify(payload.network_resources),
+    safeStringify(payload.social_media),
     payload.contact_email || null,
     payload.contact_phone || null,
     payload.preferred_contact_method || null,
@@ -120,6 +125,10 @@ export async function updateInvestorProfile(id, userId, updates) {
     "investment_criteria",
     "red_flags",
     "ideal_founder_profile",
+    "notable_achievements",
+    "value_add",
+    "network_resources",
+    "social_media",
     "contact_email",
     "contact_phone",
     "preferred_contact_method",
@@ -140,7 +149,9 @@ export async function updateInvestorProfile(id, userId, updates) {
         "investment_stage", 
         "investment_structure", 
         "portfolio_companies", 
-        "notable_exits"
+        "notable_exits",
+        "network_resources",
+        "social_media"
       ].includes(key) && val !== undefined) {
         val = safeStringify(val);
       }
