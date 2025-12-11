@@ -28,6 +28,7 @@
     "nodemailer": "^7.0.10",
     "pg": "^8.16.3",
     "sharp": "^0.32.4",
+    "socket.io": "^4.8.1",
     "ua-parser-js": "^2.0.6"
   },
   "devDependencies": {
