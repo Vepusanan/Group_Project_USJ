@@ -6,6 +6,7 @@ import pool from "./config/database.js";
 import authRoutes from "./routes/auth.js";
 import profilesRoutes from "./routes/profiles.js";
 import investorRoutes from "./routes/investors.js";
+import messagesRoutes from "./routes/messages.js";
 import cron from "node-cron";
 import { deleteStaleUnverifiedUsers } from "./utils/cleanup.js";
 import path from "path";
@@ -57,6 +58,7 @@ app.get("/api/health", async (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/startups/profile", profilesRoutes);
 app.use("/api/investors/profile", investorRoutes);
+app.use("/api/messages", messagesRoutes);
 // app.use("/api/search", searchRoutes);
 // app.use("/api/connections", connectionsRoutes);
 
