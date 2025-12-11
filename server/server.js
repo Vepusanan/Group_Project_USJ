@@ -2,11 +2,15 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import dotenv from "dotenv";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { initSocketServer } from "./socketHandler.js";
 import pool from "./config/database.js";
 import authRoutes from "./routes/auth.js";
 import profilesRoutes from "./routes/profiles.js";
 import investorRoutes from "./routes/investors.js";
 import messagesRoutes from "./routes/messages.js";
+import uploadsRoutes from "./routes/uploads.js";
 import cron from "node-cron";
 import { deleteStaleUnverifiedUsers } from "./utils/cleanup.js";
 import path from "path";
@@ -58,9 +62,27 @@ app.get("/api/health", async (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/startups/profile", profilesRoutes);
 app.use("/api/investors/profile", investorRoutes);
+app.use("/api/uploads", uploadsRoutes);
 app.use("/api/messages", messagesRoutes);
 // app.use("/api/search", searchRoutes);
 // app.use("/api/connections", connectionsRoutes);
+
+// ----------------------------------------------------
+// 1. Initialize HTTP Server
+// ----------------------------------------------------
+const httpServer = createServer(app);
+
+// 2. Initialize Socket.io Server
+// Allow connections from any origin (*) during development
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
+// 3. Inject Socket.io server into the socket handler
+initSocketServer(io);
 
 // 404 handler
 app.use((req, res) => {
@@ -96,8 +118,8 @@ cron.schedule(
   }
 );
 
-// Start the server only after cron is set up (usually in app.listen)
-app.listen(PORT, () => {
+// Start the server using the HTTP server instance for Socket.io integration
+httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV}`);
 });
