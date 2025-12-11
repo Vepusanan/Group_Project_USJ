@@ -6,6 +6,7 @@ import {
 	updateInvestorProfileController,
 	getInvestorProfileController,
 	getMyInvestorProfile,
+	getProfileCompletion,
 } from "../controllers/profileController.js";
 
 const router = express.Router();
@@ -23,6 +24,7 @@ const multerFields = upload.fields([
 
 router.post("/", protect, multerFields, createInvestorProfileController);
 router.get("/me", protect, getMyInvestorProfile); // Must be BEFORE /:id route
+router.get("/completion", protect, getProfileCompletion); // Profile completion status
 router.put("/:id", protect, multerFields, updateInvestorProfileController);
 router.get("/:id", getInvestorProfileController);
 

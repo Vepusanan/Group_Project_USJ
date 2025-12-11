@@ -73,6 +73,80 @@ export class StartupProfile {
       }
     }
   }
+
+  /**
+   * Calculate profile completion percentage
+   * @returns {Object} Completion data with percentage and incomplete sections
+   */
+  calculateCompletion() {
+    // Define field groups with weights
+    const fieldGroups = {
+      required: {
+        weight: 40,
+        fields: ['company_name', 'industry', 'description', 'city', 'country']
+      },
+      important: {
+        weight: 35,
+        fields: ['founders', 'tagline', 'stage', 'website', 'linkedin', 'contact_email']
+      },
+      optional: {
+        weight: 25,
+        fields: ['logo_url', 'founded_date', 'team', 'funding', 'traction', 'documents', 
+                 'primary_contact_name', 'contact_phone', 'social_media']
+      }
+    };
+
+    const incompleteSections = [];
+    let totalScore = 0;
+
+    // Calculate completion for each group
+    for (const [groupName, groupData] of Object.entries(fieldGroups)) {
+      const { fields, weight } = groupData;
+      let filledCount = 0;
+
+      const missingFields = [];
+      
+      for (const field of fields) {
+        const value = this[field];
+        let isFilled = false;
+
+        if (value !== null && value !== undefined && value !== '') {
+          if (typeof value === 'string') {
+            isFilled = value.trim().length > 0;
+          } else if (Array.isArray(value)) {
+            isFilled = value.length > 0;
+          } else if (typeof value === 'object') {
+            isFilled = Object.keys(value).length > 0;
+          } else {
+            isFilled = true;
+          }
+        }
+
+        if (isFilled) {
+          filledCount++;
+        } else {
+          missingFields.push(field);
+        }
+      }
+
+      const groupCompletion = (filledCount / fields.length) * weight;
+      totalScore += groupCompletion;
+
+      if (missingFields.length > 0) {
+        incompleteSections.push({
+          section: groupName,
+          missingFields: missingFields,
+          completionRate: Math.round((filledCount / fields.length) * 100)
+        });
+      }
+    }
+
+    return {
+      completionPercentage: Math.round(totalScore),
+      incompleteSections: incompleteSections,
+      isComplete: Math.round(totalScore) === 100
+    };
+  }
 }
 
 // Startup profile model - business logic layer

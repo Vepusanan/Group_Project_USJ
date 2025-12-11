@@ -97,6 +97,88 @@ export class InvestorProfile {
       }
     }
   }
+
+  /**
+   * Calculate profile completion percentage
+   * @returns {Object} Completion data with percentage and incomplete sections
+   */
+  calculateCompletion() {
+    // Define field groups with weights
+    const fieldGroups = {
+      required: {
+        weight: 40,
+        fields: ['name', 'investor_type', 'investment_thesis', 'industries', 'geography', 'investment_stage']
+      },
+      important: {
+        weight: 35,
+        fields: ['firm_name', 'city', 'country', 'investment_size_min', 'investment_size_max', 
+                 'linkedin', 'contact_email', 'background']
+      },
+      optional: {
+        weight: 25,
+        fields: ['photo_url', 'website', 'years_of_experience', 'investment_structure', 
+                 'follow_on_investment', 'investment_timeline', 'portfolio_companies', 
+                 'notable_exits', 'total_investments', 'investment_criteria', 'red_flags', 
+                 'ideal_founder_profile', 'notable_achievements', 'value_add', 
+                 'network_resources', 'social_media', 'contact_phone', 'preferred_contact_method']
+      }
+    };
+
+    const incompleteSections = [];
+    let totalScore = 0;
+
+    // Calculate completion for each group
+    for (const [groupName, groupData] of Object.entries(fieldGroups)) {
+      const { fields, weight } = groupData;
+      let filledCount = 0;
+
+      const missingFields = [];
+      
+      for (const field of fields) {
+        const value = this[field];
+        let isFilled = false;
+
+        if (value !== null && value !== undefined && value !== '') {
+          if (typeof value === 'string') {
+            isFilled = value.trim().length > 0;
+          } else if (Array.isArray(value)) {
+            isFilled = value.length > 0;
+          } else if (typeof value === 'object') {
+            isFilled = Object.keys(value).length > 0;
+          } else if (typeof value === 'boolean') {
+            isFilled = true; // Booleans are always considered filled
+          } else if (typeof value === 'number') {
+            isFilled = true; // Numbers are considered filled
+          } else {
+            isFilled = true;
+          }
+        }
+
+        if (isFilled) {
+          filledCount++;
+        } else {
+          missingFields.push(field);
+        }
+      }
+
+      const groupCompletion = (filledCount / fields.length) * weight;
+      totalScore += groupCompletion;
+
+      if (missingFields.length > 0) {
+        incompleteSections.push({
+          section: groupName,
+          missingFields: missingFields,
+          completionRate: Math.round((filledCount / fields.length) * 100)
+        });
+      }
+    }
+
+    return {
+      completionPercentage: Math.round(totalScore),
+      incompleteSections: incompleteSections,
+      isComplete: Math.round(totalScore) === 100
+    };
+  }
 }
 
 // Investor profile model - business logic layer
