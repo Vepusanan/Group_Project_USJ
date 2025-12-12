@@ -4,6 +4,7 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import pool from "./config/database.js";
 import authRoutes from "./routes/auth.js";
+import connectionsRoutes from "./routes/connectionRoutes.js";
 
 dotenv.config({ quiet: true });
 
@@ -46,7 +47,14 @@ app.get("/api/health", async (req, res) => {
 app.use("/api/auth", authRoutes);
 // app.use("/api/profiles", profilesRoutes);
 // app.use("/api/search", searchRoutes);
-// app.use("/api/connections", connectionsRoutes);
+// app.use("/api/search", searchRoutes);
+
+// ... existing imports
+
+app.use("/api/auth", authRoutes);
+// app.use("/api/profiles", profilesRoutes);
+// app.use("/api/search", searchRoutes);
+app.use("/api/connections", connectionsRoutes);
 
 // 404 handler
 app.use((req, res) => {
