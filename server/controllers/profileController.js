@@ -3,6 +3,44 @@ import { createInvestorProfile, getInvestorProfileById, updateInvestorProfile, g
 import { uploadStartupLogo, uploadInvestorPhoto, uploadMultipleDocuments, deleteFromSupabase, extractFilePathFromUrl, BUCKETS } from "../utils/supabaseStorage.js";
 import { StartupProfile } from "../models/StartupProfiles.js";
 import { InvestorProfile } from "../models/InvestorProfile.js";
+import { getPrivacySettingsByUserId } from "../repositories/PrivacySettingsRepository.js";
+
+// Helper function to check if user can view profile based on privacy settings
+const canViewProfile = async (profileUserId, requestingUserId) => {
+	// Owner can always view their own profile
+	if (requestingUserId && profileUserId === requestingUserId) {
+		return { canView: true, isOwner: true };
+	}
+
+	// Get privacy settings for the profile owner
+	const privacySettings = await getPrivacySettingsByUserId(profileUserId);
+
+	// If no privacy settings exist, default to public
+	if (!privacySettings) {
+		return { canView: true, isOwner: false };
+	}
+
+	const { profile_visibility } = privacySettings;
+
+	// If profile is public, anyone can view
+	if (profile_visibility === 'public') {
+		return { canView: true, isOwner: false };
+	}
+
+	// If profile is connections_only and user is not authenticated
+	if (profile_visibility === 'connections_only' && !requestingUserId) {
+		return { canView: false, isOwner: false };
+	}
+
+	// If profile is connections_only, check if users are connected
+	// TODO: Implement connection check when connections table exists
+	// For now, connections_only means only owner can view
+	if (profile_visibility === 'connections_only') {
+		return { canView: false, isOwner: false };
+	}
+
+	return { canView: true, isOwner: false };
+};
 
 // Create startup profile
 export const createProfile = async (req, res, next) => {
@@ -166,6 +204,18 @@ export const getProfile = async (req, res, next) => {
 		const profile = await getStartupProfileById(profileId);
 		if (!profile) return res.status(404).json({ error: "Profile not found" });
 
+		// Check privacy settings
+		const requestingUserId = req.user ? req.user.id : null;
+		const { canView, isOwner } = await canViewProfile(profile.user_id, requestingUserId);
+
+		// If user cannot view profile due to privacy settings
+		if (!canView) {
+			return res.status(403).json({ 
+				error: "This profile is private",
+				message: "This user has restricted their profile visibility to connections only"
+			});
+		}
+
 		// Determine what to show: public fields always; private fields only to owner or connected investors.
 		// For now: owner sees everything; others see public subset.
 		const publicFields = {
@@ -181,7 +231,7 @@ export const getProfile = async (req, res, next) => {
 		linkedin: profile.linkedin,
 		stage: profile.stage,
 		traction: profile.traction ? (typeof profile.traction === 'string' ? JSON.parse(profile.traction) : profile.traction) : null,
-	};	if (req.user && req.user.id === profile.user_id) {
+	};	if (isOwner) {
 		// owner gets full profile
 		// parse JSON fields before returning (only if they're strings)
 		const full = { ...profile };
@@ -522,6 +572,18 @@ export const getInvestorProfileController = async (req, res, next) => {
 		const profile = await getInvestorProfileById(profileId);
 		if (!profile) return res.status(404).json({ error: "Profile not found" });
 
+		// Check privacy settings
+		const requestingUserId = req.user ? req.user.id : null;
+		const { canView, isOwner } = await canViewProfile(profile.user_id, requestingUserId);
+
+		// If user cannot view profile due to privacy settings
+		if (!canView) {
+			return res.status(403).json({ 
+				error: "This profile is private",
+				message: "This user has restricted their profile visibility to connections only"
+			});
+		}
+
 		// Parse JSON fields before returning
 		const parseJsonField = (field) => {
 			if (!field) return null;
@@ -558,7 +620,7 @@ export const getInvestorProfileController = async (req, res, next) => {
 			is_actively_investing: profile.is_actively_investing,
 		};
 
-		if (req.user && req.user.id === profile.user_id) {
+		if (isOwner) {
 			// owner gets full profile
 			const full = { ...profile };
 			for (const key of ["industries", "geography", "investment_stage", "investment_structure", 

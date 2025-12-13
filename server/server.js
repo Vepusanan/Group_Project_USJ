@@ -12,6 +12,7 @@ import profilesRoutes from "./routes/profiles.js";
 import investorRoutes from "./routes/investors.js";
 import messagesRoutes from "./routes/messages.js";
 import uploadsRoutes from "./routes/uploads.js";
+import settingsRoutes from "./routes/settings.js";
 import cron from "node-cron";
 import { deleteStaleUnverifiedUsers } from "./utils/cleanup.js";
 import path from "path";
@@ -62,6 +63,7 @@ app.get("/api/health", async (req, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/account", accountRoutes);
+app.use("/api/settings", settingsRoutes);
 app.use("/api/startups/profile", profilesRoutes);
 app.use("/api/investors/profile", investorRoutes);
 app.use("/api/uploads", uploadsRoutes);
