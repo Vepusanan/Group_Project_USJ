@@ -7,6 +7,7 @@ import { Server } from "socket.io";
 import { initSocketServer } from "./socketHandler.js";
 import pool from "./config/database.js";
 import authRoutes from "./routes/auth.js";
+import accountRoutes from "./routes/account.js";
 import profilesRoutes from "./routes/profiles.js";
 import investorRoutes from "./routes/investors.js";
 import messagesRoutes from "./routes/messages.js";
@@ -60,6 +61,7 @@ app.get("/api/health", async (req, res) => {
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/account", accountRoutes);
 app.use("/api/startups/profile", profilesRoutes);
 app.use("/api/investors/profile", investorRoutes);
 app.use("/api/uploads", uploadsRoutes);
