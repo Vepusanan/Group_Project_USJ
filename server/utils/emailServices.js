@@ -147,3 +147,37 @@ export const sendAccountDeletionConfirmationEmail = async (email, deletionDate) 
         return false;
     }
 };
+
+export const sendDataExportEmail = async (email, token) => {
+    const downloadLink = `${process.env.BASE_URL}/api/account/export/download?token=${token}`;
+
+    const mailOptions = {
+        from: `"Startup Connect" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Your Data Export is Ready',
+        html: `
+            <h2>Data Export Ready</h2>
+            <p>Your requested data export is ready for download.</p>
+            <p>Click the link below to download your data:</p>
+            <p><a href="${downloadLink}">Download My Data</a></p>
+            <p><strong>Important:</strong> This link will expire in 24 hours for security reasons.</p>
+            <p>The export includes:</p>
+            <ul>
+                <li>Your profile information</li>
+                <li>Your connections</li>
+                <li>Your messages and conversations</li>
+                <li>Your privacy and notification settings</li>
+            </ul>
+            <p>If you did not request this export, please ignore this email or contact support if you have concerns.</p>
+        `,
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Data export email sent to ${email}`);
+        return true;
+    } catch (error) {
+        console.error('Error sending data export email:', error);
+        return false;
+    }
+};

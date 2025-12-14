@@ -31,3 +31,32 @@ export const deleteStaleUnverifiedUsers = async () => {
     throw error;
   }
 };
+
+/**
+ * Deletes expired data export tokens (older than expiration time).
+ */
+export const deleteExpiredExportTokens = async () => {
+  try {
+    const result = await pool.query(
+      `DELETE FROM data_export_tokens
+       WHERE expires_at < NOW()
+       RETURNING id, user_id, created_at;`
+    );
+
+    if (result.rowCount > 0) {
+      console.log(
+        `🧹 Cleanup Job: Successfully deleted ${result.rowCount} expired export tokens.`
+      );
+    } else {
+      console.log("🧹 Cleanup Job: No expired export tokens found to delete.");
+    }
+    return result.rowCount;
+  } catch (error) {
+    console.error("❌ Cleanup Job Error (Export Tokens):", error);
+    // Table might not exist yet, which is okay
+    if (error.code !== '42P01') { // PostgreSQL error code for "undefined table"
+      throw error;
+    }
+    return 0;
+  }
+};

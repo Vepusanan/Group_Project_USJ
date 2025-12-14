@@ -14,7 +14,7 @@ import messagesRoutes from "./routes/messages.js";
 import uploadsRoutes from "./routes/uploads.js";
 import settingsRoutes from "./routes/settings.js";
 import cron from "node-cron";
-import { deleteStaleUnverifiedUsers } from "./utils/cleanup.js";
+import { deleteStaleUnverifiedUsers, deleteExpiredExportTokens } from "./utils/cleanup.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -107,10 +107,11 @@ cron.schedule(
   "0 2 * * *",
   async () => {
     console.log(
-      "⏳ Starting scheduled cleanup job (deleting stale unverified accounts)..."
+      "⏳ Starting scheduled cleanup job (deleting stale unverified accounts and expired export tokens)..."
     );
     try {
       await deleteStaleUnverifiedUsers();
+      await deleteExpiredExportTokens();
       console.log("✅ Scheduled cleanup job finished successfully.");
     } catch (error) {
       console.error("❌ Scheduled cleanup job failed.");

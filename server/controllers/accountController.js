@@ -6,6 +6,7 @@ import {
   sendEmailChangeNotificationToOldEmail,
   sendPasswordChangeConfirmationEmail,
   sendAccountDeletionConfirmationEmail,
+  sendDataExportEmail,
 } from "../utils/emailServices.js";
 
 // Helper function to generate a secure token
@@ -351,6 +352,234 @@ export const deleteAccount = async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Server error while processing account deletion",
+    });
+  }
+};
+
+/**
+ * Export User Data
+ * GET /api/account/export
+ * 
+ * Process:
+ * 1. Collect all user data (profile, connections, messages)
+ * 2. Generate JSON file with data
+ * 3. Store export token with 24-hour expiration
+ * 4. Send email with download link
+ */
+export const exportUserData = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+
+    // 1. Collect user data
+    const userData = {};
+
+    // Get basic user information
+    const userResult = await pool.query(
+      `SELECT id, email, user_type, full_name, email_verified, created_at, updated_at
+       FROM users WHERE id = $1`,
+      [userId]
+    );
+    userData.user = userResult.rows[0];
+
+    // Get startup profile if exists
+    const startupProfileResult = await pool.query(
+      "SELECT * FROM startup_profiles WHERE user_id = $1",
+      [userId]
+    );
+    if (startupProfileResult.rows.length > 0) {
+      userData.startup_profile = startupProfileResult.rows[0];
+    }
+
+    // Get investor profile if exists
+    const investorProfileResult = await pool.query(
+      "SELECT * FROM investor_profiles WHERE user_id = $1",
+      [userId]
+    );
+    if (investorProfileResult.rows.length > 0) {
+      userData.investor_profile = investorProfileResult.rows[0];
+    }
+
+    // Get connections (if connections table exists)
+    try {
+      const connectionsResult = await pool.query(
+        `SELECT * FROM connections 
+         WHERE user_id = $1 OR connected_user_id = $1`,
+        [userId]
+      );
+      userData.connections = connectionsResult.rows;
+    } catch (error) {
+      // Table might not exist yet
+      userData.connections = [];
+    }
+
+    // Get conversations and messages
+    try {
+      const conversationsResult = await pool.query(
+        `SELECT * FROM conversations 
+         WHERE user1_id = $1 OR user2_id = $1`,
+        [userId]
+      );
+      
+      if (conversationsResult.rows.length > 0) {
+        const conversationIds = conversationsResult.rows.map(c => c.id);
+        
+        const messagesResult = await pool.query(
+          `SELECT * FROM messages 
+           WHERE conversation_id = ANY($1)
+           ORDER BY created_at ASC`,
+          [conversationIds]
+        );
+        
+        userData.conversations = conversationsResult.rows;
+        userData.messages = messagesResult.rows;
+      } else {
+        userData.conversations = [];
+        userData.messages = [];
+      }
+    } catch (error) {
+      // Tables might not exist yet
+      userData.conversations = [];
+      userData.messages = [];
+    }
+
+    // Get privacy settings
+    try {
+      const privacyResult = await pool.query(
+        "SELECT * FROM privacy_settings WHERE user_id = $1",
+        [userId]
+      );
+      if (privacyResult.rows.length > 0) {
+        userData.privacy_settings = privacyResult.rows[0];
+      }
+    } catch (error) {
+      // Table might not exist yet
+      userData.privacy_settings = null;
+    }
+
+    // Get notification settings
+    try {
+      const notificationResult = await pool.query(
+        "SELECT * FROM notification_settings WHERE user_id = $1",
+        [userId]
+      );
+      if (notificationResult.rows.length > 0) {
+        userData.notification_settings = notificationResult.rows[0];
+      }
+    } catch (error) {
+      // Table might not exist yet
+      userData.notification_settings = null;
+    }
+
+    // 2. Generate export token
+    const exportToken = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+
+    // 3. Store export data and token in database
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS data_export_tokens (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token VARCHAR(255) NOT NULL UNIQUE,
+        export_data JSONB NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        downloaded BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+    );
+
+    await pool.query(
+      `INSERT INTO data_export_tokens (user_id, token, export_data, expires_at)
+       VALUES ($1, $2, $3, $4)`,
+      [userId, exportToken, JSON.stringify(userData), expiresAt]
+    );
+
+    // 4. Send email with download link (non-blocking)
+    try {
+      await sendDataExportEmail(userEmail, exportToken);
+    } catch (emailError) {
+      console.error("Failed to send data export email:", emailError.message);
+      // Continue anyway - user can still access via API if needed
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Data export initiated. Check your email for the download link.",
+      expiresAt: expiresAt.toISOString(),
+    });
+  } catch (error) {
+    console.error("Export user data error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while exporting user data",
+    });
+  }
+};
+
+/**
+ * Download Exported Data
+ * GET /api/account/export/download?token=xxx
+ * 
+ * Process:
+ * 1. Validate token
+ * 2. Check expiration
+ * 3. Return JSON file
+ * 4. Mark as downloaded
+ */
+export const downloadExportedData = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: "Download token is required",
+      });
+    }
+
+    // 1. Find valid token
+    const tokenResult = await pool.query(
+      `SELECT user_id, export_data, expires_at, downloaded 
+       FROM data_export_tokens
+       WHERE token = $1`,
+      [token]
+    );
+
+    if (tokenResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Invalid or expired download link",
+      });
+    }
+
+    const tokenData = tokenResult.rows[0];
+
+    // 2. Check expiration
+    if (new Date(tokenData.expires_at) < new Date()) {
+      return res.status(410).json({
+        success: false,
+        error: "Download link has expired. Please request a new data export.",
+      });
+    }
+
+    // 3. Mark as downloaded
+    await pool.query(
+      "UPDATE data_export_tokens SET downloaded = true WHERE token = $1",
+      [token]
+    );
+
+    // 4. Send JSON file
+    const userData = tokenData.export_data;
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="user-data-export-${timestamp}.json"`);
+    res.status(200).json(userData);
+  } catch (error) {
+    console.error("Download exported data error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while downloading exported data",
     });
   }
 };
