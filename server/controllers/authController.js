@@ -74,7 +74,12 @@ export const register = async (req, res) => {
 // User Login
 export const login =  async (req, res) => {
   try {
+    if (!req.body) {
+      return res.status(400).json({ error: "Request body missing" });
+    }
+
     const { email, password } = req.body;
+
     
     // Validation
     if (!email || !password) {

@@ -1,13 +1,21 @@
 import express from 'express';
 import { verifyToken } from '../middleware/auth.js';
-import { sendRequest, updateStatus, getConnections } from '../controllers/connectionsController.js';
+import {
+    requestConnection,
+    acceptConnection,
+    declineConnection,
+    getConnections,
+    getNotifications
+} from "../controllers/connectionController.js";
 
 const router = express.Router();
 
 router.use(verifyToken);
 
-router.post('/request', sendRequest);
-router.put('/status', updateStatus);
-router.get('/', getConnections);
+router.post("/", requestConnection);
+router.put("/:id/accept", acceptConnection);
+router.put("/:id/decline", declineConnection);
+router.get("/", getConnections);
+router.get("/notifications/:userId", getNotifications);
 
 export default router;
