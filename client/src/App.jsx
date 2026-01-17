@@ -11,6 +11,8 @@ import RegistrationPage from './pages/RegistrationPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import EmailVerificationPage from './pages/EmailVerificationPage';
+import OnboardingPage from './pages/OnboardingPage';
+import DashboardPage from './pages/DashboardPage';
 import Header from './components/common/Header.jsx';
 import Footer from './components/common/Footer';
 import { useAuth } from './hooks/useAuth';
@@ -40,7 +42,16 @@ const PublicRoute = ({ children }) => {
     );
   }
   
-  return (!isAuthenticated || !user) ? children : <Navigate to="/" replace />;
+  // If authenticated, redirect based on user type
+  if (isAuthenticated && user) {
+    if (user.user_type === 'startup') {
+      return <Navigate to="/onboarding" replace />;
+    } else {
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+  
+  return children;
 };
 
 const AppContent = () => {
@@ -92,6 +103,20 @@ const AppContent = () => {
               <EmailVerificationPage />
             </AuthLayout>
           </PublicRoute>
+        } />
+        
+        {/* Onboarding page with protected route */}
+        <Route path="/onboarding" element={
+          <ProtectedRoute>
+            <OnboardingPage />
+          </ProtectedRoute>
+        } />
+        
+        {/* Dashboard page with protected route */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
         } />
         
         {/* 404 page */}

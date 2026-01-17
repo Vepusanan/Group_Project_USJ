@@ -103,6 +103,10 @@ const authService = {
         if (response.data.refreshToken) {
           localStorage.setItem('refreshToken', response.data.refreshToken);
         }
+        // Store user data
+        if (response.data.user) {
+          localStorage.setItem('userData', JSON.stringify(response.data.user));
+        }
         
         return {
           success: true,
@@ -301,6 +305,7 @@ const authService = {
     } finally {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userData');
     }
     
     return { success: true };
@@ -314,6 +319,7 @@ const authService = {
       if (response.data.success) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userData');
         
         return {
           success: true,

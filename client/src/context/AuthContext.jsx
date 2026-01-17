@@ -130,22 +130,29 @@ export const AuthProvider = ({ children }) => {
       try {
         const accessToken = localStorage.getItem('accessToken');
         const refreshToken = localStorage.getItem('refreshToken');
+        const userDataStr = localStorage.getItem('userData');
         
-        if (accessToken && refreshToken) {
+        if (accessToken && refreshToken && userDataStr) {
           try {
-            const userData = await apiService.getCurrentUser();
+            // Parse stored user data
+            const userData = JSON.parse(userDataStr);
             dispatch({ 
               type: AUTH_ACTIONS.SET_USER, 
               payload: userData 
             });
             dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
           } catch (error) {
-            console.error('Failed to fetch user data:', error);
+            console.error('Failed to parse user data:', error);
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userData');
             dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
           }
         } else {
+          // Clear all auth data if any piece is missing
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('userData');
           dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
         }
       } catch (error) {
@@ -153,6 +160,7 @@ export const AuthProvider = ({ children }) => {
         dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userData');
       }
     };
 
@@ -180,7 +188,7 @@ export const AuthProvider = ({ children }) => {
           refreshToken: response.refreshToken,
         },
       });
-      return { success: true };
+      return { success: true, user: response.user };
     } catch (error) {
       const errorMsg = error?.message || 'Login failed';
       dispatch({

@@ -4,7 +4,7 @@ import Button from '../components/common/Button';
 import { Link } from 'react-router-dom';
 
 const HomePage = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
@@ -60,7 +60,7 @@ const HomePage = () => {
             
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              {isAuthenticated ? (
+              {(isAuthenticated && user) ? (
                 <Link to="/dashboard">
                   <Button 
                     variant="gradient-border" 
@@ -74,10 +74,7 @@ const HomePage = () => {
                 <>
                   {/* Large SIGNUP Button */}
                   <Link to="/signup">
-                    <button 
-                      type="button"
-                      className="inline-flex items-center justify-center font-medium transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed relative bg-transparent text-white overflow-hidden group px-6 py-3 text-lg h-14 rounded-lg uppercase font-bold tracking-wider w-[150px] mr-4"
-                    >
+                    <div className="inline-flex items-center justify-center font-medium transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed relative bg-transparent text-white overflow-hidden group px-6 py-3 text-lg h-14 rounded-lg uppercase font-bold tracking-wider w-[150px] mr-4 cursor-pointer">
                       {/* Solid gradient layers */}
                       <span className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-[2px] group-hover:blur-[3px] transition-all rounded-lg"></span>
                       <span className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-100 group-hover:opacity-90 transition-opacity shadow-lg shadow-blue-500/20 rounded-lg"></span>
@@ -85,7 +82,7 @@ const HomePage = () => {
                       
                       {/* Button text */}
                       <span className="relative z-10">SIGNUP</span>
-                    </button>
+                    </div>
                   </Link>
                   
                   {/* LOGIN Button  */}

@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import profileService from '../../services/profileService';
 import Input from '../common/Input';
 import PasswordInput from '../common/PasswordInput';
 import Checkbox from '../common/Checkbox';
@@ -47,7 +48,14 @@ const LoginForm = () => {
         const result = await login(formData.email, formData.password, formData.rememberMe);
 
         if (result.success) {
-          navigate('/dashboard');
+          // For startup users, check if profile exists
+          if (result.user?.user_type === 'startup') {
+            // Redirect to onboarding by default
+            navigate('/onboarding');
+          } else {
+            // For investor users, go to dashboard
+            navigate('/onboarding');
+          }
         } else {
           setErrors({
             general: result.error || 'Login failed. Please try again.'
