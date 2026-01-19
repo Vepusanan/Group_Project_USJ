@@ -1,8 +1,8 @@
-import React from 'react';
+import React from "react";
 
 const Footer = () => {
   return (
-    <footer className="relative overflow-hidden mt-auto text-white w-full">
+    <footer className="relative overflow-hidden mt-auto text-white w-full bg-[linear-gradient(rgba(0,0,0,0.4),rgba(0,0,0,0.4)),url('../../public/images/footer/footer-image.png')] bg-no-repeat bg-cover bg-top">
       <div className="relative w-full px-4 sm:px-6 lg:px-8 py-10 md:py-12">
         {/* TOP ROW */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-8 items-start max-w-7xl mx-auto">
@@ -22,29 +22,91 @@ const Footer = () => {
               </span>
             </div>
             <p className="text-sm max-w-xs text-gray-300">
-              Connect Startups with the Right<br />Investors.
+              Connect Startups with the Right
+              <br />
+              Investors.
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-sm font-semibold mb-4 text-gray-200">QuickLinks</h4>
+            <h4 className="text-sm font-semibold mb-4 text-gray-200">
+              QuickLinks
+            </h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="/about" className="text-gray-400 hover:text-white transition">About Us</a></li>
-              <li><a href="/services" className="text-gray-400 hover:text-white transition">Our Services</a></li>
-              <li><a href="/community" className="text-gray-400 hover:text-white transition">Community</a></li>
-              <li><a href="/faq" className="text-gray-400 hover:text-white transition">FAQ</a></li>
+              <li>
+                <a
+                  href="/about"
+                  className="text-gray-400 hover:text-white transition"
+                >
+                  About Us
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/services"
+                  className="text-gray-400 hover:text-white transition"
+                >
+                  Our Services
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/community"
+                  className="text-gray-400 hover:text-white transition"
+                >
+                  Community
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/faq"
+                  className="text-gray-400 hover:text-white transition"
+                >
+                  FAQ
+                </a>
+              </li>
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <h4 className="text-sm font-semibold mb-4 text-gray-200">Company</h4>
+            <h4 className="text-sm font-semibold mb-4 text-gray-200">
+              Company
+            </h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="/about" className="text-gray-400 hover:text-white transition">About Us</a></li>
-              <li><a href="/contact" className="text-gray-400 hover:text-white transition">Contact Us</a></li>
-              <li><a href="/career-tips" className="text-gray-400 hover:text-white transition">Career Tips</a></li>
-              <li><a href="/careers" className="text-gray-400 hover:text-white transition">Career</a></li>
+              <li>
+                <a
+                  href="/about"
+                  className="text-gray-400 hover:text-white transition"
+                >
+                  About Us
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/contact"
+                  className="text-gray-400 hover:text-white transition"
+                >
+                  Contact Us
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/career-tips"
+                  className="text-gray-400 hover:text-white transition"
+                >
+                  Career Tips
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/careers"
+                  className="text-gray-400 hover:text-white transition"
+                >
+                  Career
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -65,13 +127,14 @@ const Footer = () => {
               <button
                 className="flex items-center justify-center text-sm font-medium rounded-full text-white hover:opacity-90 transition-opacity flex-shrink-0"
                 style={{
-                  width: 'auto',
-                  minWidth: '100px',
-                  height: '46px',
-                  padding: '12px 24px',
-                  border: '1px solid rgba(119, 103, 159, 0.5)',
-                  boxShadow: '0px 0px 15px rgba(119, 103, 159, 0.3)',
-                  background: 'linear-gradient(180deg, rgba(131, 110, 198, 0.3) 0%, rgba(20, 15, 42, 0.8) 100%)'
+                  width: "auto",
+                  minWidth: "100px",
+                  height: "46px",
+                  padding: "12px 24px",
+                  border: "1px solid rgba(119, 103, 159, 0.5)",
+                  boxShadow: "0px 0px 15px rgba(119, 103, 159, 0.3)",
+                  background:
+                    "linear-gradient(180deg, rgba(131, 110, 198, 0.3) 0%, rgba(20, 15, 42, 0.8) 100%)",
                 }}
               >
                 Join Us
@@ -82,12 +145,22 @@ const Footer = () => {
 
         {/* BOTTOM */}
         <div className="mt-12 pt-6 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between text-sm max-w-7xl mx-auto">
-          <p className="text-gray-400">© {new Date().getFullYear()} StartHub Capital. All rights reserved.</p>
+          <p className="text-gray-400">
+            © {new Date().getFullYear()} StartHub Capital. All rights reserved.
+          </p>
           <div className="flex space-x-5 mt-4 md:mt-0">
-            <a href="#" className="text-gray-400 hover:text-white transition">Twitter</a>
-            <a href="#" className="text-gray-400 hover:text-white transition">LinkedIn</a>
-            <a href="#" className="text-gray-400 hover:text-white transition">Instagram</a>
-            <a href="#" className="text-gray-400 hover:text-white transition">Facebook</a>
+            <a href="#" className="text-gray-400 hover:text-white transition">
+              Twitter
+            </a>
+            <a href="#" className="text-gray-400 hover:text-white transition">
+              LinkedIn
+            </a>
+            <a href="#" className="text-gray-400 hover:text-white transition">
+              Instagram
+            </a>
+            <a href="#" className="text-gray-400 hover:text-white transition">
+              Facebook
+            </a>
           </div>
         </div>
       </div>
