@@ -1,6 +1,7 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 // Create axios instance
 const api = axios.create({
@@ -10,13 +11,13 @@ const api = axios.create({
 // Add token to requests
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Handle 401 responses
@@ -24,12 +25,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      window.location.href = '/login';
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 /**
@@ -43,9 +44,9 @@ export const profileService = {
    */
   createProfile: async (formData) => {
     try {
-      const response = await api.post('/startups', formData, {
+      const response = await api.post("/startups/profile", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
       return {
@@ -53,10 +54,10 @@ export const profileService = {
         data: response.data,
       };
     } catch (error) {
-      console.error('Create profile error:', error);
+      console.error("Create profile error:", error);
       return {
         success: false,
-        error: error.response?.data?.error || 'Failed to create profile',
+        error: error.response?.data?.error || "Failed to create profile",
       };
     }
   },
@@ -71,7 +72,7 @@ export const profileService = {
     try {
       const response = await api.put(`/startups/${profileId}`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
       return {
@@ -79,10 +80,10 @@ export const profileService = {
         data: response.data,
       };
     } catch (error) {
-      console.error('Update profile error:', error);
+      console.error("Update profile error:", error);
       return {
         success: false,
-        error: error.response?.data?.error || 'Failed to update profile',
+        error: error.response?.data?.error || "Failed to update profile",
       };
     }
   },
@@ -93,7 +94,7 @@ export const profileService = {
    */
   getMyProfile: async () => {
     try {
-      const response = await api.get('/startups/me');
+      const response = await api.get("/startups/me");
       return {
         success: true,
         data: response.data,
@@ -106,10 +107,10 @@ export const profileService = {
           data: null,
         };
       }
-      console.error('Get my profile error:', error);
+      console.error("Get my profile error:", error);
       return {
         success: false,
-        error: error.response?.data?.error || 'Failed to get profile',
+        error: error.response?.data?.error || "Failed to get profile",
       };
     }
   },
@@ -120,16 +121,16 @@ export const profileService = {
    */
   getProfileCompletion: async () => {
     try {
-      const response = await api.get('/startups/completion');
+      const response = await api.get("/startups/completion");
       return {
         success: true,
         data: response.data,
       };
     } catch (error) {
-      console.error('Get profile completion error:', error);
+      console.error("Get profile completion error:", error);
       return {
         success: false,
-        error: error.response?.data?.error || 'Failed to get completion status',
+        error: error.response?.data?.error || "Failed to get completion status",
       };
     }
   },
@@ -142,20 +143,24 @@ export const profileService = {
    */
   uploadDocuments: async (profileId, formData) => {
     try {
-      const response = await api.post(`/startups/${profileId}/documents`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+      const response = await api.post(
+        `/startups/${profileId}/documents`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         },
-      });
+      );
       return {
         success: true,
         data: response.data,
       };
     } catch (error) {
-      console.error('Upload documents error:', error);
+      console.error("Upload documents error:", error);
       return {
         success: false,
-        error: error.response?.data?.error || 'Failed to upload documents',
+        error: error.response?.data?.error || "Failed to upload documents",
       };
     }
   },
@@ -168,16 +173,18 @@ export const profileService = {
    */
   deleteDocument: async (profileId, documentIndex) => {
     try {
-      const response = await api.delete(`/startups/${profileId}/documents/${documentIndex}`);
+      const response = await api.delete(
+        `/startups/${profileId}/documents/${documentIndex}`,
+      );
       return {
         success: true,
         data: response.data,
       };
     } catch (error) {
-      console.error('Delete document error:', error);
+      console.error("Delete document error:", error);
       return {
         success: false,
-        error: error.response?.data?.error || 'Failed to delete document',
+        error: error.response?.data?.error || "Failed to delete document",
       };
     }
   },
