@@ -799,3 +799,16 @@ button:focus {
   outline: 1px solid blue;
 }
 
+/* Page hero background used below the header on most pages */
+.page-hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  min-height: 800px;
+  background: url("/images/lightRay-top/Noise & Texture.png") center top / cover no-repeat;
+  pointer-events: none;
+  z-index: 0;
+}
+

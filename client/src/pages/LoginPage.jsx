@@ -5,7 +5,7 @@ import Button from '../components/common/Button';
 
 const LoginPage = () => {
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto ">
       <div className="bg-white/4 backdrop-blur-lg rounded-2xl p-8 md:p-10 border border-gray-700/50 shadow-2xl mt-10">
         <h1 className="text-3xl font-bold text-white text-center mb-8">
           Sign in
