@@ -64,7 +64,7 @@ const AppContent = () => {
   const location = useLocation();
 
   // Define routes where Header should be hidden
-  const hideHeaderRoutes = ["/onboarding", "/dashboard", "/"];
+  const hideHeaderRoutes = ["/dashboard", "/"];
   const showBgRoutes = [
     "/login",
     "/signup",
