@@ -8,12 +8,18 @@ const HomePage = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/");
+    try {
+      await logout();
+    } catch (error) {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("userData");
+    }
+    navigate("/login");
   };
 
   return (
-    <div className="min-h-screen bg-black overflow-hidden bg-[url('../../public/images/hero-background/hero-background.png')] bg-cover bg-center relative z-10  ">
+    <div className="min-h-screen bg-black overflow-hidden bg-[url('../../public/images/hero-background/hero-background.png')] bg-cover bg-center relative z-10">
       {/* Header Section */}
       <div className="relative w-full max-w-full flex justify-between items-center px-6 py-4 md:px-8 lg:px-12 xl:px-16 mb-4">
         {/* Logo Section */}
@@ -83,13 +89,6 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Background Gradients */}
-      {/* <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900/20 via-black to-black"></div>
-        <div className="absolute top-20 left-10 w-[600px] h-[600px] bg-gradient-to-br from-purple-900/10 to-blue-900/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-[700px] h-[700px] bg-gradient-to-tr from-violet-900/10 to-pink-900/10 rounded-full blur-3xl"></div>
-      </div> */}
-
       {/* Main Content */}
       <div className="relative z-10 container mx-auto px-6 md:px-10 lg:px-20 py-8">
         <div className="h-4 md:h-8 lg:h-12"></div>
@@ -97,7 +96,6 @@ const HomePage = () => {
         {/* Hero Section */}
         <div className="flex flex-col lg:flex-row items-center justify-between min-h-[70vh]">
           <div className="lg:w-1/2 lg:pr-12 text-center lg:text-left">
-            {/* Main Heading */}
             <h1 className="text-5xl md:text-6xl lg:text-[50px] font-bold leading-[100%] tracking-[-4%] mb-8">
               <span className="block text-white mb-4">Connect Startups</span>
               <span
@@ -114,7 +112,6 @@ const HomePage = () => {
               </span>
             </h1>
 
-            {/* STARTHUB CAPITAL Subtitle */}
             <div
               className="text-[40px] font-normal leading-[100%] tracking-[-4%] mb-10"
               style={{
@@ -129,12 +126,9 @@ const HomePage = () => {
               STARTHUB CAPITAL
             </div>
 
-            {/* Description Paragraph */}
             <p
               className="text-gray-300 text-lg leading-relaxed mb-10 max-w-[468px] mx-auto lg:mx-0"
-              style={{
-                textShadow: "0px 4px 4px rgba(0, 0, 0, 0.25)",
-              }}
+              style={{ textShadow: "0px 4px 4px rgba(0, 0, 0, 0.25)" }}
             >
               A smart matching platform that helps founders showcase their
               ideas, connect with verified investors, and secure funding faster,
@@ -142,34 +136,31 @@ const HomePage = () => {
               startups that fit their goals.
             </p>
 
-            {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               {isAuthenticated && user ? (
                 <Link to="/dashboard">
                   <Button
                     variant="gradient-border"
                     size="lg"
-                    className="w-[180px]"
+                    className="w-[220px]"
                   >
                     Go to Dashboard
                   </Button>
                 </Link>
               ) : (
                 <>
-                  {/* Large SIGNUP Button */}
                   <Link to="/signup">
-                    <div className="inline-flex items-center justify-center font-medium transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed relative bg-transparent text-white overflow-hidden group px-6 py-3 text-lg h-14 rounded-lg uppercase font-bold tracking-wider w-[150px] mr-4 cursor-pointer">
-                      {/* Solid gradient layers */}
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center font-medium transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed relative bg-transparent text-white overflow-hidden group px-6 py-3 text-lg h-14 rounded-lg uppercase font-bold tracking-wider w-[150px] mr-4"
+                    >
                       <span className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-[2px] group-hover:blur-[3px] transition-all rounded-lg"></span>
                       <span className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-100 group-hover:opacity-90 transition-opacity shadow-lg shadow-blue-500/20 rounded-lg"></span>
                       <span className="absolute inset-[2px] bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 transition-colors group-hover:from-blue-500 group-hover:via-purple-500 group-hover:to-pink-500 rounded-lg"></span>
-
-                      {/* Button text */}
                       <span className="relative z-10">SIGNUP</span>
-                    </div>
+                    </button>
                   </Link>
 
-                  {/* LOGIN Button  */}
                   <Link to="/login">
                     <Button
                       variant="gradient-border"
@@ -177,7 +168,7 @@ const HomePage = () => {
                       className="w-[150px] flex items-center justify-center gap-2"
                     >
                       LOGIN
-                      <span className="text-lg font-bold">→</span>
+                      <span className="text-lg font-bold">{"->"}</span>
                     </Button>
                   </Link>
                 </>
@@ -185,7 +176,6 @@ const HomePage = () => {
             </div>
           </div>
 
-          {/* Rocket Image Section */}
           <div className="lg:w-1/2 lg:pl-12 mt-12 lg:mt-0 flex justify-center">
             <div className="relative w-full max-w-md">
               <div className="relative animate-float">
@@ -195,7 +185,6 @@ const HomePage = () => {
                   className="w-full h-auto max-w-md mx-auto"
                 />
 
-                {/* Animated Flame Effect */}
                 <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-32 h-32">
                   <div className="absolute inset-0 bg-gradient-to-t from-blue-500/70 via-cyan-400/60 to-transparent rounded-full blur-xl opacity-70 animate-pulse"></div>
                   <div

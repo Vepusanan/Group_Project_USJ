@@ -11,6 +11,8 @@ import accountRoutes from "./routes/account.js";
 import profilesRoutes from "./routes/profiles.js";
 import investorRoutes from "./routes/investors.js";
 import messagesRoutes from "./routes/messages.js";
+import searchRoutes from "./routes/search.js";
+import investorSearchRoutes from "./routes/investorSearch.js";
 import uploadsRoutes from "./routes/uploads.js";
 import settingsRoutes from "./routes/settings.js";
 import cron from "node-cron";
@@ -66,9 +68,10 @@ app.use("/api/account", accountRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/startups/profile", profilesRoutes);
 app.use("/api/investors/profile", investorRoutes);
+app.use("/api/investors", investorSearchRoutes);
 app.use("/api/uploads", uploadsRoutes);
 app.use("/api/messages", messagesRoutes);
-// app.use("/api/search", searchRoutes);
+app.use("/api/startups", searchRoutes);
 // app.use("/api/connections", connectionsRoutes);
 
 // ----------------------------------------------------
@@ -107,7 +110,7 @@ cron.schedule(
   "0 2 * * *",
   async () => {
     console.log(
-      "⏳ Starting scheduled cleanup job (deleting stale unverified accounts)..."
+      "⏳ Starting scheduled cleanup job (deleting stale unverified accounts)...",
     );
     try {
       await deleteStaleUnverifiedUsers();
@@ -119,10 +122,23 @@ cron.schedule(
   {
     scheduled: true,
     timezone: "Asia/Colombo", // Set the timezone appropriate for your deployment environment
-  }
+  },
 );
 
 // Start the server using the HTTP server instance for Socket.io integration
+httpServer.on("error", (error) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(`❌ Port ${PORT} is already in use.`);
+    console.error(
+      "Stop the existing server process or run with a different PORT (example: PORT=5001).",
+    );
+    process.exit(1);
+  }
+
+  console.error("❌ Failed to start server:", error.message);
+  process.exit(1);
+});
+
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV}`);

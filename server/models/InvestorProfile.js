@@ -46,6 +46,11 @@ export class InvestorProfile {
     this.preferred_contact_method = data.preferred_contact_method;
     this.is_actively_investing = data.is_actively_investing;
     this.profile_visibility = data.profile_visibility;
+    // Live DB columns (may differ from migration/old code column names)
+    this.location = data.location;
+    this.experience_years = data.experience_years;
+    this.min_investment_size = data.min_investment_size;
+    this.max_investment_size = data.max_investment_size;
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
   }
@@ -57,21 +62,32 @@ export class InvestorProfile {
   getPublicFields() {
     return {
       id: this.id,
+      user_id: this.user_id,
       name: this.name,
       firm_name: this.firm_name,
       photo_url: this.photo_url,
+      // Location: live DB uses single 'location' field; old schema used city + country
+      location:
+        this.location ||
+        [this.city, this.country].filter(Boolean).join(", ") ||
+        null,
       city: this.city,
       country: this.country,
       website: this.website,
       linkedin: this.linkedin,
       investor_type: this.investor_type,
-      years_of_experience: this.years_of_experience,
+      // Experience: live DB uses 'experience_years'; old schema used 'years_of_experience'
+      experience_years:
+        this.experience_years ?? this.years_of_experience ?? null,
       investment_thesis: this.investment_thesis,
       industries: this.industries,
       geography: this.geography,
       investment_stage: this.investment_stage,
-      investment_size_min: this.investment_size_min,
-      investment_size_max: this.investment_size_max,
+      // Investment size: live DB uses min/max_investment_size; old schema used investment_size_min/max
+      min_investment_size:
+        this.min_investment_size ?? this.investment_size_min ?? null,
+      max_investment_size:
+        this.max_investment_size ?? this.investment_size_max ?? null,
       portfolio_companies: this.portfolio_companies,
       total_investments: this.total_investments,
       notable_achievements: this.notable_achievements,
@@ -79,6 +95,8 @@ export class InvestorProfile {
       network_resources: this.network_resources,
       social_media: this.social_media,
       is_actively_investing: this.is_actively_investing,
+      created_at: this.created_at,
+      updated_at: this.updated_at,
     };
   }
 
@@ -86,9 +104,20 @@ export class InvestorProfile {
    * Parse JSON fields from database strings
    * @param {Array} fields - Field names to parse
    */
-  parseJsonFields(fields = ["industries", "geography", "investment_stage", "investment_structure", "portfolio_companies", "notable_exits", "network_resources", "social_media"]) {
+  parseJsonFields(
+    fields = [
+      "industries",
+      "geography",
+      "investment_stage",
+      "investment_structure",
+      "portfolio_companies",
+      "notable_exits",
+      "network_resources",
+      "social_media",
+    ],
+  ) {
     for (const field of fields) {
-      if (this[field] && typeof this[field] === 'string') {
+      if (this[field] && typeof this[field] === "string") {
         try {
           this[field] = JSON.parse(this[field]);
         } catch (e) {
@@ -107,21 +136,51 @@ export class InvestorProfile {
     const fieldGroups = {
       required: {
         weight: 40,
-        fields: ['name', 'investor_type', 'investment_thesis', 'industries', 'geography', 'investment_stage']
+        fields: [
+          "name",
+          "investor_type",
+          "investment_thesis",
+          "industries",
+          "geography",
+          "investment_stage",
+        ],
       },
       important: {
         weight: 35,
-        fields: ['firm_name', 'city', 'country', 'investment_size_min', 'investment_size_max', 
-                 'linkedin', 'contact_email', 'background']
+        fields: [
+          "firm_name",
+          "city",
+          "country",
+          "investment_size_min",
+          "investment_size_max",
+          "linkedin",
+          "contact_email",
+          "background",
+        ],
       },
       optional: {
         weight: 25,
-        fields: ['photo_url', 'website', 'years_of_experience', 'investment_structure', 
-                 'follow_on_investment', 'investment_timeline', 'portfolio_companies', 
-                 'notable_exits', 'total_investments', 'investment_criteria', 'red_flags', 
-                 'ideal_founder_profile', 'notable_achievements', 'value_add', 
-                 'network_resources', 'social_media', 'contact_phone', 'preferred_contact_method']
-      }
+        fields: [
+          "photo_url",
+          "website",
+          "years_of_experience",
+          "investment_structure",
+          "follow_on_investment",
+          "investment_timeline",
+          "portfolio_companies",
+          "notable_exits",
+          "total_investments",
+          "investment_criteria",
+          "red_flags",
+          "ideal_founder_profile",
+          "notable_achievements",
+          "value_add",
+          "network_resources",
+          "social_media",
+          "contact_phone",
+          "preferred_contact_method",
+        ],
+      },
     };
 
     const incompleteSections = [];
@@ -133,21 +192,21 @@ export class InvestorProfile {
       let filledCount = 0;
 
       const missingFields = [];
-      
+
       for (const field of fields) {
         const value = this[field];
         let isFilled = false;
 
-        if (value !== null && value !== undefined && value !== '') {
-          if (typeof value === 'string') {
+        if (value !== null && value !== undefined && value !== "") {
+          if (typeof value === "string") {
             isFilled = value.trim().length > 0;
           } else if (Array.isArray(value)) {
             isFilled = value.length > 0;
-          } else if (typeof value === 'object') {
+          } else if (typeof value === "object") {
             isFilled = Object.keys(value).length > 0;
-          } else if (typeof value === 'boolean') {
+          } else if (typeof value === "boolean") {
             isFilled = true; // Booleans are always considered filled
-          } else if (typeof value === 'number') {
+          } else if (typeof value === "number") {
             isFilled = true; // Numbers are considered filled
           } else {
             isFilled = true;
@@ -168,7 +227,7 @@ export class InvestorProfile {
         incompleteSections.push({
           section: groupName,
           missingFields: missingFields,
-          completionRate: Math.round((filledCount / fields.length) * 100)
+          completionRate: Math.round((filledCount / fields.length) * 100),
         });
       }
     }
@@ -176,7 +235,7 @@ export class InvestorProfile {
     return {
       completionPercentage: Math.round(totalScore),
       incompleteSections: incompleteSections,
-      isComplete: Math.round(totalScore) === 100
+      isComplete: Math.round(totalScore) === 100,
     };
   }
 }
