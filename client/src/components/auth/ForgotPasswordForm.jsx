@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import Input from '../common/Input';
-import Button from '../common/Button';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import Input from "../common/Input";
+import Button from "../common/Button";
 
 const ForgotPasswordForm = () => {
   const { forgotPassword, error: authError, clearError } = useAuth();
 
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = () => {
     if (!email) {
-      setError('Email is required');
+      setError("Email is required");
       return false;
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Please enter a valid email');
+      setError("Please enter a valid email");
       return false;
     }
-    setError('');
+    setError("");
     return true;
   };
 
@@ -37,12 +37,14 @@ const ForgotPasswordForm = () => {
 
         if (result.success) {
           setSuccess(true);
-          setError('');
+          setError("");
         } else {
-          setError(result.error || 'Failed to send reset link. Please try again.');
+          setError(
+            result.error || "Failed to send reset link. Please try again.",
+          );
         }
       } catch (error) {
-        setError('An unexpected error occurred. Please try again.');
+        setError("An unexpected error occurred. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -64,9 +66,10 @@ const ForgotPasswordForm = () => {
       )}
 
       {success && (
-        <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-          <p className="text-green-400 text-sm text-center">
-            If a matching account exists, a password reset email has been sent.
+        <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <p className="text-blue-300 text-sm text-center">
+            Watch your email — a password reset link has been sent to your
+            inbox.
           </p>
         </div>
       )}
@@ -77,8 +80,18 @@ const ForgotPasswordForm = () => {
         </label>
         <div className="relative">
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
             </svg>
           </div>
           <Input
@@ -86,7 +99,7 @@ const ForgotPasswordForm = () => {
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
-              if (error) setError('');
+              if (error) setError("");
             }}
             className="pl-10"
           />
@@ -104,8 +117,6 @@ const ForgotPasswordForm = () => {
       >
         Request reset link
       </Button>
-
-      
     </form>
   );
 };

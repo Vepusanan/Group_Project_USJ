@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import Input from '../common/Input';
-import PasswordInput from '../common/PasswordInput';
-import Checkbox from '../common/Checkbox';
-import Button from '../common/Button';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import Input from "../common/Input";
+import PasswordInput from "../common/PasswordInput";
+import Checkbox from "../common/Checkbox";
+import Button from "../common/Button";
 
 const RegistrationForm = () => {
   const navigate = useNavigate();
   const { register, error: authError, clearError } = useAuth();
 
   const [formData, setFormData] = useState({
-    userType: '',
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    agreedToTerms: false
+    userType: "",
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    agreedToTerms: false,
   });
 
   const [errors, setErrors] = useState({});
@@ -26,35 +26,35 @@ const RegistrationForm = () => {
     const newErrors = {};
 
     if (!formData.userType) {
-      newErrors.userType = 'Please select your role';
+      newErrors.userType = "Please select your role";
     }
 
     if (!formData.fullName) {
-      newErrors.fullName = 'Full name is required';
+      newErrors.fullName = "Full name is required";
     } else if (formData.fullName.length < 2) {
-      newErrors.fullName = 'Name must be at least 2 characters';
+      newErrors.fullName = "Name must be at least 2 characters";
     }
 
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
+      newErrors.email = "Please enter a valid email";
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
     } else if (formData.password.length < 10) {
-      newErrors.password = 'Password must be at least 10 characters';
+      newErrors.password = "Password must be at least 10 characters";
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
+      newErrors.confirmPassword = "Please confirm your password";
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = "Passwords do not match";
     }
 
     if (!formData.agreedToTerms) {
-      newErrors.agreedToTerms = 'You must agree to the terms and conditions';
+      newErrors.agreedToTerms = "You must agree to the terms and conditions";
     }
 
     setErrors(newErrors);
@@ -73,19 +73,19 @@ const RegistrationForm = () => {
           userType: formData.userType,
           fullName: formData.fullName,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
         });
 
         if (result.success) {
-          navigate('/verify-email');
+          navigate("/verify-email");
         } else {
           setErrors({
-            general: result.error || 'Registration failed. Please try again.'
+            general: result.error || "Registration failed. Please try again.",
           });
         }
       } catch (error) {
         setErrors({
-          general: 'An unexpected error occurred. Please try again.'
+          general: "An unexpected error occurred. Please try again.",
         });
       } finally {
         setIsLoading(false);
@@ -94,15 +94,15 @@ const RegistrationForm = () => {
   };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
 
     if (errors[field]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [field]: null
+        [field]: null,
       }));
     }
   };
@@ -127,12 +127,18 @@ const RegistrationForm = () => {
         </label>
         <select
           value={formData.userType}
-          onChange={(e) => handleInputChange('userType', e.target.value)}
-          className={`w-full px-4 py-3 bg-white/5 border ${errors.userType ? 'border-red-500/50' : 'border-gray-600'} rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200`}
+          onChange={(e) => handleInputChange("userType", e.target.value)}
+          className={`w-full px-4 py-3 bg-white/5 border ${errors.userType ? "border-red-500/50" : "border-gray-600"} rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200`}
         >
-          <option value="" className="bg-gray-900">Select Your Role</option>
-          <option value="startup" className="bg-gray-900">Startup</option>
-          <option value="investor" className="bg-gray-900">Investor</option>
+          <option value="" className="bg-gray-900">
+            Select Your Role
+          </option>
+          <option value="startup" className="bg-gray-900">
+            Startup
+          </option>
+          <option value="investor" className="bg-gray-900">
+            Investor
+          </option>
         </select>
         {errors.userType && (
           <p className="mt-1 text-sm text-red-500">{errors.userType}</p>
@@ -143,7 +149,7 @@ const RegistrationForm = () => {
         label="Full Name / Company Name"
         type="text"
         value={formData.fullName}
-        onChange={(e) => handleInputChange('fullName', e.target.value)}
+        onChange={(e) => handleInputChange("fullName", e.target.value)}
         error={errors.fullName}
       />
 
@@ -151,7 +157,7 @@ const RegistrationForm = () => {
         label="Email"
         type="email"
         value={formData.email}
-        onChange={(e) => handleInputChange('email', e.target.value)}
+        onChange={(e) => handleInputChange("email", e.target.value)}
         error={errors.email}
       />
 
@@ -159,7 +165,7 @@ const RegistrationForm = () => {
         label="Password"
         value={formData.password}
         placeholder=""
-        onChange={(e) => handleInputChange('password', e.target.value)}
+        onChange={(e) => handleInputChange("password", e.target.value)}
         error={errors.password}
       />
 
@@ -167,29 +173,25 @@ const RegistrationForm = () => {
         label="Confirm Password"
         value={formData.confirmPassword}
         placeholder=""
-        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+        onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
         error={errors.confirmPassword}
       />
 
       <Checkbox
         label={
           <span className="text-gray-300 text-sm">
-            I agree to the <Link to="/terms" className="text-blue-400 hover:text-blue-300">Terms and Conditions</Link> 
+            I agree to the{" "}
+            <Link to="/terms" className="text-blue-400 hover:text-blue-300">
+              Terms and Conditions
+            </Link>
           </span>
         }
         checked={formData.agreedToTerms}
-        onChange={(checked) => handleInputChange('agreedToTerms', checked)}
+        onChange={(checked) => handleInputChange("agreedToTerms", checked)}
         error={errors.agreedToTerms}
       />
 
-    
-      <Button
-        type="submit"
-        isSignUp={true}  
-        fullWidth
-        loading={isLoading}
-        disabled={isLoading}
-      >
+      <Button type="submit" fullWidth loading={isLoading} disabled={isLoading}>
         Sign up
       </Button>
     </form>

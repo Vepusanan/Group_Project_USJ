@@ -1,6 +1,12 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import authService from '../services/authService';
-import { apiService } from '../services/apiService';
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  useCallback,
+} from "react";
+import authService from "../services/authService";
+import { apiService } from "../services/apiService";
 
 const initialState = {
   user: null,
@@ -12,41 +18,46 @@ const initialState = {
 };
 
 const AUTH_ACTIONS = {
-  LOGIN_START: 'LOGIN_START',
-  LOGIN_SUCCESS: 'LOGIN_SUCCESS',
-  LOGIN_FAILURE: 'LOGIN_FAILURE',
-  LOGOUT: 'LOGOUT',
-  REGISTER_START: 'REGISTER_START',
-  REGISTER_SUCCESS: 'REGISTER_SUCCESS',
-  REGISTER_FAILURE: 'REGISTER_FAILURE',
-  FORGOT_PASSWORD_START: 'FORGOT_PASSWORD_START',
-  FORGOT_PASSWORD_SUCCESS: 'FORGOT_PASSWORD_SUCCESS',
-  FORGOT_PASSWORD_FAILURE: 'FORGOT_PASSWORD_FAILURE',
-  RESET_PASSWORD_START: 'RESET_PASSWORD_START',
-  RESET_PASSWORD_SUCCESS: 'RESET_PASSWORD_SUCCESS',
-  RESET_PASSWORD_FAILURE: 'RESET_PASSWORD_FAILURE',
-  VERIFY_EMAIL_START: 'VERIFY_EMAIL_START',
-  VERIFY_EMAIL_SUCCESS: 'VERIFY_EMAIL_SUCCESS',
-  VERIFY_EMAIL_FAILURE: 'VERIFY_EMAIL_FAILURE',
-  CLEAR_ERROR: 'CLEAR_ERROR',
-  SET_LOADING: 'SET_LOADING',
-  SET_USER: 'SET_USER',
-  REFRESH_TOKEN_SUCCESS: 'REFRESH_TOKEN_SUCCESS',
+  LOGIN_START: "LOGIN_START",
+  LOGIN_SUCCESS: "LOGIN_SUCCESS",
+  LOGIN_FAILURE: "LOGIN_FAILURE",
+  LOGOUT: "LOGOUT",
+  REGISTER_START: "REGISTER_START",
+  REGISTER_SUCCESS: "REGISTER_SUCCESS",
+  REGISTER_FAILURE: "REGISTER_FAILURE",
+  FORGOT_PASSWORD_START: "FORGOT_PASSWORD_START",
+  FORGOT_PASSWORD_SUCCESS: "FORGOT_PASSWORD_SUCCESS",
+  FORGOT_PASSWORD_FAILURE: "FORGOT_PASSWORD_FAILURE",
+  RESET_PASSWORD_START: "RESET_PASSWORD_START",
+  RESET_PASSWORD_SUCCESS: "RESET_PASSWORD_SUCCESS",
+  RESET_PASSWORD_FAILURE: "RESET_PASSWORD_FAILURE",
+  VERIFY_EMAIL_START: "VERIFY_EMAIL_START",
+  VERIFY_EMAIL_SUCCESS: "VERIFY_EMAIL_SUCCESS",
+  VERIFY_EMAIL_FAILURE: "VERIFY_EMAIL_FAILURE",
+  CLEAR_ERROR: "CLEAR_ERROR",
+  SET_LOADING: "SET_LOADING",
+  SET_USER: "SET_USER",
+  REFRESH_TOKEN_SUCCESS: "REFRESH_TOKEN_SUCCESS",
 };
 
 const authReducer = (state, action) => {
   switch (action.type) {
     case AUTH_ACTIONS.LOGIN_START:
     case AUTH_ACTIONS.REGISTER_START:
-    case AUTH_ACTIONS.FORGOT_PASSWORD_START:
-    case AUTH_ACTIONS.RESET_PASSWORD_START:
-    case AUTH_ACTIONS.VERIFY_EMAIL_START:
       return {
         ...state,
         isLoading: true,
         error: null,
       };
-    
+
+    case AUTH_ACTIONS.FORGOT_PASSWORD_START:
+    case AUTH_ACTIONS.RESET_PASSWORD_START:
+    case AUTH_ACTIONS.VERIFY_EMAIL_START:
+      return {
+        ...state,
+        error: null,
+      };
+
     case AUTH_ACTIONS.LOGIN_SUCCESS:
     case AUTH_ACTIONS.REGISTER_SUCCESS:
       return {
@@ -54,11 +65,12 @@ const authReducer = (state, action) => {
         user: action.payload?.user || null,
         accessToken: action.payload?.accessToken || null,
         refreshToken: action.payload?.refreshToken || null,
-        isAuthenticated: !!action.payload?.accessToken && !!action.payload?.user,
+        isAuthenticated:
+          !!action.payload?.accessToken && !!action.payload?.user,
         isLoading: false,
         error: null,
       };
-    
+
     case AUTH_ACTIONS.LOGIN_FAILURE:
     case AUTH_ACTIONS.REGISTER_FAILURE:
     case AUTH_ACTIONS.FORGOT_PASSWORD_FAILURE:
@@ -67,9 +79,9 @@ const authReducer = (state, action) => {
       return {
         ...state,
         isLoading: false,
-        error: action.payload || 'An error occurred',
+        error: action.payload || "An error occurred",
       };
-    
+
     case AUTH_ACTIONS.FORGOT_PASSWORD_SUCCESS:
     case AUTH_ACTIONS.RESET_PASSWORD_SUCCESS:
     case AUTH_ACTIONS.VERIFY_EMAIL_SUCCESS:
@@ -78,7 +90,7 @@ const authReducer = (state, action) => {
         isLoading: false,
         error: null,
       };
-    
+
     case AUTH_ACTIONS.LOGOUT:
       return {
         ...state,
@@ -89,32 +101,32 @@ const authReducer = (state, action) => {
         isLoading: false,
         error: null,
       };
-    
+
     case AUTH_ACTIONS.CLEAR_ERROR:
       return {
         ...state,
         error: null,
       };
-    
+
     case AUTH_ACTIONS.SET_LOADING:
       return {
         ...state,
         isLoading: action.payload ?? true,
       };
-    
+
     case AUTH_ACTIONS.SET_USER:
       return {
         ...state,
         user: action.payload,
         isAuthenticated: !!action.payload,
       };
-    
+
     case AUTH_ACTIONS.REFRESH_TOKEN_SUCCESS:
       return {
         ...state,
         accessToken: action.payload?.accessToken || null,
       };
-    
+
     default:
       return state;
   }
@@ -128,31 +140,31 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const accessToken = localStorage.getItem('accessToken');
-        const refreshToken = localStorage.getItem('refreshToken');
-        
+        const accessToken = localStorage.getItem("accessToken");
+        const refreshToken = localStorage.getItem("refreshToken");
+
         if (accessToken && refreshToken) {
           try {
             const userData = await apiService.getCurrentUser();
-            dispatch({ 
-              type: AUTH_ACTIONS.SET_USER, 
-              payload: userData 
+            dispatch({
+              type: AUTH_ACTIONS.SET_USER,
+              payload: userData,
             });
             dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
           } catch (error) {
-            console.error('Failed to fetch user data:', error);
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            console.error("Failed to fetch user data:", error);
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
             dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
           }
         } else {
           dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
         }
       } catch (error) {
-        console.error('Auth status check failed:', error);
+        console.error("Auth status check failed:", error);
         dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
       }
     };
 
@@ -163,11 +175,11 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     try {
       const response = await authService.login(email, password, rememberMe);
-      
+
       if (response.success === false) {
         dispatch({
           type: AUTH_ACTIONS.LOGIN_FAILURE,
-          payload: response.error || 'Login failed',
+          payload: response.error || "Login failed",
         });
         return { success: false, error: response.error };
       }
@@ -182,7 +194,7 @@ export const AuthProvider = ({ children }) => {
       });
       return { success: true };
     } catch (error) {
-      const errorMsg = error?.message || 'Login failed';
+      const errorMsg = error?.message || "Login failed";
       dispatch({
         type: AUTH_ACTIONS.LOGIN_FAILURE,
         payload: errorMsg,
@@ -195,11 +207,11 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.REGISTER_START });
     try {
       const response = await authService.register(userData);
-      
+
       if (response.success === false) {
         dispatch({
           type: AUTH_ACTIONS.REGISTER_FAILURE,
-          payload: response.error || 'Registration failed',
+          payload: response.error || "Registration failed",
         });
         return { success: false, error: response.error };
       }
@@ -214,7 +226,7 @@ export const AuthProvider = ({ children }) => {
       });
       return { success: true };
     } catch (error) {
-      const errorMsg = error?.message || 'Registration failed';
+      const errorMsg = error?.message || "Registration failed";
       dispatch({
         type: AUTH_ACTIONS.REGISTER_FAILURE,
         payload: errorMsg,
@@ -227,9 +239,9 @@ export const AuthProvider = ({ children }) => {
     try {
       await authService.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
-    
+
     dispatch({ type: AUTH_ACTIONS.LOGOUT });
   }, []);
 
@@ -237,11 +249,11 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.FORGOT_PASSWORD_START });
     try {
       const response = await authService.forgotPassword(email);
-      
+
       if (response.success === false) {
         dispatch({
           type: AUTH_ACTIONS.FORGOT_PASSWORD_FAILURE,
-          payload: response.error || 'Failed to send reset link',
+          payload: response.error || "Failed to send reset link",
         });
         return { success: false, error: response.error };
       }
@@ -251,7 +263,7 @@ export const AuthProvider = ({ children }) => {
       });
       return { success: true };
     } catch (error) {
-      const errorMsg = error?.message || 'Failed to send reset link';
+      const errorMsg = error?.message || "Failed to send reset link";
       dispatch({
         type: AUTH_ACTIONS.FORGOT_PASSWORD_FAILURE,
         payload: errorMsg,
@@ -264,11 +276,11 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.RESET_PASSWORD_START });
     try {
       const response = await authService.resetPassword(token, password);
-      
+
       if (response.success === false) {
         dispatch({
           type: AUTH_ACTIONS.RESET_PASSWORD_FAILURE,
-          payload: response.error || 'Failed to reset password',
+          payload: response.error || "Failed to reset password",
         });
         return { success: false, error: response.error };
       }
@@ -278,7 +290,7 @@ export const AuthProvider = ({ children }) => {
       });
       return { success: true };
     } catch (error) {
-      const errorMsg = error?.message || 'Failed to reset password';
+      const errorMsg = error?.message || "Failed to reset password";
       dispatch({
         type: AUTH_ACTIONS.RESET_PASSWORD_FAILURE,
         payload: errorMsg,
@@ -291,11 +303,11 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.VERIFY_EMAIL_START });
     try {
       const response = await authService.verifyEmail(token);
-      
+
       if (response.success === false) {
         dispatch({
           type: AUTH_ACTIONS.VERIFY_EMAIL_FAILURE,
-          payload: response.error || 'Failed to verify email',
+          payload: response.error || "Failed to verify email",
         });
         return { success: false, error: response.error };
       }
@@ -305,7 +317,7 @@ export const AuthProvider = ({ children }) => {
       });
       return { success: true };
     } catch (error) {
-      const errorMsg = error?.message || 'Failed to verify email';
+      const errorMsg = error?.message || "Failed to verify email";
       dispatch({
         type: AUTH_ACTIONS.VERIFY_EMAIL_FAILURE,
         payload: errorMsg,
@@ -318,11 +330,11 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.VERIFY_EMAIL_START });
     try {
       const response = await authService.resendVerification(email);
-      
+
       if (response.success === false) {
         dispatch({
           type: AUTH_ACTIONS.VERIFY_EMAIL_FAILURE,
-          payload: response.error || 'Failed to resend verification',
+          payload: response.error || "Failed to resend verification",
         });
         return { success: false, error: response.error };
       }
@@ -332,7 +344,7 @@ export const AuthProvider = ({ children }) => {
       });
       return { success: true };
     } catch (error) {
-      const errorMsg = error?.message || 'Failed to resend verification';
+      const errorMsg = error?.message || "Failed to resend verification";
       dispatch({
         type: AUTH_ACTIONS.VERIFY_EMAIL_FAILURE,
         payload: errorMsg,
@@ -342,7 +354,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const refreshAccessToken = useCallback(async () => {
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = localStorage.getItem("refreshToken");
     if (!refreshToken) return { success: false };
 
     try {
@@ -350,14 +362,14 @@ export const AuthProvider = ({ children }) => {
       if (response.success) {
         dispatch({
           type: AUTH_ACTIONS.REFRESH_TOKEN_SUCCESS,
-          payload: { accessToken: response.accessToken }
+          payload: { accessToken: response.accessToken },
         });
         return { success: true };
       }
       return { success: false };
     } catch (error) {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
       return { success: false };
     }
