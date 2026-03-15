@@ -18,10 +18,10 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden">
       {/* Background Gradients */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900/20 via-black to-black"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-black/20 to-black/40"></div>
         <div className="absolute top-20 left-10 w-[600px] h-[600px] bg-gradient-to-br from-purple-900/10 to-blue-900/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 right-10 w-[700px] h-[700px] bg-gradient-to-tr from-violet-900/10 to-pink-900/10 rounded-full blur-3xl"></div>
       </div>
@@ -86,20 +86,12 @@ const HomePage = () => {
                     <Button
                       variant="gradient-border"
                       size="lg"
-                      className="w-[180px]"
+                      className="w-[220px]"
                     >
                       Go to Dashboard
                     </Button>
                   </Link>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="lg"
-                    onClick={handleLogout}
-                    className="w-[150px]"
-                  >
-                    Logout
-                  </Button>
+                  
                 </>
               ) : (
                 <>

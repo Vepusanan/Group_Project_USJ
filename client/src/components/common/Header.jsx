@@ -22,7 +22,7 @@ const Header = () => {
 
   return (
     <div
-      className={`relative w-full max-w-full flex justify-between items-center px-6 py-4 md:px-8 lg:px-12 xl:px-16 ${isHomePage ? "mb-4" : "mb-1"}`}
+      className={`relative w-full max-w-full flex justify-between items-center px-6 py-4 md:px-8 lg:px-12 xl:px-16 ${isHomePage ? "mb-0 bg-black/35" : "mb-1"}`}
     >
       {/* Logo Section */}
       <Link to="/" className="flex items-center space-x-2 group">
