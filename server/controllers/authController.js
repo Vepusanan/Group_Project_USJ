@@ -23,8 +23,13 @@ const generateAccessToken = (user) => {
   return jwt.sign(
     { userId: user.id, email: user.email, userType: user.user_type },
     process.env.JWT_SECRET,
-    { expiresIn: "15m" } // Standard short-lived access token
+    { expiresIn: "15m" }, // Standard short-lived access token
   );
+};
+
+const getFrontendBaseUrl = () => {
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  return frontendUrl.replace(/\/+$/, "");
 };
 
 // Register new user
@@ -48,7 +53,7 @@ export const register = async (req, res) => {
 
     const existingUser = await pool.query(
       "SELECT id FROM users WHERE email = $1",
-      [email.toLowerCase()]
+      [email.toLowerCase()],
     );
 
     if (existingUser.rows.length > 0) {
@@ -63,7 +68,7 @@ export const register = async (req, res) => {
     const verificationToken = jwt.sign(
       { email: email.toLowerCase() },
       process.env.JWT_VERIFY_SECRET, // Use a separate secret for verification
-      { expiresIn: "24h" }
+      { expiresIn: "24h" },
     );
 
     const tokenExpiration = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now // 2. Insert user with token and set email_verified to false
@@ -87,7 +92,7 @@ export const register = async (req, res) => {
         userType,
         verificationToken,
         tokenExpiration,
-      ]
+      ],
     );
 
     const user = result.rows[0]; // 3. Send verification email
@@ -119,9 +124,10 @@ export const register = async (req, res) => {
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
+    const loginUrl = `${getFrontendBaseUrl()}/login`;
 
     if (!token) {
-      return res.status(400).send("Verification failed: Token is missing.");
+      return res.redirect(`${loginUrl}?verified=failed&reason=missing_token`);
     } // 1. Verify the token's signature and expiration
 
     const decoded = jwt.verify(token, process.env.JWT_VERIFY_SECRET);
@@ -132,14 +138,14 @@ export const verifyEmail = async (req, res) => {
  WHERE email = $1
    AND email_verification_token = $2
    AND email_verification_token_expires > NOW()`,
-      [userEmail, token]
+      [userEmail, token],
     );
 
     if (result.rows.length === 0) {
       // The token is either invalid, already used, or expired
-      return res
-        .status(401)
-        .send("Verification failed: Invalid or expired token.");
+      return res.redirect(
+        `${loginUrl}?verified=failed&reason=invalid_or_expired`,
+      );
     } // 3. Update the user record: set email_verified to true and clear token fields
 
     await pool.query(
@@ -148,24 +154,20 @@ export const verifyEmail = async (req, res) => {
      email_verification_token = NULL,
      email_verification_token_expires = NULL
  WHERE id = $1`,
-      [result.rows[0].id]
+      [result.rows[0].id],
     ); // Redirect or send a success message (redirect is common for verification links)
 
-    res.send("Email verified successfully! You can now log in.");
+    return res.redirect(`${loginUrl}?verified=success`);
   } catch (error) {
     console.error("Email verification error:", error);
+    const loginUrl = `${getFrontendBaseUrl()}/login`;
     if (error.name === "TokenExpiredError") {
-      return res.status(401).send("Verification failed: Token has expired.");
+      return res.redirect(`${loginUrl}?verified=failed&reason=expired`);
     }
     if (error.name === "JsonWebTokenError") {
-      return res
-        .status(401)
-        .json({ success: false, error: "Verification failed: Invalid token." });
+      return res.redirect(`${loginUrl}?verified=failed&reason=invalid_token`);
     }
-    res.status(500).json({
-      success: false,
-      error: "Server error during email verification.",
-    });
+    return res.redirect(`${loginUrl}?verified=failed&reason=server_error`);
   }
 };
 
@@ -183,7 +185,7 @@ export const resendVerification = async (req, res) => {
 
     const result = await pool.query(
       "SELECT id, email_verified FROM users WHERE email = $1",
-      [email.toLowerCase()]
+      [email.toLowerCase()],
     );
 
     if (result.rows.length === 0) {
@@ -207,7 +209,7 @@ export const resendVerification = async (req, res) => {
     const newVerificationToken = jwt.sign(
       { email: email.toLowerCase() },
       process.env.JWT_VERIFY_SECRET,
-      { expiresIn: "24h" } // Reset expiration to 24 hours from now
+      { expiresIn: "24h" }, // Reset expiration to 24 hours from now
     );
 
     const tokenExpiration = new Date(Date.now() + 24 * 60 * 60 * 1000); // 5. Update user with new token and expiration
@@ -217,7 +219,7 @@ export const resendVerification = async (req, res) => {
  SET email_verification_token = $1,
      email_verification_token_expires = $2
  WHERE id = $3`,
-      [newVerificationToken, tokenExpiration, user.id]
+      [newVerificationToken, tokenExpiration, user.id],
     ); // 6. Send new verification email
 
     await sendVerificationEmail(email.toLowerCase(), newVerificationToken);
@@ -249,7 +251,7 @@ export const login = async (req, res) => {
 
     const result = await pool.query(
       "SELECT id, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until FROM users WHERE email = $1",
-      [email.toLowerCase()]
+      [email.toLowerCase()],
     );
 
     if (result.rows.length === 0) {
@@ -280,7 +282,7 @@ export const login = async (req, res) => {
       const failedResult = await lockAccountIfNecessary(
         user.id,
         user.failed_login_attempts,
-        user.email
+        user.email,
       );
       if (failedResult.locked) {
         return res.status(403).json({
@@ -298,7 +300,7 @@ export const login = async (req, res) => {
     if (user.failed_login_attempts > 0) {
       await pool.query(
         "UPDATE users SET failed_login_attempts = 0, account_locked_until = NULL WHERE id = $1",
-        [user.id]
+        [user.id],
       );
     }
 
@@ -336,7 +338,7 @@ export const login = async (req, res) => {
     } // --- END DEVICE INFO PARSING --- // FIX: Re-write SQL string completely to eliminate hidden syntax error
     await pool.query(
       `INSERT INTO sessions (user_id, refresh_token, is_remembered, expires_at, client_ip, device_info) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [user.id, refreshToken, isRemembered, expiresAt, clientIp, deviceInfo]
+      [user.id, refreshToken, isRemembered, expiresAt, clientIp, deviceInfo],
     );
     res.json({
       success: true,
@@ -379,7 +381,7 @@ export const refreshToken = async (req, res) => {
  FROM sessions s
  JOIN users u ON s.user_id = u.id
  WHERE s.refresh_token = $1 AND s.expires_at > NOW()`,
-      [refreshToken]
+      [refreshToken],
     );
 
     if (sessionResult.rows.length === 0) {
@@ -424,7 +426,7 @@ export const forgotPassword = async (req, res) => {
     // 2. Check if user exists (select ID only)
     const userResult = await pool.query(
       "SELECT id FROM users WHERE email = $1",
-      [email.toLowerCase()]
+      [email.toLowerCase()],
     );
 
     // --- IMPORTANT: Don't reveal if email exists ---
@@ -445,7 +447,7 @@ export const forgotPassword = async (req, res) => {
     await pool.query(
       `INSERT INTO password_reset_tokens (token, user_id, expires_at)
              VALUES ($1, $2, $3)`,
-      [resetToken, userId, expiresAt]
+      [resetToken, userId, expiresAt],
     );
 
     // 4. Send reset email (Await is safe here, but can be non-blocking in production)
@@ -480,7 +482,7 @@ export const resetPassword = async (req, res) => {
     const tokenResult = await pool.query(
       `SELECT user_id, expires_at, used_at FROM password_reset_tokens
              WHERE token = $1`,
-      [token]
+      [token],
     );
 
     if (tokenResult.rows.length === 0) {
@@ -511,7 +513,7 @@ export const resetPassword = async (req, res) => {
     // 3. Update the user's password hash and get the user's email
     const updateResult = await pool.query(
       "UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING email",
-      [newHashedPassword, userId]
+      [newHashedPassword, userId],
     );
 
     const userEmail = updateResult.rows[0].email;
@@ -519,7 +521,7 @@ export const resetPassword = async (req, res) => {
     // 4. Invalidate the token (one-time use)
     await pool.query(
       "UPDATE password_reset_tokens SET used_at = NOW() WHERE token = $1",
-      [token]
+      [token],
     );
 
     // 5. Terminate all active sessions (security measure)
@@ -558,7 +560,7 @@ export const logout = async (req, res) => {
     // Delete the specific session matching the user and the provided refresh token.
     const result = await pool.query(
       "DELETE FROM sessions WHERE user_id = $1 AND refresh_token = $2 RETURNING id",
-      [userId, refreshToken]
+      [userId, refreshToken],
     );
 
     if (result.rowCount === 0) {
@@ -590,7 +592,7 @@ export const logoutAll = async (req, res) => {
     // Delete ALL refresh tokens associated with the user ID.
     const result = await pool.query(
       "DELETE FROM sessions WHERE user_id = $1 RETURNING id",
-      [userId]
+      [userId],
     );
 
     // All subsequent refresh token usage will fail immediately.
@@ -623,7 +625,7 @@ export const getActiveSessions = async (req, res) => {
              FROM sessions 
              WHERE user_id = $1 
              ORDER BY created_at DESC`,
-      [userId]
+      [userId],
     );
 
     // Note: The client_ip often only shows the IP of the proxy/VPN/load balancer.

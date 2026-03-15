@@ -1,8 +1,8 @@
-import React from 'react';
+import React from "react";
 
 const AuthLayout = ({ children }) => {
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden bg-transparent">
       {/* Subtle gradient background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-20 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl"></div>
