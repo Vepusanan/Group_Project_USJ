@@ -19,6 +19,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import EmailVerificationPage from "./pages/EmailVerificationPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
+import StartupsListPage from "./pages/StartupsListPage";
 import Header from "./components/common/Header.jsx";
 import Footer from "./components/common/Footer";
 import { useAuth } from "./hooks/useAuth";
@@ -52,7 +53,7 @@ const PublicRoute = ({ children }) => {
     if (user.user_type === "startup") {
       return <Navigate to="/onboarding" replace />;
     }
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/startups" replace />;
   }
 
   return children;
@@ -157,6 +158,15 @@ const AppContent = () => {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/startups"
+            element={
+              <ProtectedRoute>
+                <StartupsListPage />
               </ProtectedRoute>
             }
           />

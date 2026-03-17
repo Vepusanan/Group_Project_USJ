@@ -159,9 +159,13 @@ export const AuthProvider = ({ children }) => {
           }
 
           try {
-            const userData = await apiService.getCurrentUser();
-            localStorage.setItem("userData", JSON.stringify(userData));
-            dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData });
+            const response = await apiService.getCurrentUser();
+            // getCurrentUser returns { success, data } - extract the actual user data
+            if (response.success && response.data) {
+              const userData = response.data.user || response.data;
+              localStorage.setItem("userData", JSON.stringify(userData));
+              dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData });
+            }
           } catch (error) {
             console.error("Failed to fetch user data:", error);
             if (!hydratedFromStorage) {

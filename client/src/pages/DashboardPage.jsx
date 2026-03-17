@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 
 const DashboardPage = () => {
   const location = useLocation();
@@ -22,10 +22,13 @@ const DashboardPage = () => {
           
           <div className="bg-white/4 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50 max-w-2xl mx-auto">
             <h2 className="text-2xl font-semibold text-white mb-4">Coming Soon</h2>
-            <p className="text-gray-300">
+            <p className="text-gray-300 mb-6">
               Your startup profile has been created successfully. 
               The dashboard features will be available soon.
             </p>
+            <Link to="/startups" className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity">
+               Explore Startups
+            </Link>
           </div>
         </div>
       </div>

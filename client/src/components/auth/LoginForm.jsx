@@ -53,8 +53,8 @@ const LoginForm = () => {
             // Redirect to onboarding by default
             navigate('/onboarding');
           } else {
-            // For investor users, go to dashboard
-            navigate('/onboarding');
+            // For investor users, go to dashboard (now startups page)
+            navigate('/startups');
           }
         } else {
           setErrors({

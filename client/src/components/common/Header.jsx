@@ -49,6 +49,15 @@ const Header = () => {
           {isAuthenticated && user ? (
             <>
               <Link
+                to="/startups"
+                className="px-4 py-2 bg-purple-500/20 rounded-full text-sm font-medium border border-purple-400/40 hover:bg-purple-500/50 hover:border-purple-400/60 transition-all duration-300"
+              >
+                <span className="text-white hover:text-transparent hover:bg-gradient-to-r hover:from-purple-300 hover:to-blue-300 hover:bg-clip-text transition-all duration-300">
+                  Discover Startups
+                </span>
+              </Link>
+              
+              <Link
                 to="/dashboard"
                 className="px-4 py-2 bg-blue-500/20 rounded-full text-sm font-medium border border-blue-400/40 hover:bg-blue-500/50 hover:border-blue-400/60 transition-all duration-300"
               >
