@@ -48,13 +48,13 @@ const LoginForm = () => {
         const result = await login(formData.email, formData.password, formData.rememberMe);
 
         if (result.success) {
-          // For startup users, check if profile exists
-          if (result.user?.user_type === 'startup') {
-            // Redirect to onboarding by default
+          // Redirect based on user type
+          if (result.user?.userType === 'startup') {
             navigate('/onboarding');
+          } else if (result.user?.userType === 'investor') {
+            navigate('/investor-onboarding');
           } else {
-            // For investor users, go to dashboard
-            navigate('/onboarding');
+            navigate('/dashboard');
           }
         } else {
           setErrors({
