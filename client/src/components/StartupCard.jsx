@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Users, TrendingUp, Presentation } from "lucide-react";
+import { Activity, MapPin, Users, TrendingUp, CircleDollarSign } from "lucide-react";
 
 const StartupCard = ({ startup, view = "grid" }) => {
     // Determine card structure based on view mode (Grid vs List)
@@ -71,56 +71,71 @@ const StartupCard = ({ startup, view = "grid" }) => {
     }
 
     // Default: Grid View
+    const status = startup.connectionStatus || startup.status || "Pending";
+    const isConnected = status.toLowerCase() === "connected";
+
     return (
-        <Link 
-            to={`/startup/${startup._id}`}
-            className="group block bg-[#111111] border border-white/10 rounded-xl overflow-hidden hover:border-purple-500/50 transition-all hover:-translate-y-1"
-        >
-            {/* Header/Banner Area */}
-            <div className="h-24 bg-gradient-to-r from-purple-900/40 to-blue-900/40 relative border-b border-white/10">
-                <div className="absolute -bottom-6 left-6 w-12 h-12 bg-[#1A1A1A] rounded-lg border border-white/10 p-2 flex items-center justify-center shadow-lg">
+        <div className="group bg-black/80 border border-white/20 rounded-xl p-5 hover:border-purple-500/60 transition-all">
+            <div className="flex items-start gap-4">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-b from-sky-500 to-blue-700 flex items-center justify-center shrink-0 overflow-hidden">
                     <img
                         src={startup.logo || "/images/home/rocketicon.png"}
                         alt={startup.companyName}
-                        className="max-h-full max-w-full object-contain"
+                        className="w-11 h-11 object-contain"
                     />
                 </div>
-                <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-medium text-purple-300 border border-purple-500/30">
-                    {startup.industry}
-                </div>
-            </div>
-            
-            <div className="p-6 pt-10">
-                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-purple-300 transition-colors line-clamp-1">
-                    {startup.companyName}
-                </h3>
-                
-                <p className="text-gray-400 text-sm mb-5 line-clamp-2 h-10">
-                    {startup.shortDescription || "No description provided. Click to learn more about this startup."}
-                </p>
-                
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs text-gray-400 mb-6">
-                    <div className="flex items-center gap-1.5">
-                        <MapPin className="w-4 h-4 text-gray-500" />
-                        <span className="truncate">{startup.location || "Location N/A"}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <TrendingUp className="w-4 h-4 text-gray-500" />
-                        <span className="truncate">{startup.fundingStage || "Stage N/A"}</span>
-                    </div>
-                </div>
-                
-                <div className="border-t border-white/10 pt-4 flex items-center justify-between">
-                    <span className="text-xs text-gray-500">
-                        {startup.revenueStatus}
-                    </span>
-                    <span className="flex items-center gap-1 text-sm font-medium text-purple-400 group-hover:text-purple-300 transition-colors">
-                        View Details <Presentation className="w-4 h-4 ml-1" />
+
+                <div className="min-w-0 flex-1">
+                    <h3 className="text-xl font-bold text-white mb-1 leading-tight truncate">
+                        {startup.companyName}
+                    </h3>
+                    <p className="text-sm text-gray-300 leading-snug line-clamp-2 min-h-[2.5rem]">
+                        {startup.shortDescription || "No description provided."}
+                    </p>
+
+                    <span
+                        className={`inline-flex items-center mt-2 px-3 py-1 rounded-full text-xs font-semibold border ${
+                            isConnected
+                                ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300"
+                                : "bg-amber-500/15 border-amber-400/30 text-amber-300"
+                        }`}
+                    >
+                        <span className="mr-1.5 text-[10px]">●</span>
+                        {status}
                     </span>
                 </div>
             </div>
-        </Link>
+
+            <div className="mt-6 space-y-3 text-base text-gray-100">
+                <div className="flex items-center gap-3">
+                    <Activity className="w-4 h-4 text-gray-300" />
+                    <span className="truncate">{startup.industry || "Industry N/A"}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <MapPin className="w-4 h-4 text-gray-300" />
+                    <span className="truncate">{startup.location || "Location N/A"}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <CircleDollarSign className="w-4 h-4 text-gray-300" />
+                    <span className="truncate">{startup.revenueStatus || startup.fundingStage || "N/A"}</span>
+                </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+                <Link
+                    to={`/startup/${startup._id || startup.id}`}
+                    className="text-center py-2 rounded-xl border border-slate-500/40 bg-slate-900/30 text-sm text-gray-100 hover:border-purple-400/60 hover:text-white transition"
+                >
+                    View Profile
+                </Link>
+                <button
+                    type="button"
+                    className="py-2 rounded-xl border border-slate-500/40 bg-slate-900/30 text-sm text-gray-100 hover:border-purple-400/60 hover:text-white transition"
+                >
+                    Connect
+                </button>
+            </div>
+        </div>
     );
 };
 

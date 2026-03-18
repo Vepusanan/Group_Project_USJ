@@ -61,7 +61,7 @@ const PublicRoute = ({ children }) => {
 
 const AppContent = () => {
   const location = useLocation();
-  const hideHeaderRoutes = ["/dashboard", "/"];
+  const hideHeaderRoutes = ["/dashboard", "/", "/startups"];
   const showBgRoutes = [
     "/login",
     "/signup",
