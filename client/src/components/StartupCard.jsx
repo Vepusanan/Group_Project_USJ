@@ -79,28 +79,33 @@ const StartupCard = ({ startup, view = "grid" }) => {
   // Default: Grid View
   const status = startup.connectionStatus || startup.status || "Pending";
   const isConnected = status.toLowerCase() === "connected";
+  const startupName = startup.companyName || startup.name || "Startup";
+  const description =
+    startup.shortDescription ||
+    startup.description ||
+    "No description provided.";
 
   return (
-    <div className="group bg-black/80 border border-white/20 rounded-xl p-5 hover:border-purple-500/60 transition-all">
-      <div className="flex items-start gap-4">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-b from-sky-500 to-blue-700 flex items-center justify-center shrink-0 overflow-hidden">
+    <div className="group bg-black/80 border border-white/20 rounded-xl p-5 h-full flex flex-col hover:border-purple-500/60 transition-all">
+      <div className="flex items-start gap-4 min-h-[84px]">
+        <div className="w-16 h-16 rounded-full bg-gradient-to-b from-sky-500 to-blue-700 flex items-center justify-center shrink-0 overflow-hidden mt-0.5">
           <img
             src={startup.logo || "/images/home/rocketicon.png"}
-            alt={startup.companyName}
+            alt={startupName}
             className="w-11 h-11 object-contain"
           />
         </div>
 
-        <div className="min-w-0 flex-1">
-          <h3 className="text-xl font-bold text-white mb-1 leading-tight truncate">
-            {startup.companyName}
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h3 className="text-[1.65rem] font-bold text-white mb-1 leading-tight truncate">
+            {startupName}
           </h3>
-          <p className="text-sm text-gray-300 leading-snug line-clamp-2 min-h-[2.5rem]">
-            {startup.shortDescription || "No description provided."}
+          <p className="text-[15px] text-gray-300 leading-snug line-clamp-2 min-h-[42px]">
+            {description}
           </p>
 
           <span
-            className={`inline-flex items-center mt-2 px-3 py-1 rounded-full text-xs font-semibold border ${
+            className={`inline-flex items-center mt-2 px-3 py-1 rounded-full text-sm font-semibold border ${
               isConnected
                 ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300"
                 : "bg-amber-500/15 border-amber-400/30 text-amber-300"
@@ -113,32 +118,36 @@ const StartupCard = ({ startup, view = "grid" }) => {
       </div>
 
       <div className="mt-6 space-y-3 text-base text-gray-100">
-        <div className="flex items-center gap-3">
-          <Activity className="w-4 h-4 text-gray-300" />
-          <span className="truncate">{startup.industry || "Industry N/A"}</span>
+        <div className="flex items-center gap-3 min-h-[28px]">
+          <Activity className="w-4 h-4 text-gray-300 shrink-0" />
+          <span className="truncate leading-none">
+            {startup.industry || "Industry N/A"}
+          </span>
         </div>
-        <div className="flex items-center gap-3">
-          <MapPin className="w-4 h-4 text-gray-300" />
-          <span className="truncate">{startup.location || "Location N/A"}</span>
+        <div className="flex items-center gap-3 min-h-[28px]">
+          <MapPin className="w-4 h-4 text-gray-300 shrink-0" />
+          <span className="truncate leading-none">
+            {startup.location || "Location N/A"}
+          </span>
         </div>
-        <div className="flex items-center gap-3">
-          <CircleDollarSign className="w-4 h-4 text-gray-300" />
-          <span className="truncate">
+        <div className="flex items-center gap-3 min-h-[28px]">
+          <CircleDollarSign className="w-4 h-4 text-gray-300 shrink-0" />
+          <span className="truncate leading-none">
             {startup.revenueStatus || startup.fundingStage || "N/A"}
           </span>
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
+      <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
         <Link
           to={`/startup/${startup._id || startup.id}`}
-          className="text-center py-2 rounded-xl border border-slate-500/40 bg-slate-900/30 text-sm text-gray-100 hover:border-purple-400/60 hover:text-white transition"
+          className="text-center py-2 rounded-xl border border-slate-500/40 bg-slate-900/30 text-base text-gray-100 hover:border-purple-400/60 hover:text-white transition"
         >
           View Profile
         </Link>
         <button
           type="button"
-          className="py-2 rounded-xl border border-slate-500/40 bg-slate-900/30 text-sm text-gray-100 hover:border-purple-400/60 hover:text-white transition"
+          className="py-2 rounded-xl border border-slate-500/40 bg-slate-900/30 text-base text-gray-100 hover:border-purple-400/60 hover:text-white transition"
         >
           Connect
         </button>
