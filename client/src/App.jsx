@@ -18,6 +18,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import EmailVerificationPage from "./pages/EmailVerificationPage";
 import OnboardingPage from "./pages/OnboardingPage";
+import InvestorOnboardingPage from "./pages/InvestorOnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
 import Header from "./components/common/Header.jsx";
 import Footer from "./components/common/Footer";
@@ -49,8 +50,11 @@ const PublicRoute = ({ children }) => {
   }
 
   if (isAuthenticated && user) {
-    if (user.user_type === "startup") {
+    if (user.userType === "startup") {
       return <Navigate to="/onboarding" replace />;
+    }
+    if (user.userType === "investor") {
+      return <Navigate to="/investor-onboarding" replace />;
     }
     return <Navigate to="/dashboard" replace />;
   }
@@ -68,6 +72,7 @@ const AppContent = () => {
     "/reset-password",
     "/verify-email",
     "/onboarding",
+    "/investor-onboarding",
     "/dashboard",
   ];
 
@@ -148,6 +153,15 @@ const AppContent = () => {
             element={
               <ProtectedRoute>
                 <OnboardingPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/investor-onboarding"
+            element={
+              <ProtectedRoute>
+                <InvestorOnboardingPage />
               </ProtectedRoute>
             }
           />
