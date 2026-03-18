@@ -7,6 +7,233 @@ const safeStringify = (value) => {
   return JSON.stringify(value);
 };
 
+let investorProfileColumnsCache = null;
+
+async function getInvestorProfileColumns() {
+  if (investorProfileColumnsCache) {
+    return investorProfileColumnsCache;
+  }
+
+  const schemaQuery = `
+    SELECT column_name, data_type, udt_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'investor_profiles'
+  `;
+
+  const result = await pool.query(schemaQuery);
+  const columns = {};
+  for (const row of result.rows) {
+    columns[row.column_name] = {
+      dataType: row.data_type,
+      udtName: row.udt_name,
+    };
+  }
+
+  investorProfileColumnsCache = columns;
+  return columns;
+}
+
+function normalizeValueForColumn(columnMeta, value) {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  const isJson =
+    columnMeta &&
+    (columnMeta.dataType === "json" || columnMeta.dataType === "jsonb");
+  const isTextArray =
+    columnMeta && columnMeta.dataType === "ARRAY" && columnMeta.udtName === "_text";
+
+  if (isJson) {
+    return safeStringify(value);
+  }
+
+  if (isTextArray) {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item));
+    }
+
+    if (typeof value === "string") {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item));
+        }
+      } catch (e) {
+        // Fall through to best-effort single item array.
+      }
+
+      return [value];
+    }
+
+    return [String(value)];
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0 ? String(value[0]) : null;
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+
+  return value;
+}
+
+function getLocationFromPayload(payload) {
+  if (payload.location) return payload.location;
+  const parts = [payload.city, payload.country].filter(Boolean);
+  return parts.length ? parts.join(", ") : null;
+}
+
+function getFirstDefined(...values) {
+  for (const value of values) {
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+function assignIfColumnExists(target, columns, columnName, rawValue) {
+  if (!columns[columnName]) return;
+
+  const normalized = normalizeValueForColumn(columns[columnName], rawValue);
+  if (normalized !== undefined) {
+    target[columnName] = normalized;
+  }
+}
+
+function buildCreatePayloadForExistingSchema(columns, payload) {
+  const mapped = {};
+
+  assignIfColumnExists(mapped, columns, "name", payload.name || null);
+  assignIfColumnExists(mapped, columns, "firm_name", payload.firm_name || null);
+  assignIfColumnExists(mapped, columns, "photo_url", payload.photo_url || null);
+  assignIfColumnExists(mapped, columns, "location", getLocationFromPayload(payload));
+  assignIfColumnExists(mapped, columns, "city", payload.city || null);
+  assignIfColumnExists(mapped, columns, "country", payload.country || null);
+  assignIfColumnExists(mapped, columns, "website", payload.website || null);
+  assignIfColumnExists(mapped, columns, "linkedin", payload.linkedin || null);
+  assignIfColumnExists(mapped, columns, "investor_type", payload.investor_type || null);
+
+  const experience = getFirstDefined(
+    payload.years_of_experience,
+    payload.experience_years,
+    null,
+  );
+  assignIfColumnExists(mapped, columns, "years_of_experience", experience);
+  assignIfColumnExists(mapped, columns, "experience_years", experience);
+  assignIfColumnExists(mapped, columns, "background", payload.background || null);
+
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "investment_thesis",
+    payload.investment_thesis || null,
+  );
+  assignIfColumnExists(mapped, columns, "industries", payload.industries || null);
+  assignIfColumnExists(mapped, columns, "geography", payload.geography || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "investment_stage",
+    payload.investment_stage || null,
+  );
+
+  const investmentMin = getFirstDefined(
+    payload.investment_size_min,
+    payload.min_investment_size,
+    null,
+  );
+  const investmentMax = getFirstDefined(
+    payload.investment_size_max,
+    payload.max_investment_size,
+    null,
+  );
+
+  assignIfColumnExists(mapped, columns, "investment_size_min", investmentMin);
+  assignIfColumnExists(mapped, columns, "investment_size_max", investmentMax);
+  assignIfColumnExists(mapped, columns, "min_investment_size", investmentMin);
+  assignIfColumnExists(mapped, columns, "max_investment_size", investmentMax);
+
+  const followOn =
+    payload.follow_on_investment !== undefined
+      ? payload.follow_on_investment
+      : true;
+  assignIfColumnExists(mapped, columns, "investment_structure", payload.investment_structure || null);
+  assignIfColumnExists(mapped, columns, "follow_on_investment", followOn);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "investment_timeline",
+    payload.investment_timeline || null,
+  );
+
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "portfolio_companies",
+    payload.portfolio_companies || null,
+  );
+  assignIfColumnExists(mapped, columns, "notable_exits", payload.notable_exits || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "total_investments",
+    payload.total_investments || null,
+  );
+
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "investment_criteria",
+    payload.investment_criteria || null,
+  );
+  assignIfColumnExists(mapped, columns, "red_flags", payload.red_flags || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "ideal_founder_profile",
+    payload.ideal_founder_profile || null,
+  );
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "notable_achievements",
+    payload.notable_achievements || null,
+  );
+  assignIfColumnExists(mapped, columns, "value_add", payload.value_add || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "network_resources",
+    payload.network_resources || null,
+  );
+  assignIfColumnExists(mapped, columns, "social_media", payload.social_media || null);
+
+  assignIfColumnExists(mapped, columns, "contact_email", payload.contact_email || null);
+  assignIfColumnExists(mapped, columns, "contact_phone", payload.contact_phone || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "preferred_contact_method",
+    payload.preferred_contact_method || null,
+  );
+
+  const isActive =
+    payload.is_actively_investing !== undefined
+      ? payload.is_actively_investing
+      : true;
+  assignIfColumnExists(mapped, columns, "is_actively_investing", isActive);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "profile_visibility",
+    payload.profile_visibility || "public",
+  );
+
+  return mapped;
+}
+
 /**
  * Create a new investor profile in the database
  * @param {string} userId - User ID
@@ -14,60 +241,14 @@ const safeStringify = (value) => {
  * @returns {Promise<Object>} Created profile
  */
 export async function createInvestorProfile(userId, payload) {
-  const q = `INSERT INTO investor_profiles
-    (user_id, name, firm_name, photo_url, city, country, website, linkedin, 
-     investor_type, years_of_experience, background, investment_thesis, 
-     industries, geography, investment_stage, investment_size_min, investment_size_max, 
-     investment_structure, follow_on_investment, investment_timeline, 
-     portfolio_companies, notable_exits, total_investments, 
-     investment_criteria, red_flags, ideal_founder_profile, 
-     notable_achievements, value_add, network_resources, social_media, 
-     contact_email, contact_phone, preferred_contact_method, 
-     is_actively_investing, profile_visibility)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35)
-    RETURNING *`;
+  const columns = await getInvestorProfileColumns();
+  const mappedPayload = buildCreatePayloadForExistingSchema(columns, payload);
 
-  const values = [
-    userId,
-    payload.name || null,
-    payload.firm_name || null,
-    payload.photo_url || null,
-    payload.city || null,
-    payload.country || null,
-    payload.website || null,
-    payload.linkedin || null,
-    payload.investor_type || null,
-    payload.years_of_experience || null,
-    payload.background || null,
-    payload.investment_thesis || null,
-    safeStringify(payload.industries),
-    safeStringify(payload.geography),
-    safeStringify(payload.investment_stage),
-    payload.investment_size_min || null,
-    payload.investment_size_max || null,
-    safeStringify(payload.investment_structure),
-    payload.follow_on_investment !== undefined
-      ? payload.follow_on_investment
-      : true,
-    payload.investment_timeline || null,
-    safeStringify(payload.portfolio_companies),
-    safeStringify(payload.notable_exits),
-    payload.total_investments || null,
-    payload.investment_criteria || null,
-    payload.red_flags || null,
-    payload.ideal_founder_profile || null,
-    payload.notable_achievements || null,
-    payload.value_add || null,
-    safeStringify(payload.network_resources),
-    safeStringify(payload.social_media),
-    payload.contact_email || null,
-    payload.contact_phone || null,
-    payload.preferred_contact_method || null,
-    payload.is_actively_investing !== undefined
-      ? payload.is_actively_investing
-      : true,
-    payload.profile_visibility || "public",
-  ];
+  const insertColumns = ["user_id", ...Object.keys(mappedPayload)];
+  const placeholders = insertColumns.map((_, i) => `$${i + 1}`);
+  const values = [userId, ...Object.values(mappedPayload)];
+
+  const q = `INSERT INTO investor_profiles (${insertColumns.join(", ")}) VALUES (${placeholders.join(", ")}) RETURNING *`;
 
   const result = await pool.query(q, values);
   return result.rows[0];
@@ -103,6 +284,8 @@ export async function getInvestorProfileByUserId(userId) {
  * @returns {Promise<Object|null>} Updated profile or null
  */
 export async function updateInvestorProfile(id, userId, updates) {
+  const columns = await getInvestorProfileColumns();
+
   const allowed = [
     "name",
     "firm_name",
@@ -145,23 +328,10 @@ export async function updateInvestorProfile(id, userId, updates) {
   let idx = 1;
 
   for (const key of allowed) {
-    if (Object.prototype.hasOwnProperty.call(updates, key)) {
+    if (Object.prototype.hasOwnProperty.call(updates, key) && columns[key]) {
       let val = updates[key];
-      if (
-        [
-          "industries",
-          "geography",
-          "investment_stage",
-          "investment_structure",
-          "portfolio_companies",
-          "notable_exits",
-          "network_resources",
-          "social_media",
-        ].includes(key) &&
-        val !== undefined
-      ) {
-        val = safeStringify(val);
-      }
+
+      val = normalizeValueForColumn(columns[key], val);
       sets.push(`${key} = $${idx}`);
       values.push(val);
       idx += 1;

@@ -57,7 +57,10 @@ export const investorProfileService = {
       console.error("Create investor profile error:", error);
       return {
         success: false,
-        error: error.response?.data?.error || "Failed to create profile",
+        error:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Failed to create profile",
       };
     }
   },
@@ -83,7 +86,10 @@ export const investorProfileService = {
       console.error("Update investor profile error:", error);
       return {
         success: false,
-        error: error.response?.data?.error || "Failed to update profile",
+        error:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Failed to update profile",
       };
     }
   },
