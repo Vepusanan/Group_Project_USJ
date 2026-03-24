@@ -63,6 +63,60 @@ const normalizeStartupUpdates = (updates = {}) => {
 
 const STARTUP_SEARCH_VECTOR = `to_tsvector('english', concat_ws(' ', coalesce(sp.company_name, ''), coalesce(sp.tagline, ''), coalesce(sp.description, '')))`;
 
+let connectionTableMetaCache = null;
+
+const normalizeConnectionStatus = (status) => {
+  const value = String(status || "").toLowerCase();
+  if (value === "connected") return "accepted";
+  if (["pending", "accepted", "declined"].includes(value)) return value;
+  return null;
+};
+
+const getConnectionTableMeta = async () => {
+  if (connectionTableMetaCache !== null) {
+    return connectionTableMetaCache;
+  }
+
+  const tableResult = await pool.query(
+    `SELECT to_regclass('public.connections') AS table_name`,
+  );
+  const hasTable = Boolean(tableResult.rows[0]?.table_name);
+
+  if (!hasTable) {
+    connectionTableMetaCache = { available: false };
+    return connectionTableMetaCache;
+  }
+
+  const columnResult = await pool.query(
+    `
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'connections'
+    `,
+  );
+
+  const columns = new Set(columnResult.rows.map((row) => row.column_name));
+  const hasRequesterReceiver =
+    columns.has("requester_id") &&
+    columns.has("receiver_id") &&
+    columns.has("status");
+  const hasInvestorStartup =
+    columns.has("investor_id") &&
+    columns.has("startup_id") &&
+    columns.has("status");
+
+  connectionTableMetaCache = {
+    available: hasRequesterReceiver || hasInvestorStartup,
+    schemaType: hasInvestorStartup
+      ? "investor_startup"
+      : hasRequesterReceiver
+        ? "requester_receiver"
+        : null,
+  };
+
+  return connectionTableMetaCache;
+};
+
 const buildListStartupsQuery = ({
   searchTerm,
   industries,
@@ -352,4 +406,78 @@ export async function listStartups(options = {}) {
     rows: rowsResult.rows,
     total: countResult.rows[0]?.total || 0,
   };
+}
+
+/**
+ * Resolve connection statuses between requester and listed startup users.
+ * Gracefully returns an empty map if a compatible connections table is unavailable.
+ * @param {string|null} requesterUserId
+ * @param {string[]} startupUserIds
+ * @returns {Promise<Map<string, string>>}
+ */
+export async function getConnectionStatusesForStartups(
+  requesterUserId,
+  startupUserIds = [],
+) {
+  if (!requesterUserId || startupUserIds.length === 0) {
+    return new Map();
+  }
+
+  const uniqueStartupUserIds = [...new Set(startupUserIds.filter(Boolean))];
+  if (uniqueStartupUserIds.length === 0) {
+    return new Map();
+  }
+
+  const connectionMeta = await getConnectionTableMeta();
+  if (!connectionMeta.available) {
+    return new Map();
+  }
+
+  if (connectionMeta.schemaType === "investor_startup") {
+    const connectionResult = await pool.query(
+      `
+        SELECT c.startup_id::text AS startup_user_id, c.status
+        FROM public.connections c
+        WHERE c.investor_id::text = $1
+          AND c.startup_id::text = ANY($2::text[])
+      `,
+      [requesterUserId, uniqueStartupUserIds],
+    );
+
+    return new Map(
+      connectionResult.rows
+        .map((row) => [
+          row.startup_user_id,
+          normalizeConnectionStatus(row.status),
+        ])
+        .filter(([, status]) => Boolean(status)),
+    );
+  }
+
+  const connectionResult = await pool.query(
+    `
+      SELECT
+        CASE
+          WHEN c.requester_id::text = $1 THEN c.receiver_id::text
+          ELSE c.requester_id::text
+        END AS startup_user_id,
+        c.status
+      FROM public.connections c
+      WHERE (
+        (c.requester_id::text = $1 AND c.receiver_id::text = ANY($2::text[]))
+        OR
+        (c.receiver_id::text = $1 AND c.requester_id::text = ANY($2::text[]))
+      )
+    `,
+    [requesterUserId, uniqueStartupUserIds],
+  );
+
+  return new Map(
+    connectionResult.rows
+      .map((row) => [
+        row.startup_user_id,
+        normalizeConnectionStatus(row.status),
+      ])
+      .filter(([, status]) => Boolean(status)),
+  );
 }

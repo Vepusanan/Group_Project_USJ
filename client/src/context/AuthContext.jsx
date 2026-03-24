@@ -160,8 +160,14 @@ export const AuthProvider = ({ children }) => {
 
           try {
             const userData = await apiService.getCurrentUser();
-            localStorage.setItem("userData", JSON.stringify(userData));
-            dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData });
+            if (userData.success && userData.data) {
+              localStorage.setItem("userData", JSON.stringify(userData.data));
+              dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData.data });
+            } else if (!hydratedFromStorage) {
+              localStorage.removeItem("accessToken");
+              localStorage.removeItem("refreshToken");
+              localStorage.removeItem("userData");
+            }
           } catch (error) {
             console.error("Failed to fetch user data:", error);
             if (!hydratedFromStorage) {

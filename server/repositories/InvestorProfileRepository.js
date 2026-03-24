@@ -42,7 +42,9 @@ function normalizeValueForColumn(columnMeta, value) {
     columnMeta &&
     (columnMeta.dataType === "json" || columnMeta.dataType === "jsonb");
   const isTextArray =
-    columnMeta && columnMeta.dataType === "ARRAY" && columnMeta.udtName === "_text";
+    columnMeta &&
+    columnMeta.dataType === "ARRAY" &&
+    columnMeta.udtName === "_text";
 
   if (isJson) {
     return safeStringify(value);
@@ -108,12 +110,22 @@ function buildCreatePayloadForExistingSchema(columns, payload) {
   assignIfColumnExists(mapped, columns, "name", payload.name || null);
   assignIfColumnExists(mapped, columns, "firm_name", payload.firm_name || null);
   assignIfColumnExists(mapped, columns, "photo_url", payload.photo_url || null);
-  assignIfColumnExists(mapped, columns, "location", getLocationFromPayload(payload));
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "location",
+    getLocationFromPayload(payload),
+  );
   assignIfColumnExists(mapped, columns, "city", payload.city || null);
   assignIfColumnExists(mapped, columns, "country", payload.country || null);
   assignIfColumnExists(mapped, columns, "website", payload.website || null);
   assignIfColumnExists(mapped, columns, "linkedin", payload.linkedin || null);
-  assignIfColumnExists(mapped, columns, "investor_type", payload.investor_type || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "investor_type",
+    payload.investor_type || null,
+  );
 
   const experience = getFirstDefined(
     payload.years_of_experience,
@@ -122,7 +134,12 @@ function buildCreatePayloadForExistingSchema(columns, payload) {
   );
   assignIfColumnExists(mapped, columns, "years_of_experience", experience);
   assignIfColumnExists(mapped, columns, "experience_years", experience);
-  assignIfColumnExists(mapped, columns, "background", payload.background || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "background",
+    payload.background || null,
+  );
 
   assignIfColumnExists(
     mapped,
@@ -130,7 +147,12 @@ function buildCreatePayloadForExistingSchema(columns, payload) {
     "investment_thesis",
     payload.investment_thesis || null,
   );
-  assignIfColumnExists(mapped, columns, "industries", payload.industries || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "industries",
+    payload.industries || null,
+  );
   assignIfColumnExists(mapped, columns, "geography", payload.geography || null);
   assignIfColumnExists(
     mapped,
@@ -159,7 +181,12 @@ function buildCreatePayloadForExistingSchema(columns, payload) {
     payload.follow_on_investment !== undefined
       ? payload.follow_on_investment
       : true;
-  assignIfColumnExists(mapped, columns, "investment_structure", payload.investment_structure || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "investment_structure",
+    payload.investment_structure || null,
+  );
   assignIfColumnExists(mapped, columns, "follow_on_investment", followOn);
   assignIfColumnExists(
     mapped,
@@ -174,7 +201,12 @@ function buildCreatePayloadForExistingSchema(columns, payload) {
     "portfolio_companies",
     payload.portfolio_companies || null,
   );
-  assignIfColumnExists(mapped, columns, "notable_exits", payload.notable_exits || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "notable_exits",
+    payload.notable_exits || null,
+  );
   assignIfColumnExists(
     mapped,
     columns,
@@ -208,10 +240,25 @@ function buildCreatePayloadForExistingSchema(columns, payload) {
     "network_resources",
     payload.network_resources || null,
   );
-  assignIfColumnExists(mapped, columns, "social_media", payload.social_media || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "social_media",
+    payload.social_media || null,
+  );
 
-  assignIfColumnExists(mapped, columns, "contact_email", payload.contact_email || null);
-  assignIfColumnExists(mapped, columns, "contact_phone", payload.contact_phone || null);
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "contact_email",
+    payload.contact_email || null,
+  );
+  assignIfColumnExists(
+    mapped,
+    columns,
+    "contact_phone",
+    payload.contact_phone || null,
+  );
   assignIfColumnExists(
     mapped,
     columns,
@@ -504,4 +551,58 @@ export async function listInvestors(options = {}) {
     rows: rowsResult.rows,
     total: countResult.rows[0]?.total ?? 0,
   };
+}
+
+const normalizeConnectionStatus = (status) => {
+  const value = String(status || "").toLowerCase();
+  if (value === "connected") return "accepted";
+  if (["pending", "accepted", "declined"].includes(value)) return value;
+  return null;
+};
+
+/**
+ * Resolve connection statuses between startup requester and listed investor users.
+ * @param {string|null} requesterUserId
+ * @param {string[]} investorUserIds
+ * @returns {Promise<Map<string, string>>}
+ */
+export async function getConnectionStatusesForInvestors(
+  requesterUserId,
+  investorUserIds = [],
+) {
+  if (!requesterUserId || investorUserIds.length === 0) {
+    return new Map();
+  }
+
+  const uniqueInvestorUserIds = [...new Set(investorUserIds.filter(Boolean))];
+  if (uniqueInvestorUserIds.length === 0) {
+    return new Map();
+  }
+
+  const tableResult = await pool.query(
+    `SELECT to_regclass('public.connections') AS table_name`,
+  );
+
+  if (!tableResult.rows[0]?.table_name) {
+    return new Map();
+  }
+
+  const connectionsResult = await pool.query(
+    `
+      SELECT c.investor_id::text AS investor_user_id, c.status
+      FROM public.connections c
+      WHERE c.startup_id::text = $1
+        AND c.investor_id::text = ANY($2::text[])
+    `,
+    [requesterUserId, uniqueInvestorUserIds],
+  );
+
+  return new Map(
+    connectionsResult.rows
+      .map((row) => [
+        row.investor_user_id,
+        normalizeConnectionStatus(row.status),
+      ])
+      .filter(([, status]) => Boolean(status)),
+  );
 }

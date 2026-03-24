@@ -1,6 +1,8 @@
-import React from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Bell, LogOut, Settings } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import { apiService } from "../../services/apiService";
 
 const Header = () => {
   const location = useLocation();
@@ -9,6 +11,29 @@ const Header = () => {
   const isHomePage = location.pathname === "/";
   const isVerifyEmailPage = location.pathname === "/verify-email";
   const isLoginPage = location.pathname === "/login";
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const isInvestor = user?.userType === "investor";
+  const userInitial = (user?.firstName || user?.name || user?.email || "U")
+    .charAt(0)
+    .toUpperCase();
+  const navItems = isInvestor
+    ? [
+        { to: "/startups", label: "Startups" },
+        { to: "/connections", label: "My Connections" },
+        { to: "/messages", label: "Messages" },
+        { to: "/profile", label: "Profile" },
+        { to: "/settings", label: "Settings" },
+      ]
+    : [
+        { to: "/investors", label: "Investors" },
+        { to: "/connections", label: "My Connections" },
+        { to: "/messages", label: "Messages" },
+        { to: "/profile", label: "Profile" },
+        { to: "/settings", label: "Settings" },
+      ];
 
   const handleLogout = async () => {
     try {
@@ -19,6 +44,46 @@ const Header = () => {
       localStorage.removeItem("userData");
     }
     navigate("/login");
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let isMounted = true;
+    const loadNotifications = async () => {
+      const result = await apiService.getNotifications();
+      if (!isMounted || !result.success) return;
+      setNotifications(result.data?.data || []);
+    };
+
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!showNotifications) return;
+
+    const onClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [showNotifications]);
+
+  const handleMarkNotificationRead = async (notificationKey) => {
+    const result = await apiService.markNotificationRead(notificationKey);
+    if (!result.success) return;
+    setNotifications((prev) =>
+      prev.filter((item) => item.key !== notificationKey),
+    );
   };
 
   return (
@@ -48,23 +113,118 @@ const Header = () => {
         <div className="flex items-center space-x-3">
           {isAuthenticated && user ? (
             <>
+              <nav className="hidden lg:flex items-center gap-2">
+                {navItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) =>
+                      `px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-300 ${
+                        isActive
+                          ? "bg-purple-500/30 border-purple-400/60 text-white"
+                          : "bg-white/5 border-white/15 text-gray-200 hover:bg-white/10"
+                      }`
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                ))}
+              </nav>
+
               <Link
                 to="/dashboard"
                 className="px-4 py-2 bg-blue-500/20 rounded-full text-sm font-medium border border-blue-400/40 hover:bg-blue-500/50 hover:border-blue-400/60 transition-all duration-300"
               >
-                <span className="text-white hover:text-transparent hover:bg-gradient-to-r hover:from-blue-300 hover:to-purple-300 hover:bg-clip-text transition-all duration-300">
-                  Dashboard
-                </span>
+                <span className="text-white">Dashboard</span>
               </Link>
 
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-500/20 rounded-full text-sm font-medium border border-red-400/40 hover:bg-red-500/50 hover:border-red-400/60 transition-all duration-300"
-              >
-                <span className="text-white hover:text-transparent hover:bg-gradient-to-r hover:from-red-300 hover:to-pink-300 hover:bg-clip-text transition-all duration-300">
-                  Logout
-                </span>
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    type="button"
+                    aria-label="Open notifications"
+                    onClick={() => setShowNotifications((prev) => !prev)}
+                    className="w-11 h-11 rounded-full border border-white/25 bg-black/20 text-white flex items-center justify-center hover:bg-white/10 transition-all duration-300 relative"
+                  >
+                    <Bell className="w-5 h-5" />
+                    {notifications.length > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                        {notifications.length > 9 ? "9+" : notifications.length}
+                      </span>
+                    )}
+                  </button>
+
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-[320px] rounded-xl border border-white/15 bg-[#161324] shadow-2xl p-3 z-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-white">
+                          Notifications
+                        </p>
+                      </div>
+
+                      {notifications.length === 0 ? (
+                        <p className="text-sm text-gray-300 py-3">
+                          No new notifications.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-80 overflow-auto pr-1">
+                          {notifications.map((notification) => (
+                            <button
+                              key={notification.key}
+                              type="button"
+                              onClick={() =>
+                                handleMarkNotificationRead(notification.key)
+                              }
+                              className="w-full text-left rounded-lg border border-white/10 bg-black/20 p-3 hover:bg-white/5"
+                            >
+                              <p className="text-sm text-white font-medium">
+                                {notification.title}
+                              </p>
+                              <p className="text-xs text-gray-300 mt-1">
+                                {notification.message}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <Link
+                  to="/settings"
+                  aria-label="Open settings"
+                  className={`w-11 h-11 rounded-full border flex items-center justify-center transition-all duration-300 ${
+                    location.pathname === "/settings"
+                      ? "bg-gradient-to-r from-purple-600/80 to-indigo-600/80 border-purple-300/60 text-white"
+                      : "bg-purple-500/30 border-purple-300/40 text-white hover:bg-purple-500/50"
+                  }`}
+                >
+                  <Settings className="w-5 h-5" />
+                </Link>
+
+                <Link
+                  to="/profile"
+                  aria-label="Open profile"
+                  className={`w-11 h-11 rounded-full border overflow-hidden flex items-center justify-center transition-all duration-300 ${
+                    location.pathname.startsWith("/profile")
+                      ? "border-purple-300/70 ring-2 ring-purple-400/30"
+                      : "border-white/30 hover:border-purple-300/60"
+                  }`}
+                >
+                  <div className="w-full h-full bg-gradient-to-r from-amber-300 to-purple-400 flex items-center justify-center text-black font-semibold text-sm">
+                    {userInitial}
+                  </div>
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  aria-label="Log out"
+                  className="w-11 h-11 rounded-full border border-white/25 bg-black/20 text-white flex items-center justify-center hover:bg-red-500/25 hover:border-red-300/50 transition-all duration-300"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
             </>
           ) : (
             <>

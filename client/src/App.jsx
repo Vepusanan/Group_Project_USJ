@@ -20,6 +20,15 @@ import EmailVerificationPage from "./pages/EmailVerificationPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import InvestorOnboardingPage from "./pages/InvestorOnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
+import StartupsPage from "./pages/StartupsPage";
+import InvestorsPage from "./pages/InvestorsPage";
+import ConnectionsPage from "./pages/ConnectionsPage";
+import MessagesPage from "./pages/MessagesPage";
+import StartupProfilePage from "./pages/StartupProfilePage";
+import InvestorProfilePage from "./pages/InvestorProfilePage";
+import MyProfilePage from "./pages/MyProfilePage";
+import EditProfilePage from "./pages/EditProfilePage";
+import SettingsPage from "./pages/SettingsPage";
 import Header from "./components/common/Header.jsx";
 import Footer from "./components/common/Footer";
 import { useAuth } from "./hooks/useAuth";
@@ -50,12 +59,6 @@ const PublicRoute = ({ children }) => {
   }
 
   if (isAuthenticated && user) {
-    if (user.userType === "startup") {
-      return <Navigate to="/onboarding" replace />;
-    }
-    if (user.userType === "investor") {
-      return <Navigate to="/investor-onboarding" replace />;
-    }
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -64,20 +67,11 @@ const PublicRoute = ({ children }) => {
 
 const AppContent = () => {
   const location = useLocation();
-  const hideHeaderRoutes = ["/dashboard", "/"];
-  const showBgRoutes = [
-    "/login",
-    "/signup",
-    "/forgot-password",
-    "/reset-password",
-    "/verify-email",
-    "/onboarding",
-    "/investor-onboarding",
-    "/dashboard",
-  ];
+  const hideHeaderRoutes = ["/"];
+  const showBgRoutes = location.pathname !== "/";
 
   const shouldShowHeader = !hideHeaderRoutes.includes(location.pathname);
-  const shouldShowBg = showBgRoutes.includes(location.pathname);
+  const shouldShowBg = showBgRoutes;
 
   return (
     <div className="flex flex-col min-h-screen relative">
@@ -171,6 +165,87 @@ const AppContent = () => {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/startups"
+            element={
+              <ProtectedRoute>
+                <StartupsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/startups/:id"
+            element={
+              <ProtectedRoute>
+                <StartupProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/investors"
+            element={
+              <ProtectedRoute>
+                <InvestorsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/investors/:id"
+            element={
+              <ProtectedRoute>
+                <InvestorProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/connections"
+            element={
+              <ProtectedRoute>
+                <ConnectionsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <MessagesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <MyProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile/edit"
+            element={
+              <ProtectedRoute>
+                <EditProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
               </ProtectedRoute>
             }
           />

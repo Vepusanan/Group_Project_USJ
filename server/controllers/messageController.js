@@ -1,4 +1,5 @@
 import * as MessageRepository from "../repositories/messageRepository.js";
+import { isUsersConnected } from "../repositories/ConnectionRepository.js";
 
 // Send a new message
 export const sendMessage = async (req, res) => {
@@ -6,10 +7,10 @@ export const sendMessage = async (req, res) => {
   const { receiverId, text, attachmentUrl } = req.body;
 
   // Basic Validation
-  if (!receiverId || !text) {
+  if (!receiverId || (!text && !attachmentUrl)) {
     return res.status(400).json({
       success: false,
-      error: "Receiver ID and message text are required.",
+      error: "Receiver ID and either message text or attachment are required.",
     });
   }
 
@@ -21,12 +22,18 @@ export const sendMessage = async (req, res) => {
   }
 
   try {
-    // TODO: Add check here to verify users are "connected" in your system
+    const connected = await isUsersConnected(senderId, receiverId);
+    if (!connected) {
+      return res.status(403).json({
+        success: false,
+        error: "You can only message users you are connected with.",
+      });
+    }
 
     const messageData = await MessageRepository.createAndStoreMessage({
       senderId,
       receiverId,
-      text,
+      text: (text || "").trim(),
       attachmentUrl,
     });
 
@@ -44,14 +51,36 @@ export const sendMessage = async (req, res) => {
   }
 };
 
+// Upload message attachment
+export const uploadMessageAttachment = async (req, res) => {
+  try {
+    if (!req.attachmentUrl) {
+      return res.status(400).json({
+        success: false,
+        error: "No attachment URL generated",
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      attachmentUrl: req.attachmentUrl,
+    });
+  } catch (error) {
+    console.error("Upload message attachment error:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to upload message attachment",
+    });
+  }
+};
+
 // Get list of conversations
 export const getConversations = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const conversations = await MessageRepository.getConversationsByUserId(
-      userId
-    );
+    const conversations =
+      await MessageRepository.getConversationsByUserId(userId);
 
     res.status(200).json({
       success: true,
@@ -84,7 +113,7 @@ export const getConversationMessages = async (req, res) => {
         userId,
         limit,
         offset,
-      }
+      },
     );
 
     res.status(200).json({

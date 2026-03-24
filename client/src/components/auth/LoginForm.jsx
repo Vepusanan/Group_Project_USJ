@@ -1,20 +1,19 @@
-import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import profileService from '../../services/profileService';
-import Input from '../common/Input';
-import PasswordInput from '../common/PasswordInput';
-import Checkbox from '../common/Checkbox';
-import Button from '../common/Button';
+import React, { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import Input from "../common/Input";
+import PasswordInput from "../common/PasswordInput";
+import Checkbox from "../common/Checkbox";
+import Button from "../common/Button";
 
 const LoginForm = () => {
   const navigate = useNavigate();
   const { login, error: authError, clearError } = useAuth();
 
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    rememberMe: true
+    email: "",
+    password: "",
+    rememberMe: true,
   });
 
   const [errors, setErrors] = useState({});
@@ -24,13 +23,13 @@ const LoginForm = () => {
     const newErrors = {};
 
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
+      newErrors.email = "Please enter a valid email";
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
     }
 
     setErrors(newErrors);
@@ -45,25 +44,22 @@ const LoginForm = () => {
       clearError();
 
       try {
-        const result = await login(formData.email, formData.password, formData.rememberMe);
+        const result = await login(
+          formData.email,
+          formData.password,
+          formData.rememberMe,
+        );
 
         if (result.success) {
-          // Redirect based on user type
-          if (result.user?.userType === 'startup') {
-            navigate('/onboarding');
-          } else if (result.user?.userType === 'investor') {
-            navigate('/investor-onboarding');
-          } else {
-            navigate('/dashboard');
-          }
+          navigate("/dashboard");
         } else {
           setErrors({
-            general: result.error || 'Login failed. Please try again.'
+            general: result.error || "Login failed. Please try again.",
           });
         }
       } catch (error) {
         setErrors({
-          general: 'An unexpected error occurred. Please try again.'
+          general: "An unexpected error occurred. Please try again.",
         });
       } finally {
         setIsLoading(false);
@@ -72,15 +68,15 @@ const LoginForm = () => {
   };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
 
     if (errors[field]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [field]: null
+        [field]: null,
       }));
     }
   };
@@ -103,7 +99,7 @@ const LoginForm = () => {
         label="Email or mobile phone number"
         type="email"
         value={formData.email}
-        onChange={(e) => handleInputChange('email', e.target.value)}
+        onChange={(e) => handleInputChange("email", e.target.value)}
         error={errors.email}
         required
       />
@@ -112,7 +108,7 @@ const LoginForm = () => {
         label="Your password"
         value={formData.password}
         placeholder=""
-        onChange={(e) => handleInputChange('password', e.target.value)}
+        onChange={(e) => handleInputChange("password", e.target.value)}
         error={errors.password}
         required
       />
@@ -120,13 +116,12 @@ const LoginForm = () => {
       <Checkbox
         label="Remember me"
         checked={formData.rememberMe}
-        onChange={(checked) => handleInputChange('rememberMe', checked)}
+        onChange={(checked) => handleInputChange("rememberMe", checked)}
       />
 
-    
       <Button
         type="submit"
-        variant="gradient-border" 
+        variant="gradient-border"
         fullWidth
         loading={isLoading}
         disabled={isLoading}

@@ -1,7 +1,13 @@
 import { StartupProfile } from "../models/StartupProfiles.js";
-import { listStartups } from "../repositories/StartupProfileRepository.js";
+import {
+  getConnectionStatusesForStartups,
+  listStartups,
+} from "../repositories/StartupProfileRepository.js";
 import { InvestorProfile } from "../models/InvestorProfile.js";
-import { listInvestors } from "../repositories/InvestorProfileRepository.js";
+import {
+  getConnectionStatusesForInvestors,
+  listInvestors,
+} from "../repositories/InvestorProfileRepository.js";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -23,12 +29,20 @@ const toPositiveInteger = (value, fallback) => {
   return parsed;
 };
 
-const buildConnectionStatus = (requestingUserId, startupUserId) => {
+const buildConnectionStatus = (
+  requestingUserId,
+  startupUserId,
+  connectionStatusMap = new Map(),
+) => {
   if (!requestingUserId) {
     return null;
   }
 
-  return requestingUserId === startupUserId ? "self" : "not_connected";
+  if (requestingUserId === startupUserId) {
+    return "self";
+  }
+
+  return connectionStatusMap.get(startupUserId) || "not_connected";
 };
 
 export const getStartups = async (req, res, next) => {
@@ -59,6 +73,12 @@ export const getStartups = async (req, res, next) => {
       requesterUserId: req.user?.id || null,
     });
 
+    const startupUserIds = result.rows.map((row) => row.user_id);
+    const connectionStatusMap = await getConnectionStatusesForStartups(
+      req.user?.id || null,
+      startupUserIds,
+    );
+
     const data = result.rows.map((row) => {
       const startup = new StartupProfile(row);
       startup.parseJsonFields(["traction", "social_media"]);
@@ -68,6 +88,7 @@ export const getStartups = async (req, res, next) => {
         connection_status: buildConnectionStatus(
           req.user?.id || null,
           startup.user_id,
+          connectionStatusMap,
         ),
       };
     });
@@ -132,6 +153,12 @@ export const getInvestors = async (req, res, next) => {
       requesterUserId: req.user?.id || null,
     });
 
+    const investorUserIds = result.rows.map((row) => row.user_id);
+    const connectionStatusMap = await getConnectionStatusesForInvestors(
+      req.user?.id || null,
+      investorUserIds,
+    );
+
     const data = result.rows.map((row) => {
       const investor = new InvestorProfile(row);
       return {
@@ -139,6 +166,7 @@ export const getInvestors = async (req, res, next) => {
         connection_status: buildConnectionStatus(
           req.user?.id || null,
           investor.user_id,
+          connectionStatusMap,
         ),
       };
     });

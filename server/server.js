@@ -15,6 +15,8 @@ import searchRoutes from "./routes/search.js";
 import investorSearchRoutes from "./routes/investorSearch.js";
 import uploadsRoutes from "./routes/uploads.js";
 import settingsRoutes from "./routes/settings.js";
+import connectionsRoutes from "./routes/connectons.js";
+import notificationsRoutes from "./routes/notifications.js";
 import cron from "node-cron";
 import { deleteStaleUnverifiedUsers } from "./utils/cleanup.js";
 import path from "path";
@@ -71,8 +73,10 @@ app.use("/api/investors/profile", investorRoutes);
 app.use("/api/investors", investorSearchRoutes);
 app.use("/api/uploads", uploadsRoutes);
 app.use("/api/messages", messagesRoutes);
+app.use("/startups", searchRoutes);
 app.use("/api/startups", searchRoutes);
-// app.use("/api/connections", connectionsRoutes);
+app.use("/api/connections", connectionsRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 // ----------------------------------------------------
 // 1. Initialize HTTP Server

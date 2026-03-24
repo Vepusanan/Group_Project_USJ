@@ -70,11 +70,15 @@ export const profileService = {
    */
   updateProfile: async (profileId, formData) => {
     try {
-      const response = await api.put(`/startups/${profileId}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
+      const response = await api.put(
+        `/startups/profile/${profileId}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         },
-      });
+      );
       return {
         success: true,
         data: response.data,
@@ -94,7 +98,7 @@ export const profileService = {
    */
   getMyProfile: async () => {
     try {
-      const response = await api.get("/startups/me");
+      const response = await api.get("/startups/profile/me");
       return {
         success: true,
         data: response.data,
@@ -121,7 +125,7 @@ export const profileService = {
    */
   getProfileCompletion: async () => {
     try {
-      const response = await api.get("/startups/completion");
+      const response = await api.get("/startups/profile/completion");
       return {
         success: true,
         data: response.data,
@@ -144,7 +148,7 @@ export const profileService = {
   uploadDocuments: async (profileId, formData) => {
     try {
       const response = await api.post(
-        `/startups/${profileId}/documents`,
+        `/startups/profile/${profileId}/documents`,
         formData,
         {
           headers: {
@@ -174,7 +178,7 @@ export const profileService = {
   deleteDocument: async (profileId, documentIndex) => {
     try {
       const response = await api.delete(
-        `/startups/${profileId}/documents/${documentIndex}`,
+        `/startups/profile/${profileId}/documents/${documentIndex}`,
       );
       return {
         success: true,
