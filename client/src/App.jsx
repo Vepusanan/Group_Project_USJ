@@ -20,6 +20,7 @@ import EmailVerificationPage from "./pages/EmailVerificationPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import InvestorOnboardingPage from "./pages/InvestorOnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
+import InvestorsListPage from "./pages/InvestorsListPage";
 import Header from "./components/common/Header.jsx";
 import Footer from "./components/common/Footer";
 import { useAuth } from "./hooks/useAuth";
@@ -64,7 +65,7 @@ const PublicRoute = ({ children }) => {
 
 const AppContent = () => {
   const location = useLocation();
-  const hideHeaderRoutes = ["/dashboard", "/"];
+  const hideHeaderRoutes = ["/dashboard", "/", "/investors"];
   const showBgRoutes = [
     "/login",
     "/signup",
@@ -171,6 +172,15 @@ const AppContent = () => {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/investors"
+            element={
+              <ProtectedRoute>
+                <InvestorsListPage />
               </ProtectedRoute>
             }
           />
