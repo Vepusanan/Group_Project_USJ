@@ -24,15 +24,11 @@ const Header = () => {
         { to: "/startups", label: "Startups" },
         { to: "/connections", label: "My Connections" },
         { to: "/messages", label: "Messages" },
-        { to: "/profile", label: "Profile" },
-        { to: "/settings", label: "Settings" },
       ]
     : [
         { to: "/investors", label: "Investors" },
         { to: "/connections", label: "My Connections" },
         { to: "/messages", label: "Messages" },
-        { to: "/profile", label: "Profile" },
-        { to: "/settings", label: "Settings" },
       ];
 
   const handleLogout = async () => {
@@ -113,32 +109,41 @@ const Header = () => {
         <div className="flex items-center space-x-3">
           {isAuthenticated && user ? (
             <>
-              <nav className="hidden lg:flex items-center gap-2">
-                {navItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    className={({ isActive }) =>
-                      `px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-300 ${
-                        isActive
-                          ? "bg-purple-500/30 border-purple-400/60 text-white"
-                          : "bg-white/5 border-white/15 text-gray-200 hover:bg-white/10"
-                      }`
-                    }
-                  >
-                    {item.label}
-                  </NavLink>
-                ))}
-              </nav>
+              <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-2">
+                <nav className="flex items-center gap-2">
+                  {navItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={({ isActive }) =>
+                        `px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-300 ${
+                          isActive
+                            ? "bg-purple-500/30 border-purple-400/60 text-white"
+                            : "bg-white/5 border-white/15 text-gray-200 hover:bg-white/10"
+                        }`
+                      }
+                    >
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </nav>
 
-              <Link
-                to="/dashboard"
-                className="px-4 py-2 bg-blue-500/20 rounded-full text-sm font-medium border border-blue-400/40 hover:bg-blue-500/50 hover:border-blue-400/60 transition-all duration-300"
-              >
-                <span className="text-white">Dashboard</span>
-              </Link>
+                <Link
+                  to={isInvestor ? "/startups" : "/investors"}
+                  className="px-4 py-2 bg-blue-500/20 rounded-full text-sm font-medium border border-blue-400/40 hover:bg-blue-500/50 hover:border-blue-400/60 transition-all duration-300"
+                >
+                  <span className="text-white">Explore</span>
+                </Link>
+              </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 ml-auto">
+                <Link
+                  to={isInvestor ? "/startups" : "/investors"}
+                  className="lg:hidden px-4 py-2 bg-blue-500/20 rounded-full text-sm font-medium border border-blue-400/40 hover:bg-blue-500/50 hover:border-blue-400/60 transition-all duration-300"
+                >
+                  <span className="text-white">Explore</span>
+                </Link>
+
                 <div className="relative" ref={dropdownRef}>
                   <button
                     type="button"

@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 const HomePage = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
+  const roleLandingPath = user?.userType === "investor" ? "/startups" : "/investors";
 
   const handleLogout = async () => {
     try {
@@ -46,11 +47,11 @@ const HomePage = () => {
           {isAuthenticated && user ? (
             <>
               <Link
-                to="/dashboard"
+                to={roleLandingPath}
                 className="px-4 py-2 bg-blue-500/20 rounded-full text-sm font-medium border border-blue-400/40 hover:bg-blue-500/50 hover:border-blue-400/60 transition-all duration-300"
               >
                 <span className="text-white hover:text-transparent hover:bg-gradient-to-r hover:from-blue-300 hover:to-purple-300 hover:bg-clip-text transition-all duration-300">
-                  Dashboard
+                  Explore
                 </span>
               </Link>
 
@@ -138,13 +139,13 @@ const HomePage = () => {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               {isAuthenticated && user ? (
-                <Link to="/dashboard">
+                <Link to={roleLandingPath}>
                   <Button
                     variant="gradient-border"
                     size="lg"
                     className="w-[220px]"
                   >
-                    Go to Dashboard
+                    Explore Matches
                   </Button>
                 </Link>
               ) : (

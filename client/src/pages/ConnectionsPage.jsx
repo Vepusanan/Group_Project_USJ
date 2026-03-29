@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiService } from "../services/apiService";
 
 const statusTagClass = {
@@ -14,6 +15,7 @@ const tabs = [
 ];
 
 const ConnectionsPage = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("connected");
   const [connections, setConnections] = useState([]);
   const [pendingSent, setPendingSent] = useState([]);
@@ -93,6 +95,17 @@ const ConnectionsPage = () => {
     (item) => item.normalized_status === "accepted",
   );
 
+  const handleMessage = (connection) => {
+    if (!connection?.other_user_id) return;
+
+    const params = new URLSearchParams({
+      userId: String(connection.other_user_id),
+      name: connection.other_user_name || "User",
+    });
+
+    navigate(`/messages?${params.toString()}`);
+  };
+
   return (
     <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
       <div className="mx-auto max-w-6xl space-y-6">
@@ -155,6 +168,13 @@ const ConnectionsPage = () => {
                         >
                           accepted
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => handleMessage(connection)}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white"
+                        >
+                          Message
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleRemoveConnection(connection.id)}

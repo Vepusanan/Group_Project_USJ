@@ -1,20 +1,33 @@
 import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiService } from "../services/apiService";
 import { useAuth } from "../hooks/useAuth";
 
-const stringifyValue = (value) => {
-  if (Array.isArray(value)) {
-    return value.join(", ");
+const parseJsonValue = (value, fallback) => {
+  if (value == null) return fallback;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
   }
-  if (typeof value === "object" && value !== null) {
-    return Object.values(value).join(", ");
+  return value;
+};
+
+const stringifyValue = (value) => {
+  if (!value) return "N/A";
+  if (Array.isArray(value)) return value.join(", ") || "N/A";
+  if (typeof value === "object") {
+    const vals = Object.values(value).filter(Boolean);
+    return vals.length ? vals.join(", ") : "N/A";
   }
   return value;
 };
 
 const InvestorProfilePage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,8 +50,15 @@ const InvestorProfilePage = () => {
         return;
       }
 
-      setProfile(result.data?.data || null);
-      setConnectionStatus(result.data?.data?.connection_status || null);
+      const data = result.data?.data || null;
+      if (!data) {
+        setError("Profile not found");
+        setLoading(false);
+        return;
+      }
+
+      setProfile(data);
+      setConnectionStatus(data.connection_status || null);
       setLoading(false);
     };
 
@@ -63,10 +83,23 @@ const InvestorProfilePage = () => {
     );
   }
 
-  const isOwnProfile = !!(
-    user?.id &&
-    profile?.user_id &&
-    user.id === profile.user_id
+  const industries = parseJsonValue(
+    profile.industries_of_interest,
+    profile.industries_of_interest,
+  );
+  const stages = parseJsonValue(profile.stage_preference, profile.stage_preference);
+  const geographies = parseJsonValue(
+    profile.geographic_preference,
+    profile.geographic_preference,
+  );
+  const structures = parseJsonValue(
+    profile.investment_structure,
+    profile.investment_structure,
+  );
+  const social = parseJsonValue(profile.social_media, {});
+
+  const isOwnProfile = Boolean(
+    user?.id && profile?.user_id && user.id === profile.user_id,
   );
 
   const handleSendConnectionRequest = async () => {
@@ -88,6 +121,16 @@ const InvestorProfilePage = () => {
     setConnectMessage("");
   };
 
+  const handleMessage = () => {
+    if (!profile?.user_id) return;
+
+    const params = new URLSearchParams({
+      userId: String(profile.user_id),
+      name: profile.name_or_firm || "Investor",
+    });
+    navigate(`/messages?${params.toString()}`);
+  };
+
   return (
     <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
       <div className="max-w-5xl mx-auto space-y-4">
@@ -95,31 +138,38 @@ const InvestorProfilePage = () => {
           to="/investors"
           className="inline-block text-sm text-blue-300 hover:text-blue-200"
         >
-          ← Back to Investors
+          &lt;- Back to Investors
         </Link>
 
         <div className="rounded-xl border border-white/15 bg-black/45 p-6">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-white">
-                {profile.name || profile.firm_name || "Investor"}
+                {profile.name_or_firm || "Investor"}
               </h1>
               <p className="text-gray-300 mt-1">
                 {profile.investor_type || "Investor profile"}
               </p>
               <p className="text-sm text-gray-400 mt-2">
-                {profile.location ||
-                  [profile.city, profile.country].filter(Boolean).join(", ") ||
-                  "No location information"}
+                {stringifyValue(geographies)}
               </p>
             </div>
 
             {!isOwnProfile && (
-              <div>
+              <div className="flex items-center gap-2">
                 {connectionStatus === "accepted" ? (
-                  <span className="inline-block px-3 py-1.5 rounded-full text-sm border border-emerald-400/40 bg-emerald-500/20 text-emerald-100">
-                    Connected
-                  </span>
+                  <>
+                    <span className="inline-block px-3 py-1.5 rounded-full text-sm border border-emerald-400/40 bg-emerald-500/20 text-emerald-100">
+                      Connected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleMessage}
+                      className="px-4 py-2 rounded-lg bg-indigo-600 text-white"
+                    >
+                      Message
+                    </button>
+                  </>
                 ) : connectionStatus === "pending" ? (
                   <span className="inline-block px-3 py-1.5 rounded-full text-sm border border-amber-400/40 bg-amber-500/20 text-amber-100">
                     Pending
@@ -141,55 +191,72 @@ const InvestorProfilePage = () => {
         <div className="rounded-xl border border-white/15 bg-black/45 p-6">
           <h2 className="text-xl font-semibold text-white">Investment Focus</h2>
           <div className="mt-3 space-y-2 text-gray-200">
-            <p>Industries: {stringifyValue(profile.industries) || "N/A"}</p>
-            <p>Stages: {stringifyValue(profile.investment_stage) || "N/A"}</p>
+            <p>Industries: {stringifyValue(industries)}</p>
+            <p>Stages: {stringifyValue(stages)}</p>
             <p>
-              Check Size:{" "}
-              {profile.min_investment_size ||
-                profile.investment_size_min ||
-                "N/A"}{" "}
-              -{" "}
-              {profile.max_investment_size ||
-                profile.investment_size_max ||
-                "N/A"}
+              Check Size: {profile.min_investment_size || "N/A"} -{" "}
+              {profile.max_investment_size || "N/A"}
             </p>
+            <p>Structures: {stringifyValue(structures)}</p>
             {profile.investment_thesis && (
               <p>Thesis: {profile.investment_thesis}</p>
             )}
+            {profile.what_you_look_for && (
+              <p>What You Look For: {profile.what_you_look_for}</p>
+            )}
+            {profile.value_add && <p>Value Add: {profile.value_add}</p>}
           </div>
         </div>
 
         <div className="rounded-xl border border-white/15 bg-black/45 p-6">
           <h2 className="text-xl font-semibold text-white">Contact</h2>
           <div className="mt-3 space-y-2 text-gray-200">
-            {profile.website && (
-              <p>
-                Website:{" "}
-                <a
-                  href={profile.website}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-300"
-                >
-                  {profile.website}
-                </a>
-              </p>
+            {profile.primary_contact_email && (
+              <p>Email: {profile.primary_contact_email}</p>
             )}
-            {profile.linkedin && (
+            {profile.phone_number && <p>Phone: {profile.phone_number}</p>}
+            {profile.preferred_contact_method && (
+              <p>Preferred Contact: {profile.preferred_contact_method}</p>
+            )}
+            {social.linkedin && (
               <p>
                 LinkedIn:{" "}
                 <a
-                  href={profile.linkedin}
+                  href={social.linkedin}
                   target="_blank"
                   rel="noreferrer"
                   className="text-blue-300"
                 >
-                  {profile.linkedin}
+                  {social.linkedin}
                 </a>
               </p>
             )}
-            {profile.contact_email && <p>Email: {profile.contact_email}</p>}
-            {profile.contact_phone && <p>Phone: {profile.contact_phone}</p>}
+            {social.twitter && (
+              <p>
+                Twitter:{" "}
+                <a
+                  href={social.twitter}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-300"
+                >
+                  {social.twitter}
+                </a>
+              </p>
+            )}
+            {social.website && (
+              <p>
+                Website:{" "}
+                <a
+                  href={social.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-300"
+                >
+                  {social.website}
+                </a>
+              </p>
+            )}
           </div>
         </div>
       </div>

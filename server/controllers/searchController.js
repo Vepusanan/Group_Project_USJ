@@ -65,8 +65,7 @@ export const getStartups = async (req, res, next) => {
       limit,
       q: req.query.q,
       industry: req.query.industry,
-      location_country: req.query.location_country,
-      location_city: req.query.location_city,
+      current_stage: req.query.current_stage,
       funding_stage: req.query.funding_stage,
       revenue_status: req.query.revenue_status,
       sort,
@@ -81,7 +80,7 @@ export const getStartups = async (req, res, next) => {
 
     const data = result.rows.map((row) => {
       const startup = new StartupProfile(row);
-      startup.parseJsonFields(["traction", "social_media"]);
+      startup.parseJsonFields(["social_media_links"]);
 
       return {
         ...startup.getPublicFields(),
@@ -103,8 +102,6 @@ export const getStartups = async (req, res, next) => {
       filters: {
         q: req.query.q || null,
         industry: req.query.industry || null,
-        location_country: req.query.location_country || null,
-        location_city: req.query.location_city || null,
         funding_stage: req.query.funding_stage || null,
         revenue_status: req.query.revenue_status || null,
         sort,

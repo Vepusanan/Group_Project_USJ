@@ -1,9 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { apiService } from "../services/apiService";
+import { useAuth } from "../hooks/useAuth";
 
 const MessagesPage = () => {
+  const location = useLocation();
+  const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
+  const [composeTarget, setComposeTarget] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [attachmentFile, setAttachmentFile] = useState(null);
@@ -12,8 +17,18 @@ const MessagesPage = () => {
   const [loading, setLoading] = useState(true);
   const [messageLoading, setMessageLoading] = useState(false);
   const [error, setError] = useState("");
+  const shouldScrollToBottomRef = useRef(false);
+  const messagesEndRef = useRef(null);
 
   const selectedConversationId = selectedConversation?.conversation_id || null;
+
+  const queryTarget = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const userId = params.get("userId");
+    const name = params.get("name") || "User";
+    if (!userId) return null;
+    return { userId, name };
+  }, [location.search]);
 
   const loadConversations = async () => {
     setLoading(true);
@@ -30,8 +45,33 @@ const MessagesPage = () => {
     const list = result.data?.conversations || [];
     setConversations(list);
 
-    if (!selectedConversation && list.length > 0) {
+    if (queryTarget?.userId) {
+      const matched = list.find(
+        (conversation) =>
+          String(conversation.other_user_id) === String(queryTarget.userId),
+      );
+
+      if (matched) {
+        setSelectedConversation(matched);
+        setComposeTarget(null);
+      } else {
+        setSelectedConversation(null);
+        setComposeTarget({
+          other_user_id: queryTarget.userId,
+          other_user_name: queryTarget.name,
+        });
+      }
+    } else if (!selectedConversation && list.length > 0) {
       setSelectedConversation(list[0]);
+      setComposeTarget(null);
+    } else if (selectedConversation) {
+      const stillExists = list.find(
+        (conversation) =>
+          conversation.conversation_id === selectedConversation.conversation_id,
+      );
+      if (!stillExists) {
+        setSelectedConversation(list[0] || null);
+      }
     }
 
     setLoading(false);
@@ -61,18 +101,38 @@ const MessagesPage = () => {
     setMessageLoading(false);
   };
 
+  const scrollToBottom = (behavior = "smooth") => {
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+    });
+  };
+
   useEffect(() => {
     loadConversations();
-  }, []);
+  }, [queryTarget?.userId]);
 
   useEffect(() => {
     loadMessages(selectedConversationId);
   }, [selectedConversationId]);
 
-  const selectedReceiverId = useMemo(
-    () => selectedConversation?.other_user_id || null,
-    [selectedConversation],
-  );
+  useEffect(() => {
+    if (!shouldScrollToBottomRef.current) {
+      return;
+    }
+
+    scrollToBottom("smooth");
+    shouldScrollToBottomRef.current = false;
+  }, [messages.length]);
+
+  const selectedReceiverId = useMemo(() => {
+    if (selectedConversation?.other_user_id) {
+      return selectedConversation.other_user_id;
+    }
+    if (composeTarget?.other_user_id) {
+      return composeTarget.other_user_id;
+    }
+    return null;
+  }, [selectedConversation, composeTarget]);
 
   const handleSend = async (event) => {
     event.preventDefault();
@@ -116,10 +176,14 @@ const MessagesPage = () => {
     setAttachmentFile(null);
     setAttachmentProgress(0);
     setSending(false);
-    await Promise.all([
-      loadConversations(),
-      loadMessages(selectedConversationId),
-    ]);
+
+    const createdMessage = result.data?.data;
+    if (createdMessage) {
+      shouldScrollToBottomRef.current = true;
+      setMessages((prev) => [...prev, createdMessage]);
+    }
+
+    await loadConversations();
   };
 
   const isImageAttachment = (url) => {
@@ -185,8 +249,8 @@ const MessagesPage = () => {
             )}
           </aside>
 
-          <section className="rounded-xl border border-white/15 bg-black/45 p-4 flex flex-col min-h-[520px]">
-            {!selectedConversation ? (
+          <section className="rounded-xl border border-white/15 bg-black/45 p-4 flex flex-col h-[70vh] max-h-[760px] min-h-[520px]">
+            {!selectedConversation && !composeTarget ? (
               <div className="text-gray-300">
                 Select a conversation to start messaging.
               </div>
@@ -194,59 +258,96 @@ const MessagesPage = () => {
               <>
                 <div className="pb-3 border-b border-white/10">
                   <h3 className="text-white text-lg font-semibold">
-                    {selectedConversation.other_user_name}
+                    {selectedConversation?.other_user_name ||
+                      composeTarget?.other_user_name ||
+                      "User"}
                   </h3>
                 </div>
 
-                <div className="flex-1 overflow-y-auto py-4 space-y-2">
+                <div className="flex-1 min-h-0 overflow-y-auto py-4 pr-1 space-y-2">
                   {messageLoading && (
                     <div className="text-gray-300">Loading messages...</div>
                   )}
                   {!messageLoading && messages.length === 0 && (
                     <div className="text-gray-300">
-                      No messages in this conversation.
+                      {selectedConversation
+                        ? "No messages in this conversation."
+                        : "No messages yet. Send a message to start this conversation."}
                     </div>
                   )}
 
                   {messages.map((message) => (
                     <div
                       key={message.id}
-                      className="rounded-lg border border-white/15 bg-black/30 p-3"
+                      className={`flex ${String(message.sender_id) === String(user?.id) ? "justify-end" : "justify-start"}`}
                     >
-                      {message.text && (
-                        <p className="text-gray-100 text-sm">{message.text}</p>
-                      )}
-                      {message.attachment_url && (
-                        <div className="mt-2">
-                          {isImageAttachment(message.attachment_url) ? (
-                            <a
-                              href={message.attachment_url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <img
-                                src={message.attachment_url}
-                                alt="Attachment"
-                                className="max-h-56 rounded-lg border border-white/15"
-                              />
-                            </a>
-                          ) : (
-                            <a
-                              href={message.attachment_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-blue-300 hover:text-blue-200 text-sm underline"
-                            >
-                              View attachment
-                            </a>
-                          )}
-                        </div>
-                      )}
-                      <p className="text-[11px] text-gray-500 mt-1">
-                        {new Date(message.created_at).toLocaleString()}
-                      </p>
+                      <div
+                        className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 border ${
+                          String(message.sender_id) === String(user?.id)
+                            ? "bg-gradient-to-r from-purple-700/90 to-indigo-700/90 border-purple-400/40 text-white"
+                            : "bg-black/35 border-white/15 text-gray-100"
+                        }`}
+                      >
+                        <p
+                          className={`text-[11px] mb-1 font-medium ${
+                            String(message.sender_id) === String(user?.id)
+                              ? "text-purple-100"
+                              : "text-gray-400"
+                          }`}
+                        >
+                          {String(message.sender_id) === String(user?.id)
+                            ? "You"
+                            : selectedConversation?.other_user_name ||
+                              composeTarget?.other_user_name ||
+                              "User"}
+                        </p>
+
+                        {message.text && (
+                          <p className="text-sm whitespace-pre-wrap break-words">
+                            {message.text}
+                          </p>
+                        )}
+
+                        {message.attachment_url && (
+                          <div className="mt-2">
+                            {isImageAttachment(message.attachment_url) ? (
+                              <a
+                                href={message.attachment_url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <img
+                                  src={message.attachment_url}
+                                  alt="Attachment"
+                                  className="max-h-56 rounded-lg border border-white/15"
+                                />
+                              </a>
+                            ) : (
+                              <a
+                                href={message.attachment_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-blue-200 hover:text-blue-100 text-sm underline"
+                              >
+                                View attachment
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        <p
+                          className={`text-[11px] mt-2 ${
+                            String(message.sender_id) === String(user?.id)
+                              ? "text-purple-100/80"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {new Date(message.created_at).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
                   ))}
+                  <div ref={messagesEndRef} />
                 </div>
 
                 <form

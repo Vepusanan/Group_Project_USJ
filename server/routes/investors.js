@@ -17,7 +17,7 @@ const router = express.Router();
 // GET    /api/investors/profile/:id    -> Get public (or owner) profile
 // GET    /api/investors/profile/me     -> Get current user's profile
 
-// Use multer field: photo (single image)
+// Keep legacy upload field accepted so older clients do not fail with unexpected field errors.
 const multerFields = upload.fields([{ name: "photo", maxCount: 1 }]);
 
 router.post("/", protect, multerFields, createInvestorProfileController);

@@ -1,67 +1,12 @@
 import pool from "../config/database.js";
 
-// Helper to safely stringify JSON fields (only if they're objects)
 const safeStringify = (value) => {
-  if (!value) return null;
+  if (value === undefined || value === null) return null;
   if (typeof value === "string") return value;
   return JSON.stringify(value);
 };
 
-const normalizeStartupPayload = (payload = {}) => {
-  const city = payload.city ?? payload.location_city ?? null;
-  const country = payload.country ?? payload.location_country ?? null;
-  const stage = payload.stage ?? payload.funding_stage ?? null;
-
-  return {
-    ...payload,
-    city,
-    country,
-    stage,
-    location_city: payload.location_city ?? city,
-    location_country: payload.location_country ?? country,
-    funding_stage: payload.funding_stage ?? stage,
-    revenue_status: payload.revenue_status ?? null,
-  };
-};
-
-const normalizeStartupUpdates = (updates = {}) => {
-  const normalizedUpdates = { ...updates };
-
-  if (
-    Object.prototype.hasOwnProperty.call(updates, "city") ||
-    Object.prototype.hasOwnProperty.call(updates, "location_city")
-  ) {
-    const city = updates.city ?? updates.location_city ?? null;
-    normalizedUpdates.city = city;
-    normalizedUpdates.location_city = updates.location_city ?? city;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(updates, "country") ||
-    Object.prototype.hasOwnProperty.call(updates, "location_country")
-  ) {
-    const country = updates.country ?? updates.location_country ?? null;
-    normalizedUpdates.country = country;
-    normalizedUpdates.location_country = updates.location_country ?? country;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(updates, "stage") ||
-    Object.prototype.hasOwnProperty.call(updates, "funding_stage")
-  ) {
-    const stage = updates.stage ?? updates.funding_stage ?? null;
-    normalizedUpdates.stage = stage;
-    normalizedUpdates.funding_stage = updates.funding_stage ?? stage;
-  }
-
-  if (Object.prototype.hasOwnProperty.call(updates, "revenue_status")) {
-    normalizedUpdates.revenue_status = updates.revenue_status ?? null;
-  }
-
-  return normalizedUpdates;
-};
-
-const STARTUP_SEARCH_VECTOR = `to_tsvector('english', concat_ws(' ', coalesce(sp.company_name, ''), coalesce(sp.tagline, ''), coalesce(sp.description, '')))`;
+const STARTUP_SEARCH_VECTOR = `to_tsvector('english', concat_ws(' ', coalesce(sp.company_name, ''), coalesce(sp.tagline, ''), coalesce(sp.detailed_description, '')))`;
 
 let connectionTableMetaCache = null;
 
@@ -120,8 +65,7 @@ const getConnectionTableMeta = async () => {
 const buildListStartupsQuery = ({
   searchTerm,
   industries,
-  locationCountry,
-  locationCity,
+  currentStage,
   fundingStage,
   revenueStatus,
   requesterUserId,
@@ -142,32 +86,23 @@ const buildListStartupsQuery = ({
   }
 
   if (industries.length > 0) {
-    const queryRef = addValue(
-      industries.map((industry) => industry.toLowerCase()),
-    );
+    const queryRef = addValue(industries.map((industry) => industry.toLowerCase()));
     clauses.push(`LOWER(sp.industry) = ANY(${queryRef})`);
   }
 
-  if (locationCountry) {
-    const queryRef = addValue(locationCountry.trim().toLowerCase());
-    clauses.push(
-      `LOWER(COALESCE(sp.location_country, sp.country)) = ${queryRef}`,
-    );
-  }
-
-  if (locationCity) {
-    const queryRef = addValue(locationCity.trim().toLowerCase());
-    clauses.push(`LOWER(COALESCE(sp.location_city, sp.city)) = ${queryRef}`);
+  if (currentStage) {
+    const queryRef = addValue(currentStage.toUpperCase());
+    clauses.push(`sp.current_stage = ${queryRef}::public.startup_stage_enum`);
   }
 
   if (fundingStage) {
-    const queryRef = addValue(fundingStage.trim().toLowerCase());
-    clauses.push(`LOWER(COALESCE(sp.funding_stage, sp.stage)) = ${queryRef}`);
+    const queryRef = addValue(fundingStage.toUpperCase());
+    clauses.push(`sp.funding_stage = ${queryRef}::public.funding_stage_enum`);
   }
 
   if (revenueStatus) {
-    const queryRef = addValue(revenueStatus.trim().toLowerCase());
-    clauses.push(`LOWER(sp.revenue_status) = ${queryRef}`);
+    const queryRef = addValue(revenueStatus.toUpperCase());
+    clauses.push(`sp.revenue_status = ${queryRef}::public.revenue_status_enum`);
   }
 
   if (requesterUserId) {
@@ -179,8 +114,7 @@ const buildListStartupsQuery = ({
     clauses.push(`COALESCE(ps.profile_visibility, 'public') = 'public'`);
   }
 
-  const whereClause =
-    clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
 
   return { whereClause, values };
 };
@@ -190,114 +124,94 @@ const getSortClause = (sort) => {
     case "alphabetical":
       return "ORDER BY sp.company_name ASC NULLS LAST";
     case "recently_updated":
-      return "ORDER BY sp.updated_at DESC NULLS LAST";
     case "newest":
     default:
-      return "ORDER BY sp.created_at DESC NULLS LAST";
+      return "ORDER BY sp.founded_date DESC NULLS LAST, sp.startup_profile_id DESC";
   }
 };
 
-/**
- * Create a new startup profile in the database
- * @param {string} userId - User ID
- * @param {Object} payload - Profile data
- * @returns {Promise<Object>} Created profile
- */
 export async function createStartupProfile(userId, payload) {
-  const normalizedPayload = normalizeStartupPayload(payload);
   const q = `INSERT INTO startup_profiles
-    (user_id, company_name, founders, logo_url, city, country, website, linkedin, tagline, description, industry, founded_date, stage, team, funding, traction, documents, primary_contact_name, contact_email, contact_phone, social_media, location_country, location_city, funding_stage, revenue_status)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
+    (user_id, company_name, founder_names, tagline, detailed_description, industry, founded_date,
+     current_stage, team_size, key_team_members, team_photo_url, funding_stage, amount_seeking,
+     previous_funding, use_of_funds, revenue_status, key_metrics, major_achievements,
+     customer_testimonials, pitch_deck_url, business_plan_url, product_demo_url,
+     primary_contact_name, contact_email, phone_number, social_media_links)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
     RETURNING *`;
 
   const values = [
     userId,
-    normalizedPayload.company_name || null,
-    safeStringify(normalizedPayload.founders),
-    normalizedPayload.logo_url || null,
-    normalizedPayload.city || null,
-    normalizedPayload.country || null,
-    normalizedPayload.website || null,
-    normalizedPayload.linkedin || null,
-    normalizedPayload.tagline || null,
-    normalizedPayload.description || null,
-    normalizedPayload.industry || null,
-    normalizedPayload.founded_date || null,
-    normalizedPayload.stage || null,
-    safeStringify(normalizedPayload.team),
-    safeStringify(normalizedPayload.funding),
-    safeStringify(normalizedPayload.traction),
-    safeStringify(normalizedPayload.documents),
-    normalizedPayload.primary_contact_name || null,
-    normalizedPayload.contact_email || null,
-    normalizedPayload.contact_phone || null,
-    safeStringify(normalizedPayload.social_media),
-    normalizedPayload.location_country || null,
-    normalizedPayload.location_city || null,
-    normalizedPayload.funding_stage || null,
-    normalizedPayload.revenue_status || null,
+    payload.company_name || null,
+    payload.founder_names || null,
+    payload.tagline || null,
+    payload.detailed_description || null,
+    payload.industry || null,
+    payload.founded_date || null,
+    payload.current_stage || null,
+    payload.team_size || null,
+    payload.key_team_members || null,
+    payload.team_photo_url || null,
+    payload.funding_stage || null,
+    payload.amount_seeking || null,
+    payload.previous_funding || 0,
+    payload.use_of_funds || null,
+    payload.revenue_status || null,
+    payload.key_metrics || null,
+    payload.major_achievements || null,
+    payload.customer_testimonials || null,
+    payload.pitch_deck_url || null,
+    payload.business_plan_url || null,
+    payload.product_demo_url || null,
+    payload.primary_contact_name || null,
+    payload.contact_email || null,
+    payload.phone_number || null,
+    safeStringify(payload.social_media_links),
   ];
 
   const result = await pool.query(q, values);
   return result.rows[0];
 }
 
-/**
- * Get startup profile by ID
- * @param {string} id - Profile ID
- * @returns {Promise<Object|null>} Profile or null
- */
 export async function getStartupProfileById(id) {
-  const q = "SELECT * FROM startup_profiles WHERE id = $1";
+  const q = "SELECT * FROM startup_profiles WHERE startup_profile_id = $1";
   const result = await pool.query(q, [id]);
   return result.rows[0] || null;
 }
 
-/**
- * Get startup profile by user ID
- * @param {string} userId - User ID
- * @returns {Promise<Object|null>} Profile or null
- */
 export async function getStartupProfileByUserId(userId) {
   const q = "SELECT * FROM startup_profiles WHERE user_id = $1";
   const result = await pool.query(q, [userId]);
   return result.rows[0] || null;
 }
 
-/**
- * Update startup profile
- * @param {string} id - Profile ID
- * @param {string} userId - User ID (for ownership verification)
- * @param {Object} updates - Fields to update
- * @returns {Promise<Object|null>} Updated profile or null
- */
 export async function updateStartupProfile(id, userId, updates) {
-  const normalizedUpdates = normalizeStartupUpdates(updates);
   const allowed = [
     "company_name",
-    "founders",
-    "logo_url",
-    "city",
-    "country",
-    "website",
-    "linkedin",
+    "founder_names",
     "tagline",
-    "description",
+    "detailed_description",
     "industry",
     "founded_date",
-    "stage",
-    "team",
-    "funding",
-    "traction",
-    "documents",
+    "current_stage",
+    "team_size",
+    "key_team_members",
+    "team_photo_url",
+    "funding_stage",
+    "amount_seeking",
+    "previous_funding",
+    "use_of_funds",
+    "revenue_status",
+    "key_metrics",
+    "major_achievements",
+    "customer_testimonials",
+    "pitch_deck_url",
+    "business_plan_url",
+    "product_demo_url",
     "primary_contact_name",
     "contact_email",
-    "contact_phone",
-    "social_media",
-    "location_country",
-    "location_city",
-    "funding_stage",
-    "revenue_status",
+    "phone_number",
+    "social_media_links",
   ];
 
   const sets = [];
@@ -305,19 +219,9 @@ export async function updateStartupProfile(id, userId, updates) {
   let idx = 1;
 
   for (const key of allowed) {
-    if (Object.prototype.hasOwnProperty.call(normalizedUpdates, key)) {
-      let val = normalizedUpdates[key];
-      if (
-        [
-          "founders",
-          "team",
-          "funding",
-          "traction",
-          "documents",
-          "social_media",
-        ].includes(key) &&
-        val !== undefined
-      ) {
+    if (Object.prototype.hasOwnProperty.call(updates, key)) {
+      let val = updates[key];
+      if (key === "social_media_links") {
         val = safeStringify(val);
       }
       sets.push(`${key} = $${idx}`);
@@ -330,27 +234,20 @@ export async function updateStartupProfile(id, userId, updates) {
     return getStartupProfileById(id);
   }
 
-  // updated_at will use DB trigger if available; otherwise update manually
-  const q = `UPDATE startup_profiles SET ${sets.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx} AND user_id = $${idx + 1} RETURNING *`;
+  const q = `UPDATE startup_profiles SET ${sets.join(", ")} WHERE startup_profile_id = $${idx} AND user_id = $${idx + 1} RETURNING *`;
   values.push(id, userId);
 
   const result = await pool.query(q, values);
   return result.rows[0] || null;
 }
 
-/**
- * List startups with search, filtering, sorting, and pagination.
- * @param {Object} options - Query options
- * @returns {Promise<{rows: Object[], total: number}>}
- */
 export async function listStartups(options = {}) {
   const {
     page = 1,
     limit = 20,
     q,
     industry,
-    location_country,
-    location_city,
+    current_stage,
     funding_stage,
     revenue_status,
     sort = "newest",
@@ -369,8 +266,7 @@ export async function listStartups(options = {}) {
   const { whereClause, values } = buildListStartupsQuery({
     searchTerm: q,
     industries,
-    locationCountry: location_country,
-    locationCity: location_city,
+    currentStage: current_stage,
     fundingStage: funding_stage,
     revenueStatus: revenue_status,
     requesterUserId,
@@ -408,13 +304,6 @@ export async function listStartups(options = {}) {
   };
 }
 
-/**
- * Resolve connection statuses between requester and listed startup users.
- * Gracefully returns an empty map if a compatible connections table is unavailable.
- * @param {string|null} requesterUserId
- * @param {string[]} startupUserIds
- * @returns {Promise<Map<string, string>>}
- */
 export async function getConnectionStatusesForStartups(
   requesterUserId,
   startupUserIds = [],

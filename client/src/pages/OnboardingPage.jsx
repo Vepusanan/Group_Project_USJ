@@ -10,8 +10,11 @@ const OnboardingPage = () => {
   useEffect(() => {
     const checkExistingProfile = async () => {
       const result = await profileService.getMyProfile();
-      if (result.success && result.data?.data?.id) {
-        navigate("/dashboard", { replace: true });
+      const data = result.data?.data || result.data;
+      const hasProfile = Boolean(data?.startup_profile_id || data?.id);
+
+      if (result.success && hasProfile) {
+        navigate("/investors", { replace: true });
         return;
       }
       setLoading(false);

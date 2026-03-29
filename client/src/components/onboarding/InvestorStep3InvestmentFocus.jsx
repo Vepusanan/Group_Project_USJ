@@ -1,241 +1,111 @@
 import React from "react";
-import { X } from "lucide-react";
 
-const InvestorStep3InvestmentFocus = ({
-  formData,
-  updateFormData,
-  errors,
-  setErrors,
-}) => {
-  const industries = [
-    "SaaS",
-    "E-commerce",
-    "FinTech",
-    "HealthTech",
-    "EdTech",
-    "AI/ML",
-    "Blockchain",
-    "IoT",
-    "CleanTech",
-    "BioTech",
-    "Real Estate",
-    "Food & Beverage",
-    "Travel & Hospitality",
-    "Media & Entertainment",
-    "Manufacturing",
-    "Logistics",
-    "Other",
-  ];
+const STRUCTURES = ["EQUITY", "SAFE", "CONVERTIBLE_NOTE", "DEBT", "GRANT", "OTHER"];
+const TIMELINES = ["IMMEDIATE", "1_3_MONTHS", "3_6_MONTHS", "6_PLUS_MONTHS"];
 
-  const geographies = [
-    "North America",
-    "South America",
-    "Europe",
-    "Africa",
-    "Middle East",
-    "India",
-    "Southeast Asia",
-    "East Asia",
-    "Oceania",
-    "Global",
-  ];
+const toggleArrayItem = (items, value) => {
+  if (items.includes(value)) return items.filter((item) => item !== value);
+  return [...items, value];
+};
 
-  const investmentStages = [
-    "Pre-Seed",
-    "Seed",
-    "Series A",
-    "Series B",
-    "Series C+",
-    "Late Stage",
-    "Growth Stage",
-    "Acquisition Ready",
-  ];
-
-  const toggleOption = (array, value) => {
-    if (array.includes(value)) {
-      return array.filter((item) => item !== value);
-    } else {
-      return [...array, value];
-    }
-  };
-
-  const handleIndustryChange = (industry) => {
-    updateFormData({
-      industries: toggleOption(formData.industries, industry),
-    });
-    setErrors({ ...errors, industries: null });
-  };
-
-  const handleGeographyChange = (geo) => {
-    updateFormData({
-      geography: toggleOption(formData.geography, geo),
-    });
-  };
-
-  const handleStageChange = (stage) => {
-    updateFormData({
-      investment_stage: toggleOption(formData.investment_stage, stage),
-    });
-  };
-
+const InvestorStep3InvestmentFocus = ({ formData, updateFormData, errors }) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">
-          Investment Focus
-        </h2>
-        <p className="text-gray-400">
-          Tell us about your investment thesis and focus areas
-        </p>
+        <h2 className="text-2xl font-bold text-white mb-2">Investment Focus</h2>
+        <p className="text-gray-400">Set your check size and deal structure preferences.</p>
       </div>
 
-      {/* Investment Thesis */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Min Investment Size (USD)
+            <span className="text-red-500 ml-1">*</span>
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={formData.min_investment_size}
+            onChange={(e) => updateFormData({ min_investment_size: e.target.value })}
+            className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
+          />
+          {errors.min_investment_size && <p className="text-sm text-red-500 mt-1">{errors.min_investment_size}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Max Investment Size (USD)
+            <span className="text-red-500 ml-1">*</span>
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={formData.max_investment_size}
+            onChange={(e) => updateFormData({ max_investment_size: e.target.value })}
+            className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
+          />
+          {errors.max_investment_size && <p className="text-sm text-red-500 mt-1">{errors.max_investment_size}</p>}
+        </div>
+      </div>
+
       <div>
-        <label className="block text-sm font-medium text-gray-200 mb-2">
-          Investment Thesis *
-        </label>
-        <textarea
-          value={formData.investment_thesis}
-          onChange={(e) => {
-            updateFormData({ investment_thesis: e.target.value });
-            setErrors({ ...errors, investment_thesis: null });
-          }}
-          placeholder="Describe your investment philosophy and what you look for in startups..."
-          maxLength={500}
-          className={`w-full px-4 py-3 bg-gray-800 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-600 resize-none h-24 ${
-            errors.investment_thesis ? "border-red-600" : "border-gray-700"
-          }`}
+        <label className="block text-sm font-medium text-gray-300 mb-2">Investment Structure<span className="text-red-500 ml-1">*</span></label>
+        <div className="flex flex-wrap gap-2">
+          {STRUCTURES.map((structure) => {
+            const selected = formData.investment_structure.includes(structure);
+            return (
+              <button
+                key={structure}
+                type="button"
+                onClick={() =>
+                  updateFormData({
+                    investment_structure: toggleArrayItem(formData.investment_structure, structure),
+                  })
+                }
+                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                  selected
+                    ? "bg-indigo-600/30 border-indigo-500 text-indigo-200"
+                    : "bg-white/5 border-gray-600 text-gray-300 hover:border-gray-500"
+                }`}
+              >
+                {structure}
+              </button>
+            );
+          })}
+        </div>
+        {errors.investment_structure && <p className="text-sm text-red-500 mt-1">{errors.investment_structure}</p>}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <input
+          id="follow-on"
+          type="checkbox"
+          checked={Boolean(formData.follow_on_investment)}
+          onChange={(e) => updateFormData({ follow_on_investment: e.target.checked })}
+          className="h-4 w-4 rounded border-gray-500 bg-white/5"
         />
-        <div className="flex justify-between items-center mt-2">
-          <span className="text-xs text-gray-500">
-            {formData.investment_thesis.length}/500 characters
-          </span>
-          {errors.investment_thesis && (
-            <p className="text-red-400 text-sm">{errors.investment_thesis}</p>
-          )}
-        </div>
+        <label htmlFor="follow-on" className="text-sm text-gray-300">Open to follow-on investments</label>
       </div>
 
-      {/* Industries */}
       <div>
-        <label className="block text-sm font-medium text-gray-200 mb-3">
-          Industries of Interest *
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Investment Timeline
+          <span className="text-red-500 ml-1">*</span>
         </label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          {industries.map((industry) => (
-            <button
-              key={industry}
-              type="button"
-              onClick={() => handleIndustryChange(industry)}
-              className={`px-4 py-2 rounded-lg border-2 font-medium transition-all ${
-                formData.industries.includes(industry)
-                  ? "border-purple-600 bg-purple-600/20 text-purple-300"
-                  : "border-gray-600 bg-gray-800/40 text-gray-400 hover:border-gray-500"
-              }`}
-            >
-              {industry}
-            </button>
+        <select
+          value={formData.investment_timeline}
+          onChange={(e) => updateFormData({ investment_timeline: e.target.value })}
+          className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
+        >
+          <option value="" className="bg-gray-900">Select timeline</option>
+          {TIMELINES.map((timeline) => (
+            <option key={timeline} value={timeline} className="bg-gray-900">{timeline}</option>
           ))}
-        </div>
-        {errors.industries && (
-          <p className="text-red-400 text-sm mt-2">{errors.industries}</p>
-        )}
+        </select>
+        {errors.investment_timeline && <p className="text-sm text-red-500 mt-1">{errors.investment_timeline}</p>}
       </div>
-
-      {/* Geographic Focus */}
-      <div>
-        <label className="block text-sm font-medium text-gray-200 mb-3">
-          Geographic Focus
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {geographies.map((geo) => (
-            <button
-              key={geo}
-              type="button"
-              onClick={() => handleGeographyChange(geo)}
-              className={`px-4 py-2 rounded-lg border-2 font-medium transition-all ${
-                formData.geography.includes(geo)
-                  ? "border-blue-600 bg-blue-600/20 text-blue-300"
-                  : "border-gray-600 bg-gray-800/40 text-gray-400 hover:border-gray-500"
-              }`}
-            >
-              {geo}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Investment Stages */}
-      <div>
-        <label className="block text-sm font-medium text-gray-200 mb-3">
-          Investment Stages
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {investmentStages.map((stage) => (
-            <button
-              key={stage}
-              type="button"
-              onClick={() => handleStageChange(stage)}
-              className={`px-4 py-2 rounded-lg border-2 font-medium transition-all text-left ${
-                formData.investment_stage.includes(stage)
-                  ? "border-green-600 bg-green-600/20 text-green-300"
-                  : "border-gray-600 bg-gray-800/40 text-gray-400 hover:border-gray-500"
-              }`}
-            >
-              {stage}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Selected Summary */}
-      {(formData.industries.length > 0 ||
-        formData.geography.length > 0 ||
-        formData.investment_stage.length > 0) && (
-        <div className="bg-gradient-to-r from-purple-600/10 to-blue-600/10 border border-purple-600/30 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-white mb-3">
-            Your Focus Areas
-          </h3>
-          <div className="space-y-2 text-sm">
-            {formData.industries.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {formData.industries.map((ind) => (
-                  <span
-                    key={ind}
-                    className="px-3 py-1 bg-purple-600/30 text-purple-200 rounded-full text-xs"
-                  >
-                    {ind}
-                  </span>
-                ))}
-              </div>
-            )}
-            {formData.geography.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {formData.geography.map((geo) => (
-                  <span
-                    key={geo}
-                    className="px-3 py-1 bg-blue-600/30 text-blue-200 rounded-full text-xs"
-                  >
-                    {geo}
-                  </span>
-                ))}
-              </div>
-            )}
-            {formData.investment_stage.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {formData.investment_stage.map((stage) => (
-                  <span
-                    key={stage}
-                    className="px-3 py-1 bg-green-600/30 text-green-200 rounded-full text-xs"
-                  >
-                    {stage}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

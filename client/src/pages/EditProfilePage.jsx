@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import profileService from "../services/profileService";
 import investorProfileService from "../services/investorProfileService";
@@ -37,23 +36,20 @@ const csvToArray = (value) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-const normalizeDocuments = (value) => {
-  const parsed = parseJsonValue(value, []);
-  if (!Array.isArray(parsed)) return [];
-  return parsed
-    .map((doc, index) => {
-      if (typeof doc === "string") {
-        return { name: `Document ${index + 1}`, url: doc };
-      }
-      if (doc && typeof doc === "object") {
-        return {
-          name: doc.name || `Document ${index + 1}`,
-          url: doc.url || "",
-        };
-      }
-      return null;
-    })
-    .filter(Boolean);
+const appendIfPresent = (formData, key, value) => {
+  if (value == null) return;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed !== "") formData.append(key, trimmed);
+    return;
+  }
+  if (typeof value === "number") {
+    if (!Number.isNaN(value)) formData.append(key, String(value));
+    return;
+  }
+  if (typeof value === "boolean") {
+    formData.append(key, String(value));
+  }
 };
 
 const EditProfilePage = () => {
@@ -63,7 +59,6 @@ const EditProfilePage = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [docAction, setDocAction] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [profileId, setProfileId] = useState(null);
@@ -71,62 +66,63 @@ const EditProfilePage = () => {
   const [startupForm, setStartupForm] = useState({
     company_name: "",
     tagline: "",
-    description: "",
+    detailed_description: "",
     industry: "",
-    stage: "",
-    website: "",
-    linkedin: "",
-    city: "",
-    country: "",
-    contact_email: "",
-    contact_phone: "",
-    founders_csv: "",
-    team_csv: "",
-    funding_amount: "",
+    founded_date: "",
+    current_stage: "",
+    team_size: "",
+    founder_names: "",
+    key_team_members: "",
+    team_photo_url: "",
+    funding_stage: "",
+    amount_seeking: "",
     previous_funding: "",
     use_of_funds: "",
-    traction_metrics: "",
-    achievements_csv: "",
-    milestones_csv: "",
+    revenue_status: "",
+    key_metrics: "",
+    major_achievements: "",
+    customer_testimonials: "",
+    pitch_deck_url: "",
+    business_plan_url: "",
+    product_demo_url: "",
+    primary_contact_name: "",
+    contact_email: "",
+    phone_number: "",
+    social_linkedin: "",
     social_twitter: "",
     social_facebook: "",
     social_instagram: "",
   });
 
   const [investorForm, setInvestorForm] = useState({
-    name: "",
-    firm_name: "",
+    name_or_firm: "",
     investor_type: "",
-    investment_thesis: "",
-    website: "",
-    linkedin: "",
-    city: "",
-    country: "",
-    contact_email: "",
-    contact_phone: "",
-    investment_size_min: "",
-    investment_size_max: "",
-    industries_csv: "",
-    investment_stage_csv: "",
     years_of_experience: "",
-    background: "",
-    geography_csv: "",
+    professional_background: "",
+    investment_thesis: "",
+    industries_of_interest_csv: "",
+    geographic_preference_csv: "",
+    stage_preference_csv: "",
+    min_investment_size: "",
+    max_investment_size: "",
     investment_structure_csv: "",
-    portfolio_companies_csv: "",
-    notable_exits_csv: "",
-    network_resources_csv: "",
+    follow_on_investment: false,
+    investment_timeline: "",
+    number_of_investments: "",
+    portfolio_companies: "",
+    successful_exits: "",
+    notable_achievements: "",
+    what_you_look_for: "",
+    deal_breakers: "",
+    value_add: "",
+    network_resources: "",
+    primary_contact_email: "",
+    phone_number: "",
+    preferred_contact_method: "",
+    social_linkedin: "",
     social_twitter: "",
-    social_facebook: "",
-    social_instagram: "",
-    follow_on_investment: true,
-    is_actively_investing: true,
+    social_website: "",
   });
-
-  const [imageFile, setImageFile] = useState(null);
-  const [currentImageUrl, setCurrentImageUrl] = useState("");
-  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
-  const [documents, setDocuments] = useState([]);
-  const [newDocuments, setNewDocuments] = useState([]);
 
   useEffect(() => {
     const load = async () => {
@@ -144,82 +140,109 @@ const EditProfilePage = () => {
       }
 
       const profile = result.data?.data || result.data;
-      if (!profile?.id) {
+      if (!profile) {
         setError("Profile not found. Complete onboarding first.");
         setLoading(false);
         return;
       }
 
-      setProfileId(profile.id);
+      const resolvedProfileId =
+        profile.investor_profile_id || profile.startup_profile_id || profile.id;
+
+      if (!resolvedProfileId) {
+        setError("Profile ID not found. Please re-run onboarding.");
+        setLoading(false);
+        return;
+      }
+
+      setProfileId(resolvedProfileId);
 
       if (isInvestor) {
         const socialMedia = parseJsonValue(profile.social_media, {});
+
         setInvestorForm({
-          name: profile.name || "",
-          firm_name: profile.firm_name || "",
+          name_or_firm:
+            profile.name_or_firm || profile.name || profile.firm_name || "",
           investor_type: profile.investor_type || "",
+          years_of_experience: profile.years_of_experience || "",
+          professional_background:
+            profile.professional_background || profile.background || "",
           investment_thesis: profile.investment_thesis || "",
-          website: profile.website || "",
-          linkedin: profile.linkedin || "",
-          city: profile.city || "",
-          country: profile.country || "",
-          contact_email: profile.contact_email || "",
-          contact_phone: profile.contact_phone || "",
-          investment_size_min: profile.investment_size_min || "",
-          investment_size_max: profile.investment_size_max || "",
-          industries_csv: toCsv(profile.industries),
-          investment_stage_csv: toCsv(profile.investment_stage),
-          years_of_experience:
-            profile.years_of_experience || profile.experience_years || "",
-          background: profile.background || "",
-          geography_csv: toCsv(profile.geography),
+          industries_of_interest_csv: toCsv(
+            profile.industries_of_interest || profile.industries,
+          ),
+          geographic_preference_csv: toCsv(
+            profile.geographic_preference || profile.geography,
+          ),
+          stage_preference_csv: toCsv(
+            profile.stage_preference || profile.investment_stage,
+          ),
+          min_investment_size:
+            profile.min_investment_size || profile.investment_size_min || "",
+          max_investment_size:
+            profile.max_investment_size || profile.investment_size_max || "",
           investment_structure_csv: toCsv(profile.investment_structure),
-          portfolio_companies_csv: toCsv(profile.portfolio_companies),
-          notable_exits_csv: toCsv(profile.notable_exits),
-          network_resources_csv: toCsv(profile.network_resources),
+          follow_on_investment: Boolean(profile.follow_on_investment),
+          investment_timeline: profile.investment_timeline || "",
+          number_of_investments:
+            profile.number_of_investments || profile.total_investments || "",
+          portfolio_companies: Array.isArray(profile.portfolio_companies)
+            ? profile.portfolio_companies.join(", ")
+            : profile.portfolio_companies || "",
+          successful_exits: profile.successful_exits || profile.notable_exits || "",
+          notable_achievements: profile.notable_achievements || "",
+          what_you_look_for:
+            profile.what_you_look_for || profile.investment_criteria || "",
+          deal_breakers: profile.deal_breakers || profile.red_flags || "",
+          value_add: profile.value_add || "",
+          network_resources: Array.isArray(profile.network_resources)
+            ? profile.network_resources.join(", ")
+            : profile.network_resources || "",
+          primary_contact_email:
+            profile.primary_contact_email || profile.contact_email || "",
+          phone_number: profile.phone_number || profile.contact_phone || "",
+          preferred_contact_method: profile.preferred_contact_method || "",
+          social_linkedin: socialMedia.linkedin || "",
           social_twitter: socialMedia.twitter || "",
-          social_facebook: socialMedia.facebook || "",
-          social_instagram: socialMedia.instagram || "",
-          follow_on_investment:
-            profile.follow_on_investment === undefined
-              ? true
-              : !!profile.follow_on_investment,
-          is_actively_investing:
-            profile.is_actively_investing === undefined
-              ? true
-              : !!profile.is_actively_investing,
+          social_website: socialMedia.website || "",
         });
-        setCurrentImageUrl(profile.photo_url || "");
       } else {
-        const funding = parseJsonValue(profile.funding, {});
-        const traction = parseJsonValue(profile.traction, {});
-        const socialMedia = parseJsonValue(profile.social_media, {});
+        const socialMedia = parseJsonValue(
+          profile.social_media_links || profile.social_media,
+          {},
+        );
+
         setStartupForm({
           company_name: profile.company_name || "",
           tagline: profile.tagline || "",
-          description: profile.description || "",
+          detailed_description:
+            profile.detailed_description || profile.description || "",
           industry: profile.industry || "",
-          stage: profile.stage || profile.funding_stage || "",
-          website: profile.website || "",
-          linkedin: profile.linkedin || "",
-          city: profile.city || profile.location_city || "",
-          country: profile.country || profile.location_country || "",
+          founded_date: profile.founded_date || "",
+          current_stage: profile.current_stage || "",
+          team_size: profile.team_size || "",
+          founder_names: profile.founder_names || "",
+          key_team_members: profile.key_team_members || "",
+          team_photo_url: profile.team_photo_url || "",
+          funding_stage: profile.funding_stage || profile.stage || "",
+          amount_seeking: profile.amount_seeking || "",
+          previous_funding: profile.previous_funding || "",
+          use_of_funds: profile.use_of_funds || "",
+          revenue_status: profile.revenue_status || "",
+          key_metrics: profile.key_metrics || "",
+          major_achievements: profile.major_achievements || "",
+          customer_testimonials: profile.customer_testimonials || "",
+          pitch_deck_url: profile.pitch_deck_url || "",
+          business_plan_url: profile.business_plan_url || "",
+          product_demo_url: profile.product_demo_url || "",
+          primary_contact_name: profile.primary_contact_name || "",
           contact_email: profile.contact_email || "",
-          contact_phone: profile.contact_phone || "",
-          founders_csv: toCsv(profile.founders),
-          team_csv: toCsv(profile.team),
-          funding_amount: funding.amount_seeking || "",
-          previous_funding: funding.previous_funding || "",
-          use_of_funds: funding.use_of_funds || "",
-          traction_metrics: traction.metrics || "",
-          achievements_csv: toCsv(traction.achievements),
-          milestones_csv: toCsv(traction.milestones),
+          phone_number: profile.phone_number || profile.contact_phone || "",
+          social_linkedin: socialMedia.linkedin || "",
           social_twitter: socialMedia.twitter || "",
           social_facebook: socialMedia.facebook || "",
           social_instagram: socialMedia.instagram || "",
         });
-        setDocuments(normalizeDocuments(profile.documents));
-        setCurrentImageUrl(profile.logo_url || "");
       }
 
       setLoading(false);
@@ -227,71 +250,6 @@ const EditProfilePage = () => {
 
     load();
   }, [isInvestor]);
-
-  useEffect(() => {
-    if (!imageFile) {
-      setImagePreviewUrl("");
-      return;
-    }
-
-    const preview = URL.createObjectURL(imageFile);
-    setImagePreviewUrl(preview);
-    return () => URL.revokeObjectURL(preview);
-  }, [imageFile]);
-
-  const shownImage = useMemo(
-    () => imagePreviewUrl || currentImageUrl,
-    [imagePreviewUrl, currentImageUrl],
-  );
-
-  const uploadNewDocuments = async () => {
-    if (!profileId || !newDocuments.length || isInvestor) return;
-
-    setDocAction("upload");
-    setError("");
-    setSuccess("");
-
-    const formData = new FormData();
-    newDocuments.forEach((file) => {
-      formData.append("documents", file);
-    });
-
-    const result = await profileService.uploadDocuments(profileId, formData);
-    setDocAction("");
-
-    if (!result.success) {
-      setError(result.error || "Failed to upload documents");
-      return;
-    }
-
-    const updatedDocuments = normalizeDocuments(result.data?.data?.documents);
-    setDocuments(updatedDocuments);
-    setNewDocuments([]);
-    setSuccess("Documents uploaded successfully.");
-  };
-
-  const deleteDocument = async (documentIndex) => {
-    if (!profileId || isInvestor) return;
-
-    setDocAction(`delete-${documentIndex}`);
-    setError("");
-    setSuccess("");
-
-    const result = await profileService.deleteDocument(
-      profileId,
-      documentIndex,
-    );
-    setDocAction("");
-
-    if (!result.success) {
-      setError(result.error || "Failed to delete document");
-      return;
-    }
-
-    const updatedDocuments = normalizeDocuments(result.data?.data?.documents);
-    setDocuments(updatedDocuments);
-    setSuccess("Document removed successfully.");
-  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -301,184 +259,218 @@ const EditProfilePage = () => {
     setError("");
     setSuccess("");
 
-    const formData = new FormData();
+    try {
+      const formData = new FormData();
 
-    if (isInvestor) {
-      if (!investorForm.name.trim()) {
-        setSaving(false);
-        setError("Name is required");
-        return;
-      }
+      if (isInvestor) {
+        if (!investorForm.name_or_firm.trim()) {
+          setSaving(false);
+          setError("Name or firm is required");
+          return;
+        }
 
-      formData.append("name", investorForm.name.trim());
-      formData.append("firm_name", investorForm.firm_name.trim());
-      formData.append("investor_type", investorForm.investor_type.trim());
-      formData.append(
-        "investment_thesis",
-        investorForm.investment_thesis.trim(),
-      );
-      formData.append("website", investorForm.website.trim());
-      formData.append("linkedin", investorForm.linkedin.trim());
-      formData.append("city", investorForm.city.trim());
-      formData.append("country", investorForm.country.trim());
-      formData.append("contact_email", investorForm.contact_email.trim());
-      formData.append("contact_phone", investorForm.contact_phone.trim());
-      formData.append("years_of_experience", investorForm.years_of_experience);
-      formData.append("background", investorForm.background.trim());
-      formData.append(
-        "follow_on_investment",
-        investorForm.follow_on_investment,
-      );
-      formData.append(
-        "is_actively_investing",
-        investorForm.is_actively_investing,
-      );
-
-      if (investorForm.investment_size_min !== "") {
-        formData.append(
-          "investment_size_min",
-          investorForm.investment_size_min,
+        appendIfPresent(formData, "name_or_firm", investorForm.name_or_firm);
+        appendIfPresent(formData, "investor_type", investorForm.investor_type);
+        appendIfPresent(
+          formData,
+          "years_of_experience",
+          investorForm.years_of_experience,
         );
-      }
-      if (investorForm.investment_size_max !== "") {
-        formData.append(
-          "investment_size_max",
-          investorForm.investment_size_max,
+        appendIfPresent(
+          formData,
+          "professional_background",
+          investorForm.professional_background,
         );
+        appendIfPresent(
+          formData,
+          "investment_thesis",
+          investorForm.investment_thesis,
+        );
+        appendIfPresent(
+          formData,
+          "min_investment_size",
+          investorForm.min_investment_size,
+        );
+        appendIfPresent(
+          formData,
+          "max_investment_size",
+          investorForm.max_investment_size,
+        );
+        appendIfPresent(
+          formData,
+          "investment_timeline",
+          investorForm.investment_timeline,
+        );
+        appendIfPresent(
+          formData,
+          "number_of_investments",
+          investorForm.number_of_investments,
+        );
+        appendIfPresent(
+          formData,
+          "portfolio_companies",
+          investorForm.portfolio_companies,
+        );
+        appendIfPresent(
+          formData,
+          "successful_exits",
+          investorForm.successful_exits,
+        );
+        appendIfPresent(
+          formData,
+          "notable_achievements",
+          investorForm.notable_achievements,
+        );
+        appendIfPresent(
+          formData,
+          "what_you_look_for",
+          investorForm.what_you_look_for,
+        );
+        appendIfPresent(formData, "deal_breakers", investorForm.deal_breakers);
+        appendIfPresent(formData, "value_add", investorForm.value_add);
+        appendIfPresent(
+          formData,
+          "network_resources",
+          investorForm.network_resources,
+        );
+        appendIfPresent(
+          formData,
+          "primary_contact_email",
+          investorForm.primary_contact_email,
+        );
+        appendIfPresent(formData, "phone_number", investorForm.phone_number);
+        appendIfPresent(
+          formData,
+          "preferred_contact_method",
+          investorForm.preferred_contact_method,
+        );
+        appendIfPresent(
+          formData,
+          "follow_on_investment",
+          investorForm.follow_on_investment,
+        );
+
+        const industries = csvToArray(investorForm.industries_of_interest_csv);
+        const geographies = csvToArray(investorForm.geographic_preference_csv);
+        const stages = csvToArray(investorForm.stage_preference_csv);
+        const structures = csvToArray(investorForm.investment_structure_csv);
+
+        if (industries.length) {
+          formData.append("industries_of_interest", JSON.stringify(industries));
+        }
+        if (geographies.length) {
+          formData.append("geographic_preference", JSON.stringify(geographies));
+        }
+        if (stages.length) {
+          formData.append("stage_preference", JSON.stringify(stages));
+        }
+        if (structures.length) {
+          formData.append("investment_structure", JSON.stringify(structures));
+        }
+
+        const socialMedia = {
+          linkedin: investorForm.social_linkedin.trim(),
+          twitter: investorForm.social_twitter.trim(),
+          website: investorForm.social_website.trim(),
+        };
+        if (Object.values(socialMedia).some(Boolean)) {
+          formData.append("social_media", JSON.stringify(socialMedia));
+        }
+
+        const result = await investorProfileService.updateProfile(
+          profileId,
+          formData,
+        );
+        if (!result.success) {
+          setSaving(false);
+          setError(result.error || "Failed to update profile");
+          return;
+        }
+      } else {
+        if (!startupForm.company_name.trim()) {
+          setSaving(false);
+          setError("Company name is required");
+          return;
+        }
+
+        appendIfPresent(formData, "company_name", startupForm.company_name);
+        appendIfPresent(formData, "tagline", startupForm.tagline);
+        appendIfPresent(
+          formData,
+          "detailed_description",
+          startupForm.detailed_description,
+        );
+        appendIfPresent(formData, "industry", startupForm.industry);
+        appendIfPresent(formData, "founded_date", startupForm.founded_date);
+        appendIfPresent(formData, "current_stage", startupForm.current_stage);
+        appendIfPresent(formData, "team_size", startupForm.team_size);
+        appendIfPresent(formData, "founder_names", startupForm.founder_names);
+        appendIfPresent(
+          formData,
+          "key_team_members",
+          startupForm.key_team_members,
+        );
+        appendIfPresent(formData, "team_photo_url", startupForm.team_photo_url);
+        appendIfPresent(formData, "funding_stage", startupForm.funding_stage);
+        appendIfPresent(formData, "amount_seeking", startupForm.amount_seeking);
+        appendIfPresent(
+          formData,
+          "previous_funding",
+          startupForm.previous_funding,
+        );
+        appendIfPresent(formData, "use_of_funds", startupForm.use_of_funds);
+        appendIfPresent(formData, "revenue_status", startupForm.revenue_status);
+        appendIfPresent(formData, "key_metrics", startupForm.key_metrics);
+        appendIfPresent(
+          formData,
+          "major_achievements",
+          startupForm.major_achievements,
+        );
+        appendIfPresent(
+          formData,
+          "customer_testimonials",
+          startupForm.customer_testimonials,
+        );
+        appendIfPresent(formData, "pitch_deck_url", startupForm.pitch_deck_url);
+        appendIfPresent(
+          formData,
+          "business_plan_url",
+          startupForm.business_plan_url,
+        );
+        appendIfPresent(formData, "product_demo_url", startupForm.product_demo_url);
+        appendIfPresent(
+          formData,
+          "primary_contact_name",
+          startupForm.primary_contact_name,
+        );
+        appendIfPresent(formData, "contact_email", startupForm.contact_email);
+        appendIfPresent(formData, "phone_number", startupForm.phone_number);
+
+        const socialLinks = {
+          linkedin: startupForm.social_linkedin.trim(),
+          twitter: startupForm.social_twitter.trim(),
+          facebook: startupForm.social_facebook.trim(),
+          instagram: startupForm.social_instagram.trim(),
+        };
+        if (Object.values(socialLinks).some(Boolean)) {
+          formData.append("social_media_links", JSON.stringify(socialLinks));
+        }
+
+        const result = await profileService.updateProfile(profileId, formData);
+        if (!result.success) {
+          setSaving(false);
+          setError(result.error || "Failed to update profile");
+          return;
+        }
       }
 
-      const industries = csvToArray(investorForm.industries_csv);
-      const stages = csvToArray(investorForm.investment_stage_csv);
-      const geography = csvToArray(investorForm.geography_csv);
-      const structures = csvToArray(investorForm.investment_structure_csv);
-      const portfolio = csvToArray(investorForm.portfolio_companies_csv);
-      const exits = csvToArray(investorForm.notable_exits_csv);
-      const network = csvToArray(investorForm.network_resources_csv);
-
-      if (industries.length) {
-        formData.append("industries", JSON.stringify(industries));
-      }
-      if (stages.length) {
-        formData.append("investment_stage", JSON.stringify(stages));
-      }
-      if (geography.length) {
-        formData.append("geography", JSON.stringify(geography));
-      }
-      if (structures.length) {
-        formData.append("investment_structure", JSON.stringify(structures));
-      }
-      if (portfolio.length) {
-        formData.append("portfolio_companies", JSON.stringify(portfolio));
-      }
-      if (exits.length) {
-        formData.append("notable_exits", JSON.stringify(exits));
-      }
-      if (network.length) {
-        formData.append("network_resources", JSON.stringify(network));
-      }
-
-      const socialMedia = {
-        twitter: investorForm.social_twitter.trim(),
-        facebook: investorForm.social_facebook.trim(),
-        instagram: investorForm.social_instagram.trim(),
-      };
-      if (Object.values(socialMedia).some(Boolean)) {
-        formData.append("social_media", JSON.stringify(socialMedia));
-      }
-
-      if (imageFile) {
-        formData.append("photo", imageFile);
-      }
-
-      const result = await investorProfileService.updateProfile(
-        profileId,
-        formData,
-      );
+      setSuccess("Profile updated successfully.");
       setSaving(false);
-
-      if (!result.success) {
-        setError(result.error || "Failed to update profile");
-        return;
-      }
-    } else {
-      if (!startupForm.company_name.trim()) {
-        setSaving(false);
-        setError("Company name is required");
-        return;
-      }
-
-      formData.append("company_name", startupForm.company_name.trim());
-      formData.append("tagline", startupForm.tagline.trim());
-      formData.append("description", startupForm.description.trim());
-      formData.append("industry", startupForm.industry.trim());
-      formData.append("stage", startupForm.stage.trim());
-      formData.append("website", startupForm.website.trim());
-      formData.append("linkedin", startupForm.linkedin.trim());
-      formData.append("city", startupForm.city.trim());
-      formData.append("country", startupForm.country.trim());
-      formData.append("contact_email", startupForm.contact_email.trim());
-      formData.append("contact_phone", startupForm.contact_phone.trim());
-
-      const founders = csvToArray(startupForm.founders_csv);
-      const team = csvToArray(startupForm.team_csv);
-      const achievements = csvToArray(startupForm.achievements_csv);
-      const milestones = csvToArray(startupForm.milestones_csv);
-
-      if (founders.length) {
-        formData.append("founders", JSON.stringify(founders));
-      }
-      if (team.length) {
-        formData.append("team", JSON.stringify(team));
-      }
-
-      const funding = {
-        stage: startupForm.stage.trim(),
-        amount_seeking: startupForm.funding_amount.trim(),
-        previous_funding: startupForm.previous_funding.trim(),
-        use_of_funds: startupForm.use_of_funds.trim(),
-      };
-      if (Object.values(funding).some(Boolean)) {
-        formData.append("funding", JSON.stringify(funding));
-      }
-
-      const traction = {
-        metrics: startupForm.traction_metrics.trim(),
-        achievements,
-        milestones,
-      };
-      if (
-        traction.metrics ||
-        traction.achievements.length ||
-        traction.milestones.length
-      ) {
-        formData.append("traction", JSON.stringify(traction));
-      }
-
-      const socialMedia = {
-        twitter: startupForm.social_twitter.trim(),
-        facebook: startupForm.social_facebook.trim(),
-        instagram: startupForm.social_instagram.trim(),
-      };
-      if (Object.values(socialMedia).some(Boolean)) {
-        formData.append("social_media", JSON.stringify(socialMedia));
-      }
-
-      if (imageFile) {
-        formData.append("logo", imageFile);
-      }
-
-      const result = await profileService.updateProfile(profileId, formData);
+      setTimeout(() => navigate("/profile"), 700);
+    } catch {
       setSaving(false);
-
-      if (!result.success) {
-        setError(result.error || "Failed to update profile");
-        return;
-      }
+      setError("An unexpected error occurred while saving profile.");
     }
-
-    setSuccess("Profile updated successfully.");
-    setImageFile(null);
-    setTimeout(() => navigate("/profile"), 700);
   };
 
   if (loading) {
@@ -495,8 +487,8 @@ const EditProfilePage = () => {
         <div className="rounded-xl border border-white/15 bg-black/45 p-6">
           <h1 className="text-3xl font-bold text-white">Edit Profile</h1>
           <p className="text-gray-300 mt-1">
-            Update your profile details and your{" "}
-            {isInvestor ? "photo" : "company logo"}.
+            Update your canonical {isInvestor ? "investor" : "startup"} profile
+            fields.
           </p>
         </div>
 
@@ -515,54 +507,19 @@ const EditProfilePage = () => {
             </div>
           )}
 
-          <div className="rounded-xl border border-white/10 bg-black/20 p-4 flex flex-col md:flex-row md:items-center gap-4">
-            <div className="w-20 h-20 rounded-full overflow-hidden border border-white/20 bg-white/5 flex items-center justify-center">
-              {shownImage ? (
-                <img
-                  src={shownImage}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-xs text-gray-400">No Image</span>
-              )}
-            </div>
-            <div className="flex-1">
-              <label className="text-sm text-gray-200 block mb-2">
-                {isInvestor ? "Update profile photo" : "Update company logo"}
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(event) =>
-                  setImageFile(event.target.files?.[0] || null)
-                }
-                className="w-full text-sm text-gray-200 file:mr-3 file:rounded-md file:border-0 file:bg-purple-600/70 file:px-3 file:py-2 file:text-white"
-              />
-            </div>
-          </div>
-
           {isInvestor ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
-                value={investorForm.name}
-                onChange={(e) =>
-                  setInvestorForm((prev) => ({ ...prev, name: e.target.value }))
-                }
-                placeholder="Name"
-                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-                required
-              />
-              <input
-                value={investorForm.firm_name}
+                value={investorForm.name_or_firm}
                 onChange={(e) =>
                   setInvestorForm((prev) => ({
                     ...prev,
-                    firm_name: e.target.value,
+                    name_or_firm: e.target.value,
                   }))
                 }
-                placeholder="Firm name"
+                placeholder="Name or firm"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+                required
               />
               <input
                 value={investorForm.investor_type}
@@ -589,77 +546,24 @@ const EditProfilePage = () => {
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={investorForm.website}
+                value={investorForm.investment_timeline}
                 onChange={(e) =>
                   setInvestorForm((prev) => ({
                     ...prev,
-                    website: e.target.value,
+                    investment_timeline: e.target.value,
                   }))
                 }
-                placeholder="Website"
-                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
-              <input
-                value={investorForm.linkedin}
-                onChange={(e) =>
-                  setInvestorForm((prev) => ({
-                    ...prev,
-                    linkedin: e.target.value,
-                  }))
-                }
-                placeholder="LinkedIn"
-                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
-              <input
-                value={investorForm.city}
-                onChange={(e) =>
-                  setInvestorForm((prev) => ({ ...prev, city: e.target.value }))
-                }
-                placeholder="City"
-                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
-              <input
-                value={investorForm.country}
-                onChange={(e) =>
-                  setInvestorForm((prev) => ({
-                    ...prev,
-                    country: e.target.value,
-                  }))
-                }
-                placeholder="Country"
-                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
-              <input
-                type="email"
-                value={investorForm.contact_email}
-                onChange={(e) =>
-                  setInvestorForm((prev) => ({
-                    ...prev,
-                    contact_email: e.target.value,
-                  }))
-                }
-                placeholder="Contact email"
-                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
-              <input
-                value={investorForm.contact_phone}
-                onChange={(e) =>
-                  setInvestorForm((prev) => ({
-                    ...prev,
-                    contact_phone: e.target.value,
-                  }))
-                }
-                placeholder="Contact phone"
+                placeholder="Investment timeline"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
                 type="number"
                 min="0"
-                value={investorForm.investment_size_min}
+                value={investorForm.min_investment_size}
                 onChange={(e) =>
                   setInvestorForm((prev) => ({
                     ...prev,
-                    investment_size_min: e.target.value,
+                    min_investment_size: e.target.value,
                   }))
                 }
                 placeholder="Min investment size"
@@ -668,47 +572,106 @@ const EditProfilePage = () => {
               <input
                 type="number"
                 min="0"
-                value={investorForm.investment_size_max}
+                value={investorForm.max_investment_size}
                 onChange={(e) =>
                   setInvestorForm((prev) => ({
                     ...prev,
-                    investment_size_max: e.target.value,
+                    max_investment_size: e.target.value,
                   }))
                 }
                 placeholder="Max investment size"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={investorForm.industries_csv}
+                type="number"
+                min="0"
+                value={investorForm.number_of_investments}
                 onChange={(e) =>
                   setInvestorForm((prev) => ({
                     ...prev,
-                    industries_csv: e.target.value,
+                    number_of_investments: e.target.value,
                   }))
                 }
-                placeholder="Industries (comma-separated)"
+                placeholder="Number of investments"
+                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                type="number"
+                min="0"
+                value={investorForm.successful_exits}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    successful_exits: e.target.value,
+                  }))
+                }
+                placeholder="Successful exits"
+                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={investorForm.primary_contact_email}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    primary_contact_email: e.target.value,
+                  }))
+                }
+                placeholder="Primary contact email"
+                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={investorForm.phone_number}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    phone_number: e.target.value,
+                  }))
+                }
+                placeholder="Phone number"
+                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={investorForm.preferred_contact_method}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    preferred_contact_method: e.target.value,
+                  }))
+                }
+                placeholder="Preferred contact method"
+                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={investorForm.industries_of_interest_csv}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    industries_of_interest_csv: e.target.value,
+                  }))
+                }
+                placeholder="Industries of interest (comma-separated)"
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={investorForm.investment_stage_csv}
+                value={investorForm.geographic_preference_csv}
                 onChange={(e) =>
                   setInvestorForm((prev) => ({
                     ...prev,
-                    investment_stage_csv: e.target.value,
+                    geographic_preference_csv: e.target.value,
                   }))
                 }
-                placeholder="Investment stages (comma-separated)"
+                placeholder="Geographic preference (comma-separated)"
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={investorForm.geography_csv}
+                value={investorForm.stage_preference_csv}
                 onChange={(e) =>
                   setInvestorForm((prev) => ({
                     ...prev,
-                    geography_csv: e.target.value,
+                    stage_preference_csv: e.target.value,
                   }))
                 }
-                placeholder="Geography focus (comma-separated)"
+                placeholder="Stage preference (comma-separated)"
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
@@ -722,48 +685,15 @@ const EditProfilePage = () => {
                 placeholder="Investment structures (comma-separated)"
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
-              <input
-                value={investorForm.portfolio_companies_csv}
-                onChange={(e) =>
-                  setInvestorForm((prev) => ({
-                    ...prev,
-                    portfolio_companies_csv: e.target.value,
-                  }))
-                }
-                placeholder="Portfolio companies (comma-separated)"
-                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
-              <input
-                value={investorForm.notable_exits_csv}
-                onChange={(e) =>
-                  setInvestorForm((prev) => ({
-                    ...prev,
-                    notable_exits_csv: e.target.value,
-                  }))
-                }
-                placeholder="Notable exits (comma-separated)"
-                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
-              <input
-                value={investorForm.network_resources_csv}
-                onChange={(e) =>
-                  setInvestorForm((prev) => ({
-                    ...prev,
-                    network_resources_csv: e.target.value,
-                  }))
-                }
-                placeholder="Network resources (comma-separated)"
-                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
               <textarea
-                value={investorForm.background}
+                value={investorForm.professional_background}
                 onChange={(e) =>
                   setInvestorForm((prev) => ({
                     ...prev,
-                    background: e.target.value,
+                    professional_background: e.target.value,
                   }))
                 }
-                placeholder="Background"
+                placeholder="Professional background"
                 rows={3}
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
@@ -776,8 +706,91 @@ const EditProfilePage = () => {
                   }))
                 }
                 placeholder="Investment thesis"
-                rows={4}
+                rows={3}
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <textarea
+                value={investorForm.what_you_look_for}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    what_you_look_for: e.target.value,
+                  }))
+                }
+                placeholder="What you look for"
+                rows={3}
+                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <textarea
+                value={investorForm.value_add}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    value_add: e.target.value,
+                  }))
+                }
+                placeholder="Value add"
+                rows={3}
+                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <textarea
+                value={investorForm.portfolio_companies}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    portfolio_companies: e.target.value,
+                  }))
+                }
+                placeholder="Portfolio companies"
+                rows={3}
+                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <textarea
+                value={investorForm.notable_achievements}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    notable_achievements: e.target.value,
+                  }))
+                }
+                placeholder="Notable achievements"
+                rows={3}
+                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <textarea
+                value={investorForm.deal_breakers}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    deal_breakers: e.target.value,
+                  }))
+                }
+                placeholder="Deal breakers"
+                rows={3}
+                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <textarea
+                value={investorForm.network_resources}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    network_resources: e.target.value,
+                  }))
+                }
+                placeholder="Network resources"
+                rows={3}
+                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={investorForm.social_linkedin}
+                onChange={(e) =>
+                  setInvestorForm((prev) => ({
+                    ...prev,
+                    social_linkedin: e.target.value,
+                  }))
+                }
+                placeholder="Social LinkedIn URL"
+                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
                 value={investorForm.social_twitter}
@@ -787,29 +800,18 @@ const EditProfilePage = () => {
                     social_twitter: e.target.value,
                   }))
                 }
-                placeholder="Twitter URL"
+                placeholder="Social Twitter URL"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={investorForm.social_facebook}
+                value={investorForm.social_website}
                 onChange={(e) =>
                   setInvestorForm((prev) => ({
                     ...prev,
-                    social_facebook: e.target.value,
+                    social_website: e.target.value,
                   }))
                 }
-                placeholder="Facebook URL"
-                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
-              <input
-                value={investorForm.social_instagram}
-                onChange={(e) =>
-                  setInvestorForm((prev) => ({
-                    ...prev,
-                    social_instagram: e.target.value,
-                  }))
-                }
-                placeholder="Instagram URL"
+                placeholder="Social Website URL"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <label className="rounded-lg bg-black/30 border border-white/15 px-3 py-2 text-gray-200 flex items-center justify-between">
@@ -821,20 +823,6 @@ const EditProfilePage = () => {
                     setInvestorForm((prev) => ({
                       ...prev,
                       follow_on_investment: e.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4"
-                />
-              </label>
-              <label className="rounded-lg bg-black/30 border border-white/15 px-3 py-2 text-gray-200 flex items-center justify-between">
-                <span>Actively investing</span>
-                <input
-                  type="checkbox"
-                  checked={investorForm.is_actively_investing}
-                  onChange={(e) =>
-                    setInvestorForm((prev) => ({
-                      ...prev,
-                      is_actively_investing: e.target.checked,
                     }))
                   }
                   className="h-4 w-4"
@@ -858,76 +846,126 @@ const EditProfilePage = () => {
               <input
                 value={startupForm.tagline}
                 onChange={(e) =>
-                  setStartupForm((prev) => ({
-                    ...prev,
-                    tagline: e.target.value,
-                  }))
+                  setStartupForm((prev) => ({ ...prev, tagline: e.target.value }))
                 }
                 placeholder="Tagline"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
-              <input
-                value={startupForm.industry}
+              <textarea
+                value={startupForm.detailed_description}
                 onChange={(e) =>
                   setStartupForm((prev) => ({
                     ...prev,
-                    industry: e.target.value,
+                    detailed_description: e.target.value,
                   }))
+                }
+                placeholder="Detailed description"
+                rows={3}
+                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={startupForm.industry}
+                onChange={(e) =>
+                  setStartupForm((prev) => ({ ...prev, industry: e.target.value }))
                 }
                 placeholder="Industry"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={startupForm.stage}
+                type="date"
+                value={startupForm.founded_date}
                 onChange={(e) =>
-                  setStartupForm((prev) => ({ ...prev, stage: e.target.value }))
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    founded_date: e.target.value,
+                  }))
+                }
+                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={startupForm.current_stage}
+                onChange={(e) =>
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    current_stage: e.target.value,
+                  }))
+                }
+                placeholder="Current stage"
+                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={startupForm.funding_stage}
+                onChange={(e) =>
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    funding_stage: e.target.value,
+                  }))
                 }
                 placeholder="Funding stage"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={startupForm.website}
+                type="number"
+                min="0"
+                value={startupForm.team_size}
                 onChange={(e) =>
                   setStartupForm((prev) => ({
                     ...prev,
-                    website: e.target.value,
+                    team_size: e.target.value,
                   }))
                 }
-                placeholder="Website"
+                placeholder="Team size"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={startupForm.linkedin}
+                type="number"
+                min="0"
+                value={startupForm.amount_seeking}
                 onChange={(e) =>
                   setStartupForm((prev) => ({
                     ...prev,
-                    linkedin: e.target.value,
+                    amount_seeking: e.target.value,
                   }))
                 }
-                placeholder="LinkedIn"
+                placeholder="Amount seeking"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={startupForm.city}
-                onChange={(e) =>
-                  setStartupForm((prev) => ({ ...prev, city: e.target.value }))
-                }
-                placeholder="City"
-                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
-              <input
-                value={startupForm.country}
+                type="number"
+                min="0"
+                value={startupForm.previous_funding}
                 onChange={(e) =>
                   setStartupForm((prev) => ({
                     ...prev,
-                    country: e.target.value,
+                    previous_funding: e.target.value,
                   }))
                 }
-                placeholder="Country"
+                placeholder="Previous funding"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                type="email"
+                value={startupForm.revenue_status}
+                onChange={(e) =>
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    revenue_status: e.target.value,
+                  }))
+                }
+                placeholder="Revenue status"
+                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={startupForm.primary_contact_name}
+                onChange={(e) =>
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    primary_contact_name: e.target.value,
+                  }))
+                }
+                placeholder="Primary contact name"
+                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
                 value={startupForm.contact_email}
                 onChange={(e) =>
                   setStartupForm((prev) => ({
@@ -939,59 +977,38 @@ const EditProfilePage = () => {
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={startupForm.contact_phone}
+                value={startupForm.phone_number}
                 onChange={(e) =>
                   setStartupForm((prev) => ({
                     ...prev,
-                    contact_phone: e.target.value,
+                    phone_number: e.target.value,
                   }))
                 }
-                placeholder="Contact phone"
+                placeholder="Phone number"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={startupForm.founders_csv}
+                value={startupForm.founder_names}
                 onChange={(e) =>
                   setStartupForm((prev) => ({
                     ...prev,
-                    founders_csv: e.target.value,
+                    founder_names: e.target.value,
                   }))
                 }
-                placeholder="Founders (comma-separated)"
+                placeholder="Founder names"
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
-              <input
-                value={startupForm.team_csv}
+              <textarea
+                value={startupForm.key_team_members}
                 onChange={(e) =>
                   setStartupForm((prev) => ({
                     ...prev,
-                    team_csv: e.target.value,
+                    key_team_members: e.target.value,
                   }))
                 }
-                placeholder="Team members (comma-separated)"
+                placeholder="Key team members"
+                rows={2}
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
-              <input
-                value={startupForm.funding_amount}
-                onChange={(e) =>
-                  setStartupForm((prev) => ({
-                    ...prev,
-                    funding_amount: e.target.value,
-                  }))
-                }
-                placeholder="Funding amount seeking"
-                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
-              <input
-                value={startupForm.previous_funding}
-                onChange={(e) =>
-                  setStartupForm((prev) => ({
-                    ...prev,
-                    previous_funding: e.target.value,
-                  }))
-                }
-                placeholder="Previous funding"
-                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <textarea
                 value={startupForm.use_of_funds}
@@ -1006,38 +1023,95 @@ const EditProfilePage = () => {
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <textarea
-                value={startupForm.traction_metrics}
+                value={startupForm.key_metrics}
                 onChange={(e) =>
                   setStartupForm((prev) => ({
                     ...prev,
-                    traction_metrics: e.target.value,
+                    key_metrics: e.target.value,
                   }))
                 }
-                placeholder="Traction metrics"
+                placeholder="Key metrics"
+                rows={3}
+                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <textarea
+                value={startupForm.major_achievements}
+                onChange={(e) =>
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    major_achievements: e.target.value,
+                  }))
+                }
+                placeholder="Major achievements"
+                rows={3}
+                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <textarea
+                value={startupForm.customer_testimonials}
+                onChange={(e) =>
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    customer_testimonials: e.target.value,
+                  }))
+                }
+                placeholder="Customer testimonials"
                 rows={3}
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={startupForm.achievements_csv}
+                value={startupForm.pitch_deck_url}
                 onChange={(e) =>
                   setStartupForm((prev) => ({
                     ...prev,
-                    achievements_csv: e.target.value,
+                    pitch_deck_url: e.target.value,
                   }))
                 }
-                placeholder="Achievements (comma-separated)"
+                placeholder="Pitch deck URL"
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
-                value={startupForm.milestones_csv}
+                value={startupForm.business_plan_url}
                 onChange={(e) =>
                   setStartupForm((prev) => ({
                     ...prev,
-                    milestones_csv: e.target.value,
+                    business_plan_url: e.target.value,
                   }))
                 }
-                placeholder="Milestones (comma-separated)"
+                placeholder="Business plan URL"
                 className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={startupForm.product_demo_url}
+                onChange={(e) =>
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    product_demo_url: e.target.value,
+                  }))
+                }
+                placeholder="Product demo URL"
+                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={startupForm.team_photo_url}
+                onChange={(e) =>
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    team_photo_url: e.target.value,
+                  }))
+                }
+                placeholder="Team photo URL"
+                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+              />
+              <input
+                value={startupForm.social_linkedin}
+                onChange={(e) =>
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    social_linkedin: e.target.value,
+                  }))
+                }
+                placeholder="Social LinkedIn URL"
+                className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
                 value={startupForm.social_twitter}
@@ -1047,7 +1121,7 @@ const EditProfilePage = () => {
                     social_twitter: e.target.value,
                   }))
                 }
-                placeholder="Twitter URL"
+                placeholder="Social Twitter URL"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
@@ -1058,7 +1132,7 @@ const EditProfilePage = () => {
                     social_facebook: e.target.value,
                   }))
                 }
-                placeholder="Facebook URL"
+                placeholder="Social Facebook URL"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
               <input
@@ -1069,112 +1143,19 @@ const EditProfilePage = () => {
                     social_instagram: e.target.value,
                   }))
                 }
-                placeholder="Instagram URL"
+                placeholder="Social Instagram URL"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
               />
-              <textarea
-                value={startupForm.description}
-                onChange={(e) =>
-                  setStartupForm((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                placeholder="Company description"
-                rows={4}
-                className="md:col-span-2 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-              />
             </div>
           )}
 
-          {!isInvestor && (
-            <div className="rounded-xl border border-white/10 bg-black/20 p-4 space-y-3">
-              <h3 className="text-white font-medium">Documents</h3>
-
-              <div className="space-y-2">
-                {documents.length === 0 ? (
-                  <p className="text-sm text-gray-400">
-                    No documents uploaded.
-                  </p>
-                ) : (
-                  documents.map((doc, index) => (
-                    <div
-                      key={`${doc.url || doc.name}-${index}`}
-                      className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-lg border border-white/10 px-3 py-2"
-                    >
-                      <a
-                        href={doc.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm text-blue-300 hover:text-blue-200 break-all"
-                      >
-                        {doc.name || `Document ${index + 1}`}
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => deleteDocument(index)}
-                        disabled={
-                          docAction === `delete-${index}` || !!docAction
-                        }
-                        className="text-rose-200 hover:text-rose-100 text-sm inline-flex items-center gap-2"
-                      >
-                        {docAction === `delete-${index}` ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                        Remove
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="rounded-lg border border-white/10 p-3 space-y-3">
-                <input
-                  type="file"
-                  multiple
-                  onChange={(event) =>
-                    setNewDocuments(Array.from(event.target.files || []))
-                  }
-                  className="w-full text-sm text-gray-200 file:mr-3 file:rounded-md file:border-0 file:bg-purple-600/70 file:px-3 file:py-2 file:text-white"
-                />
-                {newDocuments.length > 0 && (
-                  <p className="text-xs text-gray-300">
-                    {newDocuments.length} file(s) selected
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={uploadNewDocuments}
-                  disabled={!newDocuments.length || !!docAction}
-                  className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white hover:bg-white/15 disabled:opacity-50 inline-flex items-center gap-2"
-                >
-                  {docAction === "upload" ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4" />
-                  )}
-                  Upload Selected Documents
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => navigate("/profile")}
-              className="px-4 py-2 rounded-lg border border-white/20 text-gray-100 hover:bg-white/10"
-            >
-              Cancel
-            </button>
+          <div className="flex justify-end">
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white disabled:opacity-50"
+              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Save Profile"}
+              {saving ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>

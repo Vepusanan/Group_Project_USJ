@@ -5,7 +5,7 @@ import { getStartups } from "../controllers/searchController.js";
 const router = express.Router();
 
 // GET /startups
-// Query params: page, limit, q, industry, location_country, location_city, funding_stage, revenue_status, sort
+// Query params: page, limit, q, industry, current_stage, funding_stage, revenue_status, sort
 router.get("/", optionalAuth, getStartups);
 
 export default router;

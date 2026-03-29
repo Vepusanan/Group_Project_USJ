@@ -110,6 +110,12 @@ export const investorProfileService = {
         data: response.data,
       };
     } catch (error) {
+      if (error.response?.status === 404) {
+        return {
+          success: true,
+          data: null,
+        };
+      }
       console.error("Get investor profile error:", error);
       return {
         success: false,

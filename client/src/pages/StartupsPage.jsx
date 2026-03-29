@@ -20,8 +20,23 @@ const statusBadgeClass = {
   declined: "bg-rose-500/20 text-rose-200 border-rose-400/30",
 };
 
+const truncateDescription = (value, maxLength = 130) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "No startup description provided yet.";
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength).trimEnd()}...`;
+};
+
 const StartupCard = ({ startup, onConnect, isConnecting }) => {
+  const startupProfileId = startup.startup_profile_id || startup.id;
   const connectionStatus = startup.connection_status || "not_connected";
+  const statusLabel =
+    connectionStatus === "accepted"
+      ? "connected"
+      : connectionStatus.replace("_", " ");
+  const description = truncateDescription(
+    startup.detailed_description || startup.description,
+  );
   const canConnect = !["self", "pending", "accepted"].includes(
     connectionStatus,
   );
@@ -49,13 +64,17 @@ const StartupCard = ({ startup, onConnect, isConnecting }) => {
         <span
           className={`px-2 py-1 text-xs border rounded-full ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}
         >
-          {connectionStatus.replace("_", " ")}
+          {statusLabel}
         </span>
       </div>
 
+      <p className="mt-3 text-sm text-gray-300 leading-relaxed">
+        {description}
+      </p>
+
       <div className="mt-4 flex gap-2">
         <Link
-          to={`/startups/${startup.id}`}
+          to={`/startups/${startupProfileId}`}
           className="px-3 py-1.5 text-sm rounded-lg border border-white/20 text-white hover:bg-white/10 transition-colors"
         >
           View Profile
@@ -138,7 +157,7 @@ const StartupsPage = () => {
 
   return (
     <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-7xl min-h-[calc(100vh-9rem)] flex flex-col">
         <h1 className="text-3xl md:text-4xl font-bold text-white">
           Discover Startups
         </h1>
@@ -196,7 +215,7 @@ const StartupsPage = () => {
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {startups.map((startup) => (
                 <StartupCard
-                  key={startup.id}
+                  key={startup.startup_profile_id || startup.id || startup.user_id}
                   startup={startup}
                   onConnect={handleConnect}
                   isConnecting={connectingUserId === startup.user_id}
@@ -208,7 +227,7 @@ const StartupsPage = () => {
               <div className="mt-8 text-gray-300">No startups found.</div>
             )}
 
-            <div className="mt-8 flex items-center justify-center gap-3">
+            <div className="mt-auto pt-8 flex items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={() => setPage((prev) => Math.max(1, prev - 1))}

@@ -6,8 +6,6 @@ const defaultFilters = {
   q: "",
   investor_type: "",
   location: "",
-  industries: "",
-  investment_stage: "",
   sort: "newest",
 };
 
@@ -31,8 +29,38 @@ const currencyRange = (min, max) => {
   return `${format(min)} - ${format(max)}`;
 };
 
+const parseList = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [value];
+    } catch {
+      return [value];
+    }
+  }
+  return [];
+};
+
+const truncateDescription = (value, maxLength = 130) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "No investor description provided yet.";
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength).trimEnd()}...`;
+};
+
 const InvestorCard = ({ investor, onConnect, isConnecting }) => {
   const connectionStatus = investor.connection_status || "not_connected";
+  const statusLabel =
+    connectionStatus === "accepted"
+      ? "connected"
+      : connectionStatus.replace("_", " ");
+  const description = truncateDescription(
+    investor.investment_thesis ||
+      investor.what_you_look_for ||
+      investor.value_add,
+  );
   const canConnect = !["self", "pending", "accepted"].includes(
     connectionStatus,
   );
@@ -42,19 +70,19 @@ const InvestorCard = ({ investor, onConnect, isConnecting }) => {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-lg font-semibold text-white">
-            {investor.name || investor.firm_name || "Unnamed Investor"}
+            {investor.name_or_firm || investor.name || "Unnamed Investor"}
           </h3>
           <p className="text-sm text-gray-300">
             {investor.investor_type || "Investor"}
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            {investor.location || "No location available"}
+            {parseList(investor.geographic_preference).join(", ") || "No location available"}
           </p>
         </div>
         <span
           className={`px-2 py-1 text-xs border rounded-full ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}
         >
-          {connectionStatus.replace("_", " ")}
+          {statusLabel}
         </span>
       </div>
 
@@ -67,9 +95,13 @@ const InvestorCard = ({ investor, onConnect, isConnecting }) => {
         </p>
       </div>
 
+      <p className="mt-2 text-sm text-gray-300 leading-relaxed">
+        {description}
+      </p>
+
       <div className="mt-4 flex gap-2">
         <Link
-          to={`/investors/${investor.id}`}
+          to={`/investors/${investor.investor_profile_id || investor.id}`}
           className="px-3 py-1.5 text-sm rounded-lg border border-white/20 text-white hover:bg-white/10 transition-colors"
         >
           View Profile
@@ -152,7 +184,7 @@ const InvestorsPage = () => {
 
   return (
     <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-7xl min-h-[calc(100vh-9rem)] flex flex-col">
         <h1 className="text-3xl md:text-4xl font-bold text-white">
           Discover Investors
         </h1>
@@ -222,7 +254,7 @@ const InvestorsPage = () => {
               <div className="mt-8 text-gray-300">No investors found.</div>
             )}
 
-            <div className="mt-8 flex items-center justify-center gap-3">
+            <div className="mt-auto pt-8 flex items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={() => setPage((prev) => Math.max(1, prev - 1))}

@@ -10,8 +10,11 @@ const InvestorOnboardingPage = () => {
   useEffect(() => {
     const checkExistingProfile = async () => {
       const result = await investorProfileService.getMyProfile();
-      if (result.success && result.data?.data?.id) {
-        navigate("/dashboard", { replace: true });
+      const data = result.data?.data || result.data;
+      const hasProfile = Boolean(data?.investor_profile_id || data?.id);
+
+      if (result.success && hasProfile) {
+        navigate("/startups", { replace: true });
         return;
       }
       setLoading(false);
