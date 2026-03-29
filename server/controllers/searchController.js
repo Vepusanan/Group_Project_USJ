@@ -1,7 +1,13 @@
 import { StartupProfile } from "../models/StartupProfiles.js";
-import { listStartups } from "../repositories/StartupProfileRepository.js";
+import {
+  getConnectionStatusesForStartups,
+  listStartups,
+} from "../repositories/StartupProfileRepository.js";
 import { InvestorProfile } from "../models/InvestorProfile.js";
-import { listInvestors } from "../repositories/InvestorProfileRepository.js";
+import {
+  getConnectionStatusesForInvestors,
+  listInvestors,
+} from "../repositories/InvestorProfileRepository.js";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -23,12 +29,20 @@ const toPositiveInteger = (value, fallback) => {
   return parsed;
 };
 
-const buildConnectionStatus = (requestingUserId, startupUserId) => {
+const buildConnectionStatus = (
+  requestingUserId,
+  startupUserId,
+  connectionStatusMap = new Map(),
+) => {
   if (!requestingUserId) {
     return null;
   }
 
-  return requestingUserId === startupUserId ? "self" : "not_connected";
+  if (requestingUserId === startupUserId) {
+    return "self";
+  }
+
+  return connectionStatusMap.get(startupUserId) || "not_connected";
 };
 
 export const getStartups = async (req, res, next) => {
@@ -51,23 +65,29 @@ export const getStartups = async (req, res, next) => {
       limit,
       q: req.query.q,
       industry: req.query.industry,
-      location_country: req.query.location_country,
-      location_city: req.query.location_city,
+      current_stage: req.query.current_stage,
       funding_stage: req.query.funding_stage,
       revenue_status: req.query.revenue_status,
       sort,
       requesterUserId: req.user?.id || null,
     });
 
+    const startupUserIds = result.rows.map((row) => row.user_id);
+    const connectionStatusMap = await getConnectionStatusesForStartups(
+      req.user?.id || null,
+      startupUserIds,
+    );
+
     const data = result.rows.map((row) => {
       const startup = new StartupProfile(row);
-      startup.parseJsonFields(["traction", "social_media"]);
+      startup.parseJsonFields(["social_media_links"]);
 
       return {
         ...startup.getPublicFields(),
         connection_status: buildConnectionStatus(
           req.user?.id || null,
           startup.user_id,
+          connectionStatusMap,
         ),
       };
     });
@@ -82,8 +102,6 @@ export const getStartups = async (req, res, next) => {
       filters: {
         q: req.query.q || null,
         industry: req.query.industry || null,
-        location_country: req.query.location_country || null,
-        location_city: req.query.location_city || null,
         funding_stage: req.query.funding_stage || null,
         revenue_status: req.query.revenue_status || null,
         sort,
@@ -132,6 +150,12 @@ export const getInvestors = async (req, res, next) => {
       requesterUserId: req.user?.id || null,
     });
 
+    const investorUserIds = result.rows.map((row) => row.user_id);
+    const connectionStatusMap = await getConnectionStatusesForInvestors(
+      req.user?.id || null,
+      investorUserIds,
+    );
+
     const data = result.rows.map((row) => {
       const investor = new InvestorProfile(row);
       return {
@@ -139,6 +163,7 @@ export const getInvestors = async (req, res, next) => {
         connection_status: buildConnectionStatus(
           req.user?.id || null,
           investor.user_id,
+          connectionStatusMap,
         ),
       };
     });

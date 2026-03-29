@@ -70,11 +70,15 @@ export const profileService = {
    */
   updateProfile: async (profileId, formData) => {
     try {
-      const response = await api.put(`/startups/${profileId}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
+      const response = await api.put(
+        `/startups/profile/${profileId}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         },
-      });
+      );
       return {
         success: true,
         data: response.data,
@@ -94,7 +98,7 @@ export const profileService = {
    */
   getMyProfile: async () => {
     try {
-      const response = await api.get("/startups/me");
+      const response = await api.get("/startups/profile/me");
       return {
         success: true,
         data: response.data,
@@ -121,7 +125,7 @@ export const profileService = {
    */
   getProfileCompletion: async () => {
     try {
-      const response = await api.get("/startups/completion");
+      const response = await api.get("/startups/profile/completion");
       return {
         success: true,
         data: response.data,
@@ -131,60 +135,6 @@ export const profileService = {
       return {
         success: false,
         error: error.response?.data?.error || "Failed to get completion status",
-      };
-    }
-  },
-
-  /**
-   * Upload additional documents
-   * @param {string} profileId - Profile ID
-   * @param {FormData} formData - Form data with documents
-   * @returns {Promise}
-   */
-  uploadDocuments: async (profileId, formData) => {
-    try {
-      const response = await api.post(
-        `/startups/${profileId}/documents`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        },
-      );
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      console.error("Upload documents error:", error);
-      return {
-        success: false,
-        error: error.response?.data?.error || "Failed to upload documents",
-      };
-    }
-  },
-
-  /**
-   * Delete a document
-   * @param {string} profileId - Profile ID
-   * @param {number} documentIndex - Index of document to delete
-   * @returns {Promise}
-   */
-  deleteDocument: async (profileId, documentIndex) => {
-    try {
-      const response = await api.delete(
-        `/startups/${profileId}/documents/${documentIndex}`,
-      );
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      console.error("Delete document error:", error);
-      return {
-        success: false,
-        error: error.response?.data?.error || "Failed to delete document",
       };
     }
   },

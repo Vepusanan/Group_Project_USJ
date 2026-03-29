@@ -646,3 +646,24 @@ export const getActiveSessions = async (req, res) => {
     });
   }
 };
+
+export const getCurrentUser = async (req, res) => {
+  try {
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        fullName: req.user.full_name,
+        userType: req.user.user_type,
+        emailVerified: req.user.email_verified,
+      },
+    });
+  } catch (error) {
+    console.error("Get current user error:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to load current user",
+    });
+  }
+};

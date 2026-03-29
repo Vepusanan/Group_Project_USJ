@@ -1,8 +1,7 @@
 import pool from "../config/database.js";
 
-// Helper to safely stringify JSON fields (only if they're objects)
 const safeStringify = (value) => {
-  if (!value) return null;
+  if (value === undefined || value === null) return null;
   if (typeof value === "string") return value;
   return JSON.stringify(value);
 };
@@ -41,49 +40,20 @@ function normalizeValueForColumn(columnMeta, value) {
   const isJson =
     columnMeta &&
     (columnMeta.dataType === "json" || columnMeta.dataType === "jsonb");
-  const isTextArray =
-    columnMeta && columnMeta.dataType === "ARRAY" && columnMeta.udtName === "_text";
 
   if (isJson) {
     return safeStringify(value);
   }
 
-  if (isTextArray) {
-    if (Array.isArray(value)) {
-      return value.map((item) => String(item));
-    }
-
-    if (typeof value === "string") {
-      try {
-        const parsed = JSON.parse(value);
-        if (Array.isArray(parsed)) {
-          return parsed.map((item) => String(item));
-        }
-      } catch (e) {
-        // Fall through to best-effort single item array.
-      }
-
-      return [value];
-    }
-
-    return [String(value)];
-  }
-
   if (Array.isArray(value)) {
-    return value.length > 0 ? String(value[0]) : null;
+    return safeStringify(value);
   }
 
   if (typeof value === "object") {
-    return JSON.stringify(value);
+    return safeStringify(value);
   }
 
   return value;
-}
-
-function getLocationFromPayload(payload) {
-  if (payload.location) return payload.location;
-  const parts = [payload.city, payload.country].filter(Boolean);
-  return parts.length ? parts.join(", ") : null;
 }
 
 function getFirstDefined(...values) {
@@ -93,266 +63,101 @@ function getFirstDefined(...values) {
   return undefined;
 }
 
-function assignIfColumnExists(target, columns, columnName, rawValue) {
-  if (!columns[columnName]) return;
+const toIntegerOrNull = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+};
 
-  const normalized = normalizeValueForColumn(columns[columnName], rawValue);
-  if (normalized !== undefined) {
-    target[columnName] = normalized;
+const toNumberOrNull = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  const parsed = Number.parseFloat(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const toBooleanOrNull = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    if (value.toLowerCase() === "true") return true;
+    if (value.toLowerCase() === "false") return false;
   }
-}
+  return null;
+};
 
-function buildCreatePayloadForExistingSchema(columns, payload) {
-  const mapped = {};
+function buildCreatePayload(columns, payload) {
+  const mapped = {
+    name_or_firm: getFirstDefined(
+      payload.name_or_firm,
+      payload.name,
+      payload.firm_name,
+    ),
+    investor_type: payload.investor_type,
+    years_of_experience: toIntegerOrNull(payload.years_of_experience),
+    professional_background: getFirstDefined(
+      payload.professional_background,
+      payload.background,
+    ),
+    investment_thesis: payload.investment_thesis,
+    industries_of_interest: getFirstDefined(
+      payload.industries_of_interest,
+      payload.industries,
+    ),
+    geographic_preference: getFirstDefined(
+      payload.geographic_preference,
+      payload.geography,
+    ),
+    stage_preference: getFirstDefined(
+      payload.stage_preference,
+      payload.investment_stage,
+    ),
+    min_investment_size: toNumberOrNull(
+      getFirstDefined(payload.min_investment_size, payload.investment_size_min),
+    ),
+    max_investment_size: toNumberOrNull(
+      getFirstDefined(payload.max_investment_size, payload.investment_size_max),
+    ),
+    investment_structure: payload.investment_structure,
+    follow_on_investment: toBooleanOrNull(payload.follow_on_investment),
+    investment_timeline: payload.investment_timeline,
+    number_of_investments: toIntegerOrNull(
+      getFirstDefined(payload.number_of_investments, payload.total_investments),
+    ),
+    portfolio_companies: payload.portfolio_companies,
+    successful_exits: getFirstDefined(
+      payload.successful_exits,
+      payload.notable_exits,
+    ),
+    notable_achievements: payload.notable_achievements,
+    what_you_look_for: getFirstDefined(
+      payload.what_you_look_for,
+      payload.investment_criteria,
+    ),
+    deal_breakers: getFirstDefined(payload.deal_breakers, payload.red_flags),
+    value_add: payload.value_add,
+    network_resources: payload.network_resources,
+    primary_contact_email: getFirstDefined(
+      payload.primary_contact_email,
+      payload.contact_email,
+    ),
+    phone_number: getFirstDefined(payload.phone_number, payload.contact_phone),
+    social_media: payload.social_media,
+    preferred_contact_method: payload.preferred_contact_method,
+  };
 
-  assignIfColumnExists(mapped, columns, "name", payload.name || null);
-  assignIfColumnExists(mapped, columns, "firm_name", payload.firm_name || null);
-  assignIfColumnExists(mapped, columns, "photo_url", payload.photo_url || null);
-  assignIfColumnExists(mapped, columns, "location", getLocationFromPayload(payload));
-  assignIfColumnExists(mapped, columns, "city", payload.city || null);
-  assignIfColumnExists(mapped, columns, "country", payload.country || null);
-  assignIfColumnExists(mapped, columns, "website", payload.website || null);
-  assignIfColumnExists(mapped, columns, "linkedin", payload.linkedin || null);
-  assignIfColumnExists(mapped, columns, "investor_type", payload.investor_type || null);
-
-  const experience = getFirstDefined(
-    payload.years_of_experience,
-    payload.experience_years,
-    null,
-  );
-  assignIfColumnExists(mapped, columns, "years_of_experience", experience);
-  assignIfColumnExists(mapped, columns, "experience_years", experience);
-  assignIfColumnExists(mapped, columns, "background", payload.background || null);
-
-  assignIfColumnExists(
-    mapped,
-    columns,
-    "investment_thesis",
-    payload.investment_thesis || null,
-  );
-  assignIfColumnExists(mapped, columns, "industries", payload.industries || null);
-  assignIfColumnExists(mapped, columns, "geography", payload.geography || null);
-  assignIfColumnExists(
-    mapped,
-    columns,
-    "investment_stage",
-    payload.investment_stage || null,
-  );
-
-  const investmentMin = getFirstDefined(
-    payload.investment_size_min,
-    payload.min_investment_size,
-    null,
-  );
-  const investmentMax = getFirstDefined(
-    payload.investment_size_max,
-    payload.max_investment_size,
-    null,
-  );
-
-  assignIfColumnExists(mapped, columns, "investment_size_min", investmentMin);
-  assignIfColumnExists(mapped, columns, "investment_size_max", investmentMax);
-  assignIfColumnExists(mapped, columns, "min_investment_size", investmentMin);
-  assignIfColumnExists(mapped, columns, "max_investment_size", investmentMax);
-
-  const followOn =
-    payload.follow_on_investment !== undefined
-      ? payload.follow_on_investment
-      : true;
-  assignIfColumnExists(mapped, columns, "investment_structure", payload.investment_structure || null);
-  assignIfColumnExists(mapped, columns, "follow_on_investment", followOn);
-  assignIfColumnExists(
-    mapped,
-    columns,
-    "investment_timeline",
-    payload.investment_timeline || null,
-  );
-
-  assignIfColumnExists(
-    mapped,
-    columns,
-    "portfolio_companies",
-    payload.portfolio_companies || null,
-  );
-  assignIfColumnExists(mapped, columns, "notable_exits", payload.notable_exits || null);
-  assignIfColumnExists(
-    mapped,
-    columns,
-    "total_investments",
-    payload.total_investments || null,
-  );
-
-  assignIfColumnExists(
-    mapped,
-    columns,
-    "investment_criteria",
-    payload.investment_criteria || null,
-  );
-  assignIfColumnExists(mapped, columns, "red_flags", payload.red_flags || null);
-  assignIfColumnExists(
-    mapped,
-    columns,
-    "ideal_founder_profile",
-    payload.ideal_founder_profile || null,
-  );
-  assignIfColumnExists(
-    mapped,
-    columns,
-    "notable_achievements",
-    payload.notable_achievements || null,
-  );
-  assignIfColumnExists(mapped, columns, "value_add", payload.value_add || null);
-  assignIfColumnExists(
-    mapped,
-    columns,
-    "network_resources",
-    payload.network_resources || null,
-  );
-  assignIfColumnExists(mapped, columns, "social_media", payload.social_media || null);
-
-  assignIfColumnExists(mapped, columns, "contact_email", payload.contact_email || null);
-  assignIfColumnExists(mapped, columns, "contact_phone", payload.contact_phone || null);
-  assignIfColumnExists(
-    mapped,
-    columns,
-    "preferred_contact_method",
-    payload.preferred_contact_method || null,
-  );
-
-  const isActive =
-    payload.is_actively_investing !== undefined
-      ? payload.is_actively_investing
-      : true;
-  assignIfColumnExists(mapped, columns, "is_actively_investing", isActive);
-  assignIfColumnExists(
-    mapped,
-    columns,
-    "profile_visibility",
-    payload.profile_visibility || "public",
-  );
-
-  return mapped;
-}
-
-/**
- * Create a new investor profile in the database
- * @param {string} userId - User ID
- * @param {Object} payload - Profile data
- * @returns {Promise<Object>} Created profile
- */
-export async function createInvestorProfile(userId, payload) {
-  const columns = await getInvestorProfileColumns();
-  const mappedPayload = buildCreatePayloadForExistingSchema(columns, payload);
-
-  const insertColumns = ["user_id", ...Object.keys(mappedPayload)];
-  const placeholders = insertColumns.map((_, i) => `$${i + 1}`);
-  const values = [userId, ...Object.values(mappedPayload)];
-
-  const q = `INSERT INTO investor_profiles (${insertColumns.join(", ")}) VALUES (${placeholders.join(", ")}) RETURNING *`;
-
-  const result = await pool.query(q, values);
-  return result.rows[0];
-}
-
-/**
- * Get investor profile by ID
- * @param {string} id - Profile ID
- * @returns {Promise<Object|null>} Profile or null
- */
-export async function getInvestorProfileById(id) {
-  const q = "SELECT * FROM investor_profiles WHERE id = $1";
-  const result = await pool.query(q, [id]);
-  return result.rows[0] || null;
-}
-
-/**
- * Get investor profile by user ID
- * @param {string} userId - User ID
- * @returns {Promise<Object|null>} Profile or null
- */
-export async function getInvestorProfileByUserId(userId) {
-  const q = "SELECT * FROM investor_profiles WHERE user_id = $1";
-  const result = await pool.query(q, [userId]);
-  return result.rows[0] || null;
-}
-
-/**
- * Update investor profile
- * @param {string} id - Profile ID
- * @param {string} userId - User ID (for ownership verification)
- * @param {Object} updates - Fields to update
- * @returns {Promise<Object|null>} Updated profile or null
- */
-export async function updateInvestorProfile(id, userId, updates) {
-  const columns = await getInvestorProfileColumns();
-
-  const allowed = [
-    "name",
-    "firm_name",
-    "photo_url",
-    "city",
-    "country",
-    "website",
-    "linkedin",
-    "investor_type",
-    "years_of_experience",
-    "background",
-    "investment_thesis",
-    "industries",
-    "geography",
-    "investment_stage",
-    "investment_size_min",
-    "investment_size_max",
-    "investment_structure",
-    "follow_on_investment",
-    "investment_timeline",
-    "portfolio_companies",
-    "notable_exits",
-    "total_investments",
-    "investment_criteria",
-    "red_flags",
-    "ideal_founder_profile",
-    "notable_achievements",
-    "value_add",
-    "network_resources",
-    "social_media",
-    "contact_email",
-    "contact_phone",
-    "preferred_contact_method",
-    "is_actively_investing",
-    "profile_visibility",
-  ];
-
-  const sets = [];
-  const values = [];
-  let idx = 1;
-
-  for (const key of allowed) {
-    if (Object.prototype.hasOwnProperty.call(updates, key) && columns[key]) {
-      let val = updates[key];
-
-      val = normalizeValueForColumn(columns[key], val);
-      sets.push(`${key} = $${idx}`);
-      values.push(val);
-      idx += 1;
+  const normalized = {};
+  for (const [columnName, rawValue] of Object.entries(mapped)) {
+    if (!Object.prototype.hasOwnProperty.call(columns, columnName)) continue;
+    const value = normalizeValueForColumn(columns[columnName], rawValue);
+    if (value !== undefined) {
+      normalized[columnName] = value;
     }
   }
 
-  if (sets.length === 0) {
-    return getInvestorProfileById(id);
-  }
-
-  // updated_at will use DB trigger if available; otherwise update manually
-  const q = `UPDATE investor_profiles SET ${sets.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx} AND user_id = $${idx + 1} RETURNING *`;
-  values.push(id, userId);
-
-  const result = await pool.query(q, values);
-  return result.rows[0] || null;
+  return normalized;
 }
 
-// ─── Investor list / search ────────────────────────────────────────────────
-
-const INVESTOR_SEARCH_VECTOR = `to_tsvector('english', coalesce(ip.firm_name, '') || ' ' || coalesce(ip.investment_thesis, ''))`;
+const INVESTOR_SEARCH_VECTOR = `to_tsvector('english', coalesce(ip.name_or_firm, '') || ' ' || coalesce(ip.investment_thesis, ''))`;
 
 const buildListInvestorsQuery = ({
   searchTerm,
@@ -380,26 +185,30 @@ const buildListInvestorsQuery = ({
   }
 
   if (investorType) {
-    const ref = addValue(investorType.trim().toLowerCase());
-    clauses.push(`LOWER(ip.investor_type) = ${ref}`);
+    const ref = addValue(investorType.trim().toUpperCase());
+    clauses.push(`ip.investor_type = ${ref}::public.investor_type_enum`);
   }
 
   if (location) {
     const ref = addValue(`%${location.trim().toLowerCase()}%`);
-    clauses.push(`LOWER(COALESCE(ip.location, '')) LIKE ${ref}`);
+    clauses.push(
+      `LOWER(COALESCE(ip.geographic_preference::text, '')) LIKE ${ref}`,
+    );
   }
 
   if (industries.length > 0) {
     const normalized = industries.map((i) => i.trim().toLowerCase());
     const ref = addValue(normalized);
     clauses.push(
-      `EXISTS (SELECT 1 FROM unnest(ip.industries) AS ind WHERE LOWER(ind) = ANY(${ref}))`,
+      `EXISTS (SELECT 1 FROM jsonb_array_elements_text(ip.industries_of_interest) AS ind WHERE LOWER(ind) = ANY(${ref}))`,
     );
   }
 
   if (investmentStage) {
     const ref = addValue(investmentStage.trim().toLowerCase());
-    clauses.push(`LOWER(ip.investment_stage) = ${ref}`);
+    clauses.push(
+      `EXISTS (SELECT 1 FROM jsonb_array_elements_text(ip.stage_preference) AS stage WHERE LOWER(stage) = ${ref})`,
+    );
   }
 
   if (investmentMin != null) {
@@ -412,7 +221,6 @@ const buildListInvestorsQuery = ({
     clauses.push(`ip.min_investment_size <= ${ref}`);
   }
 
-  // Privacy: owner always sees their own profile; others need public visibility
   if (requesterUserId) {
     const ref = addValue(requesterUserId);
     clauses.push(
@@ -431,13 +239,138 @@ const buildListInvestorsQuery = ({
 const getInvestorSortClause = (sort) => {
   switch (sort) {
     case "alphabetical":
-      return "ORDER BY ip.firm_name ASC NULLS LAST";
+      return "ORDER BY ip.name_or_firm ASC NULLS LAST";
     case "most_experienced":
-      return "ORDER BY ip.experience_years DESC NULLS LAST";
-    default: // newest
-      return "ORDER BY ip.created_at DESC NULLS LAST";
+      return "ORDER BY ip.years_of_experience DESC NULLS LAST";
+    default:
+      return "ORDER BY ip.investor_profile_id DESC";
   }
 };
+
+export async function createInvestorProfile(userId, payload) {
+  const columns = await getInvestorProfileColumns();
+  const mappedPayload = buildCreatePayload(columns, payload);
+
+  const insertColumns = ["user_id", ...Object.keys(mappedPayload)];
+  const placeholders = insertColumns.map((_, i) => `$${i + 1}`);
+  const values = [userId, ...Object.values(mappedPayload)];
+
+  const q = `INSERT INTO investor_profiles (${insertColumns.join(", ")}) VALUES (${placeholders.join(", ")}) RETURNING *`;
+
+  const result = await pool.query(q, values);
+  return result.rows[0];
+}
+
+export async function getInvestorProfileById(id) {
+  const q = "SELECT * FROM investor_profiles WHERE investor_profile_id = $1";
+  const result = await pool.query(q, [id]);
+  return result.rows[0] || null;
+}
+
+export async function getInvestorProfileByUserId(userId) {
+  const q = "SELECT * FROM investor_profiles WHERE user_id = $1";
+  const result = await pool.query(q, [userId]);
+  return result.rows[0] || null;
+}
+
+export async function updateInvestorProfile(id, userId, updates) {
+  const columns = await getInvestorProfileColumns();
+
+  const allowed = [
+    "name_or_firm",
+    "investor_type",
+    "years_of_experience",
+    "professional_background",
+    "investment_thesis",
+    "industries_of_interest",
+    "geographic_preference",
+    "stage_preference",
+    "min_investment_size",
+    "max_investment_size",
+    "investment_structure",
+    "follow_on_investment",
+    "investment_timeline",
+    "number_of_investments",
+    "portfolio_companies",
+    "successful_exits",
+    "notable_achievements",
+    "what_you_look_for",
+    "deal_breakers",
+    "value_add",
+    "network_resources",
+    "primary_contact_email",
+    "phone_number",
+    "social_media",
+    "preferred_contact_method",
+  ];
+
+  const aliasToColumn = {
+    name: "name_or_firm",
+    firm_name: "name_or_firm",
+    background: "professional_background",
+    industries: "industries_of_interest",
+    geography: "geographic_preference",
+    investment_stage: "stage_preference",
+    investment_size_min: "min_investment_size",
+    investment_size_max: "max_investment_size",
+    total_investments: "number_of_investments",
+    notable_exits: "successful_exits",
+    contact_email: "primary_contact_email",
+    contact_phone: "phone_number",
+    investment_criteria: "what_you_look_for",
+    red_flags: "deal_breakers",
+  };
+
+  const normalizedUpdates = { ...updates };
+  for (const [alias, canonical] of Object.entries(aliasToColumn)) {
+    if (
+      Object.prototype.hasOwnProperty.call(normalizedUpdates, alias) &&
+      !Object.prototype.hasOwnProperty.call(normalizedUpdates, canonical)
+    ) {
+      normalizedUpdates[canonical] = normalizedUpdates[alias];
+    }
+  }
+
+  const sets = [];
+  const values = [];
+  let idx = 1;
+
+  for (const key of allowed) {
+    if (
+      Object.prototype.hasOwnProperty.call(normalizedUpdates, key) &&
+      columns[key]
+    ) {
+      let val = normalizedUpdates[key];
+
+      if (["years_of_experience", "number_of_investments"].includes(key)) {
+        val = toIntegerOrNull(val);
+      }
+
+      if (["min_investment_size", "max_investment_size"].includes(key)) {
+        val = toNumberOrNull(val);
+      }
+
+      if (key === "follow_on_investment") {
+        val = toBooleanOrNull(val);
+      }
+
+      val = normalizeValueForColumn(columns[key], val);
+      sets.push(`${key} = $${idx}`);
+      values.push(val);
+      idx += 1;
+    }
+  }
+
+  if (sets.length === 0) {
+    return getInvestorProfileById(id);
+  }
+
+  const q = `UPDATE investor_profiles SET ${sets.join(", ")} WHERE investor_profile_id = $${idx} AND user_id = $${idx + 1} RETURNING *`;
+  values.push(id, userId);
+
+  const result = await pool.query(q, values);
+  return result.rows[0] || null;
+}
 
 export async function listInvestors(options = {}) {
   const {
@@ -504,4 +437,52 @@ export async function listInvestors(options = {}) {
     rows: rowsResult.rows,
     total: countResult.rows[0]?.total ?? 0,
   };
+}
+
+const normalizeConnectionStatus = (status) => {
+  const value = String(status || "").toLowerCase();
+  if (value === "connected") return "accepted";
+  if (["pending", "accepted", "declined"].includes(value)) return value;
+  return null;
+};
+
+export async function getConnectionStatusesForInvestors(
+  requesterUserId,
+  investorUserIds = [],
+) {
+  if (!requesterUserId || investorUserIds.length === 0) {
+    return new Map();
+  }
+
+  const uniqueInvestorUserIds = [...new Set(investorUserIds.filter(Boolean))];
+  if (uniqueInvestorUserIds.length === 0) {
+    return new Map();
+  }
+
+  const tableResult = await pool.query(
+    `SELECT to_regclass('public.connections') AS table_name`,
+  );
+
+  if (!tableResult.rows[0]?.table_name) {
+    return new Map();
+  }
+
+  const connectionsResult = await pool.query(
+    `
+      SELECT c.investor_id::text AS investor_user_id, c.status
+      FROM public.connections c
+      WHERE c.startup_id::text = $1
+        AND c.investor_id::text = ANY($2::text[])
+    `,
+    [requesterUserId, uniqueInvestorUserIds],
+  );
+
+  return new Map(
+    connectionsResult.rows
+      .map((row) => [
+        row.investor_user_id,
+        normalizeConnectionStatus(row.status),
+      ])
+      .filter(([, status]) => Boolean(status)),
+  );
 }

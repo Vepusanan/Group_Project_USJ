@@ -17,7 +17,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Handle 401 responses
@@ -30,7 +30,7 @@ api.interceptors.response.use(
       window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 /**
@@ -73,11 +73,15 @@ export const investorProfileService = {
    */
   updateProfile: async (profileId, formData) => {
     try {
-      const response = await api.put(`/investors/${profileId}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
+      const response = await api.put(
+        `/investors/profile/${profileId}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         },
-      });
+      );
       return {
         success: true,
         data: response.data,
@@ -100,12 +104,18 @@ export const investorProfileService = {
    */
   getMyProfile: async () => {
     try {
-      const response = await api.get("/investors/me");
+      const response = await api.get("/investors/profile/me");
       return {
         success: true,
         data: response.data,
       };
     } catch (error) {
+      if (error.response?.status === 404) {
+        return {
+          success: true,
+          data: null,
+        };
+      }
       console.error("Get investor profile error:", error);
       return {
         success: false,
@@ -121,7 +131,7 @@ export const investorProfileService = {
    */
   getProfile: async (investorId) => {
     try {
-      const response = await api.get(`/investors/${investorId}`);
+      const response = await api.get(`/investors/profile/${investorId}`);
       return {
         success: true,
         data: response.data,
@@ -141,9 +151,10 @@ export const investorProfileService = {
    */
   checkOnboardingStatus: async () => {
     try {
-      const response = await api.get("/investors/onboarding/status");
+      const response = await api.get("/investors/profile/me");
       return {
         success: true,
+        hasProfile: !!response.data?.data,
         data: response.data,
       };
     } catch (error) {

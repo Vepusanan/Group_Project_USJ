@@ -1,137 +1,183 @@
 /**
  * Startup Profile Model
- * Contains business logic and data transformation for startup profiles
- * Database queries are handled by startupProfileRepository.js
- */
-
-/**
- * Startup Profile class/object structure
- * This can be extended with business logic methods, validations, etc.
+ * Contains business logic and data transformation for startup profiles.
  */
 export class StartupProfile {
-  constructor(data) {
-    this.id = data.id;
+  constructor(data = {}) {
+    this.startup_profile_id = data.startup_profile_id || data.id;
     this.user_id = data.user_id;
+
     this.company_name = data.company_name;
-    this.founders = data.founders;
-    this.logo_url = data.logo_url;
-    this.city = data.city;
-    this.country = data.country;
-    this.website = data.website;
-    this.linkedin = data.linkedin;
+    this.founder_names = data.founder_names;
     this.tagline = data.tagline;
-    this.description = data.description;
+    this.detailed_description = data.detailed_description || data.description;
     this.industry = data.industry;
     this.founded_date = data.founded_date;
-    this.stage = data.stage;
-    this.team = data.team;
-    this.funding = data.funding;
-    this.traction = data.traction;
-    this.documents = data.documents;
+    this.current_stage = data.current_stage || data.stage;
+
+    this.team_size = data.team_size;
+    this.key_team_members = data.key_team_members;
+    this.team_photo_url = data.team_photo_url;
+
+    this.funding_stage = data.funding_stage;
+    this.amount_seeking = data.amount_seeking;
+    this.previous_funding = data.previous_funding;
+    this.use_of_funds = data.use_of_funds;
+    this.revenue_status = data.revenue_status;
+
+    this.key_metrics = data.key_metrics;
+    this.major_achievements = data.major_achievements;
+    this.customer_testimonials = data.customer_testimonials;
+
+    this.pitch_deck_url = data.pitch_deck_url;
+    this.business_plan_url = data.business_plan_url;
+    this.product_demo_url = data.product_demo_url;
+
     this.primary_contact_name = data.primary_contact_name;
     this.contact_email = data.contact_email;
-    this.contact_phone = data.contact_phone;
-    this.social_media = data.social_media;
-    this.location_country = data.location_country;
-    this.location_city = data.location_city;
-    this.funding_stage = data.funding_stage;
-    this.revenue_status = data.revenue_status;
+    this.phone_number = data.phone_number || data.contact_phone;
+    this.social_media_links = data.social_media_links || data.social_media;
+
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
   }
 
-  /**
-   * Get public fields that are visible to all users
-   * @returns {Object} Public profile data
-   */
-  getPublicFields() {
-    const normalizedCity = this.location_city || this.city || null;
-    const normalizedCountry = this.location_country || this.country || null;
-    const normalizedFundingStage = this.funding_stage || this.stage || null;
+  validate() {
+    const errors = [];
+
+    const requiredStringFields = [
+      "company_name",
+      "founder_names",
+      "tagline",
+      "detailed_description",
+      "industry",
+      "current_stage",
+      "funding_stage",
+      "use_of_funds",
+      "revenue_status",
+      "primary_contact_name",
+      "contact_email",
+    ];
+
+    for (const field of requiredStringFields) {
+      const value = this[field];
+      if (!value || (typeof value === "string" && value.trim().length === 0)) {
+        errors.push(`${field} is required`);
+      }
+    }
+
+    if (!this.founded_date) {
+      errors.push("founded_date is required");
+    }
+
+    if (this.team_size == null || Number(this.team_size) <= 0) {
+      errors.push("team_size must be greater than 0");
+    }
+
+    if (this.amount_seeking == null || Number(this.amount_seeking) <= 0) {
+      errors.push("amount_seeking must be greater than 0");
+    }
+
+    if (this.previous_funding != null && Number(this.previous_funding) < 0) {
+      errors.push("previous_funding must be greater than or equal to 0");
+    }
 
     return {
-      id: this.id,
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+
+  getPublicFields() {
+    return {
+      startup_profile_id: this.startup_profile_id,
       user_id: this.user_id,
       company_name: this.company_name,
+      founder_names: this.founder_names,
       tagline: this.tagline,
-      description: this.description,
+      detailed_description: this.detailed_description,
+      description: this.detailed_description,
       industry: this.industry,
-      logo_url: this.logo_url,
-      city: normalizedCity,
-      country: normalizedCountry,
-      location_city: normalizedCity,
-      location_country: normalizedCountry,
-      website: this.website,
-      linkedin: this.linkedin,
-      stage: normalizedFundingStage,
-      funding_stage: normalizedFundingStage,
+      founded_date: this.founded_date,
+      current_stage: this.current_stage,
+      team_size: this.team_size,
+      key_team_members: this.key_team_members,
+      team_photo_url: this.team_photo_url,
+      funding_stage: this.funding_stage,
+      stage: this.current_stage,
+      amount_seeking: this.amount_seeking,
+      previous_funding: this.previous_funding,
+      use_of_funds: this.use_of_funds,
       revenue_status: this.revenue_status,
-      traction: this.traction,
-      social_media: this.social_media,
+      key_metrics: this.key_metrics,
+      major_achievements: this.major_achievements,
+      customer_testimonials: this.customer_testimonials,
+      pitch_deck_url: this.pitch_deck_url,
+      business_plan_url: this.business_plan_url,
+      product_demo_url: this.product_demo_url,
+      primary_contact_name: this.primary_contact_name,
+      contact_email: this.contact_email,
+      contact_phone: this.phone_number,
+      phone_number: this.phone_number,
+      social_media_links: this.social_media_links,
+      social_media: this.social_media_links,
       created_at: this.created_at,
       updated_at: this.updated_at,
     };
   }
 
-  /**
-   * Parse JSON fields from database strings
-   * @param {Array} fields - Field names to parse
-   */
-  parseJsonFields(
-    fields = [
-      "founders",
-      "team",
-      "funding",
-      "traction",
-      "documents",
-      "social_media",
-    ],
-  ) {
+  parseJsonFields(fields = ["social_media_links"]) {
     for (const field of fields) {
       if (this[field] && typeof this[field] === "string") {
         try {
           this[field] = JSON.parse(this[field]);
-        } catch (e) {
-          // Keep as-is if parsing fails
+        } catch (error) {
+          // Keep original value if JSON parsing fails.
         }
       }
     }
   }
 
-  /**
-   * Calculate profile completion percentage
-   * @returns {Object} Completion data with percentage and incomplete sections
-   */
   calculateCompletion() {
-    // Define field groups with weights
     const fieldGroups = {
       required: {
-        weight: 40,
-        fields: ["company_name", "industry", "description", "city", "country"],
-      },
-      important: {
-        weight: 35,
+        weight: 50,
         fields: [
-          "founders",
+          "company_name",
+          "founder_names",
           "tagline",
-          "stage",
-          "website",
-          "linkedin",
+          "detailed_description",
+          "industry",
+          "founded_date",
+          "current_stage",
+          "team_size",
+          "funding_stage",
+          "amount_seeking",
+          "use_of_funds",
+          "revenue_status",
+          "primary_contact_name",
           "contact_email",
         ],
       },
-      optional: {
-        weight: 25,
+      important: {
+        weight: 30,
         fields: [
-          "logo_url",
-          "founded_date",
-          "team",
-          "funding",
-          "traction",
-          "documents",
-          "primary_contact_name",
-          "contact_phone",
-          "social_media",
+          "key_team_members",
+          "previous_funding",
+          "key_metrics",
+          "major_achievements",
+          "customer_testimonials",
+        ],
+      },
+      optional: {
+        weight: 20,
+        fields: [
+          "team_photo_url",
+          "pitch_deck_url",
+          "business_plan_url",
+          "product_demo_url",
+          "phone_number",
+          "social_media_links",
         ],
       },
     };
@@ -139,11 +185,9 @@ export class StartupProfile {
     const incompleteSections = [];
     let totalScore = 0;
 
-    // Calculate completion for each group
     for (const [groupName, groupData] of Object.entries(fieldGroups)) {
       const { fields, weight } = groupData;
       let filledCount = 0;
-
       const missingFields = [];
 
       for (const field of fields) {
@@ -163,19 +207,18 @@ export class StartupProfile {
         }
 
         if (isFilled) {
-          filledCount++;
+          filledCount += 1;
         } else {
           missingFields.push(field);
         }
       }
 
-      const groupCompletion = (filledCount / fields.length) * weight;
-      totalScore += groupCompletion;
+      totalScore += (filledCount / fields.length) * weight;
 
       if (missingFields.length > 0) {
         incompleteSections.push({
           section: groupName,
-          missingFields: missingFields,
+          missingFields,
           completionRate: Math.round((filledCount / fields.length) * 100),
         });
       }
@@ -183,10 +226,8 @@ export class StartupProfile {
 
     return {
       completionPercentage: Math.round(totalScore),
-      incompleteSections: incompleteSections,
+      incompleteSections,
       isComplete: Math.round(totalScore) === 100,
     };
   }
 }
-
-// Startup profile model - business logic layer
