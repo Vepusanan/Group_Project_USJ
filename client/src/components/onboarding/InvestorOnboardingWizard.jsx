@@ -12,11 +12,27 @@ import investorProfileService from "../../services/investorProfileService";
 
 const STEPS = [
   { number: 1, title: "Basic Information", component: InvestorStep1BasicInfo },
-  { number: 2, title: "Classification", component: InvestorStep2Classification },
-  { number: 3, title: "Investment Focus", component: InvestorStep3InvestmentFocus },
-  { number: 4, title: "Investment Details", component: InvestorStep4InvestmentDetails },
+  {
+    number: 2,
+    title: "Classification",
+    component: InvestorStep2Classification,
+  },
+  {
+    number: 3,
+    title: "Investment Focus",
+    component: InvestorStep3InvestmentFocus,
+  },
+  {
+    number: 4,
+    title: "Investment Details",
+    component: InvestorStep4InvestmentDetails,
+  },
   { number: 5, title: "Portfolio", component: InvestorStep5Portfolio },
-  { number: 6, title: "Criteria & Value Add", component: InvestorStep6InvestmentCriteria },
+  {
+    number: 6,
+    title: "Criteria & Value Add",
+    component: InvestorStep6InvestmentCriteria,
+  },
   { number: 7, title: "Contact", component: InvestorStep7Contact },
 ];
 
@@ -73,7 +89,8 @@ const InvestorOnboardingWizard = () => {
         newErrors.years_of_experience = "Years of experience is required";
       }
       if (!formData.professional_background.trim()) {
-        newErrors.professional_background = "Professional background is required";
+        newErrors.professional_background =
+          "Professional background is required";
       }
     }
 
@@ -125,12 +142,15 @@ const InvestorOnboardingWizard = () => {
     if (step === 7) {
       if (!formData.primary_contact_email.trim()) {
         newErrors.primary_contact_email = "Primary contact email is required";
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.primary_contact_email)) {
+      } else if (
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.primary_contact_email)
+      ) {
         newErrors.primary_contact_email = "Invalid email format";
       }
 
       if (!formData.preferred_contact_method) {
-        newErrors.preferred_contact_method = "Preferred contact method is required";
+        newErrors.preferred_contact_method =
+          "Preferred contact method is required";
       }
     }
 
@@ -214,8 +234,12 @@ const InvestorOnboardingWizard = () => {
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Complete Your Investor Profile</h1>
-          <p className="text-gray-400">Step {currentStep} of {STEPS.length}</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            Complete Your Investor Profile
+          </h1>
+          <p className="text-gray-400">
+            Step {currentStep} of {STEPS.length}
+          </p>
         </div>
 
         <div className="mb-8">
@@ -235,12 +259,16 @@ const InvestorOnboardingWizard = () => {
                     {step.number < currentStep ? (
                       <Check className="w-5 h-5 text-white" />
                     ) : (
-                      <span className="text-white text-sm font-semibold">{step.number}</span>
+                      <span className="text-white text-sm font-semibold">
+                        {step.number}
+                      </span>
                     )}
                   </div>
                   <span
                     className={`text-xs mt-2 hidden md:block ${
-                      step.number === currentStep ? "text-purple-400 font-semibold" : "text-gray-500"
+                      step.number === currentStep
+                        ? "text-purple-400 font-semibold"
+                        : "text-gray-500"
                     }`}
                   >
                     {step.title}
@@ -304,7 +332,11 @@ const InvestorOnboardingWizard = () => {
                 disabled={isSaving}
                 className="px-8 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium disabled:opacity-50"
               >
-                {isSaving ? "Submitting..." : currentStep === STEPS.length ? "Submit Profile" : "Next"}
+                {isSaving
+                  ? "Submitting..."
+                  : currentStep === STEPS.length
+                    ? "Submit Profile"
+                    : "Next"}
               </button>
             </div>
           </div>

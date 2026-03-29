@@ -28,8 +28,12 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Business Description</h2>
-        <p className="text-gray-400">Describe your startup and current stage.</p>
+        <h2 className="text-2xl font-bold text-white mb-2">
+          Business Description
+        </h2>
+        <p className="text-gray-400">
+          Describe your startup and current stage.
+        </p>
       </div>
 
       <div>
@@ -53,8 +57,12 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
           />
         </div>
         <div className="flex justify-between mt-1">
-          {errors.tagline && <p className="text-sm text-red-500">{errors.tagline}</p>}
-          <p className="text-xs text-gray-500 ml-auto">{formData.tagline.length}/{maxTaglineLength}</p>
+          {errors.tagline && (
+            <p className="text-sm text-red-500">{errors.tagline}</p>
+          )}
+          <p className="text-xs text-gray-500 ml-auto">
+            {formData.tagline.length}/{maxTaglineLength}
+          </p>
         </div>
       </div>
 
@@ -76,8 +84,14 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
           className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white resize-none"
         />
         <div className="flex justify-between mt-1">
-          {errors.detailed_description && <p className="text-sm text-red-500">{errors.detailed_description}</p>}
-          <p className="text-xs text-gray-500 ml-auto">{formData.detailed_description.length}/{maxDescriptionLength}</p>
+          {errors.detailed_description && (
+            <p className="text-sm text-red-500">
+              {errors.detailed_description}
+            </p>
+          )}
+          <p className="text-xs text-gray-500 ml-auto">
+            {formData.detailed_description.length}/{maxDescriptionLength}
+          </p>
         </div>
       </div>
 
@@ -93,13 +107,19 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
             onChange={(e) => updateFormData({ industry: e.target.value })}
             className="w-full pl-10 pr-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
           >
-            <option value="" className="bg-gray-900">Select your industry</option>
+            <option value="" className="bg-gray-900">
+              Select your industry
+            </option>
             {INDUSTRIES.map((industry) => (
-              <option key={industry} value={industry} className="bg-gray-900">{industry}</option>
+              <option key={industry} value={industry} className="bg-gray-900">
+                {industry}
+              </option>
             ))}
           </select>
         </div>
-        {errors.industry && <p className="text-sm text-red-500 mt-1">{errors.industry}</p>}
+        {errors.industry && (
+          <p className="text-sm text-red-500 mt-1">{errors.industry}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -118,7 +138,9 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
               className="w-full pl-10 pr-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
             />
           </div>
-          {errors.founded_date && <p className="text-sm text-red-500 mt-1">{errors.founded_date}</p>}
+          {errors.founded_date && (
+            <p className="text-sm text-red-500 mt-1">{errors.founded_date}</p>
+          )}
         </div>
 
         <div>
@@ -130,16 +152,24 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
             <TrendingUp className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <select
               value={formData.current_stage}
-              onChange={(e) => updateFormData({ current_stage: e.target.value })}
+              onChange={(e) =>
+                updateFormData({ current_stage: e.target.value })
+              }
               className="w-full pl-10 pr-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
             >
-              <option value="" className="bg-gray-900">Select stage</option>
+              <option value="" className="bg-gray-900">
+                Select stage
+              </option>
               {STAGES.map((stage) => (
-                <option key={stage} value={stage} className="bg-gray-900">{stage}</option>
+                <option key={stage} value={stage} className="bg-gray-900">
+                  {stage}
+                </option>
               ))}
             </select>
           </div>
-          {errors.current_stage && <p className="text-sm text-red-500 mt-1">{errors.current_stage}</p>}
+          {errors.current_stage && (
+            <p className="text-sm text-red-500 mt-1">{errors.current_stage}</p>
+          )}
         </div>
       </div>
     </div>

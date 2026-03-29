@@ -13,7 +13,15 @@ const INDUSTRIES = [
   "Other",
 ];
 
-const GEOGRAPHIES = ["Global", "North America", "Europe", "APAC", "MENA", "LATAM", "Africa"];
+const GEOGRAPHIES = [
+  "Global",
+  "North America",
+  "Europe",
+  "APAC",
+  "MENA",
+  "LATAM",
+  "Africa",
+];
 
 const STAGES = ["IDEA", "MVP", "EARLY_REVENUE", "GROWTH", "SCALING"];
 
@@ -39,14 +47,22 @@ const InvestorStep2Classification = ({ formData, updateFormData, errors }) => {
           rows={5}
           placeholder="Describe your thesis and target opportunities."
           value={formData.investment_thesis}
-          onChange={(e) => updateFormData({ investment_thesis: e.target.value })}
+          onChange={(e) =>
+            updateFormData({ investment_thesis: e.target.value })
+          }
           className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white resize-none"
         />
-        {errors.investment_thesis && <p className="text-sm text-red-500 mt-1">{errors.investment_thesis}</p>}
+        {errors.investment_thesis && (
+          <p className="text-sm text-red-500 mt-1">
+            {errors.investment_thesis}
+          </p>
+        )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">Industries of Interest<span className="text-red-500 ml-1">*</span></label>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Industries of Interest<span className="text-red-500 ml-1">*</span>
+        </label>
         <div className="flex flex-wrap gap-2">
           {INDUSTRIES.map((industry) => {
             const selected = formData.industries_of_interest.includes(industry);
@@ -56,7 +72,10 @@ const InvestorStep2Classification = ({ formData, updateFormData, errors }) => {
                 type="button"
                 onClick={() =>
                   updateFormData({
-                    industries_of_interest: toggleArrayItem(formData.industries_of_interest, industry),
+                    industries_of_interest: toggleArrayItem(
+                      formData.industries_of_interest,
+                      industry,
+                    ),
                   })
                 }
                 className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
@@ -70,11 +89,17 @@ const InvestorStep2Classification = ({ formData, updateFormData, errors }) => {
             );
           })}
         </div>
-        {errors.industries_of_interest && <p className="text-sm text-red-500 mt-1">{errors.industries_of_interest}</p>}
+        {errors.industries_of_interest && (
+          <p className="text-sm text-red-500 mt-1">
+            {errors.industries_of_interest}
+          </p>
+        )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">Geographic Preference<span className="text-red-500 ml-1">*</span></label>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Geographic Preference<span className="text-red-500 ml-1">*</span>
+        </label>
         <div className="flex flex-wrap gap-2">
           {GEOGRAPHIES.map((geo) => {
             const selected = formData.geographic_preference.includes(geo);
@@ -84,7 +109,10 @@ const InvestorStep2Classification = ({ formData, updateFormData, errors }) => {
                 type="button"
                 onClick={() =>
                   updateFormData({
-                    geographic_preference: toggleArrayItem(formData.geographic_preference, geo),
+                    geographic_preference: toggleArrayItem(
+                      formData.geographic_preference,
+                      geo,
+                    ),
                   })
                 }
                 className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
@@ -98,11 +126,17 @@ const InvestorStep2Classification = ({ formData, updateFormData, errors }) => {
             );
           })}
         </div>
-        {errors.geographic_preference && <p className="text-sm text-red-500 mt-1">{errors.geographic_preference}</p>}
+        {errors.geographic_preference && (
+          <p className="text-sm text-red-500 mt-1">
+            {errors.geographic_preference}
+          </p>
+        )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">Stage Preference<span className="text-red-500 ml-1">*</span></label>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Stage Preference<span className="text-red-500 ml-1">*</span>
+        </label>
         <div className="flex flex-wrap gap-2">
           {STAGES.map((stage) => {
             const selected = formData.stage_preference.includes(stage);
@@ -112,7 +146,10 @@ const InvestorStep2Classification = ({ formData, updateFormData, errors }) => {
                 type="button"
                 onClick={() =>
                   updateFormData({
-                    stage_preference: toggleArrayItem(formData.stage_preference, stage),
+                    stage_preference: toggleArrayItem(
+                      formData.stage_preference,
+                      stage,
+                    ),
                   })
                 }
                 className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
@@ -126,7 +163,9 @@ const InvestorStep2Classification = ({ formData, updateFormData, errors }) => {
             );
           })}
         </div>
-        {errors.stage_preference && <p className="text-sm text-red-500 mt-1">{errors.stage_preference}</p>}
+        {errors.stage_preference && (
+          <p className="text-sm text-red-500 mt-1">{errors.stage_preference}</p>
+        )}
       </div>
     </div>
   );

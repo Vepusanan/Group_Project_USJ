@@ -87,7 +87,10 @@ const InvestorProfilePage = () => {
     profile.industries_of_interest,
     profile.industries_of_interest,
   );
-  const stages = parseJsonValue(profile.stage_preference, profile.stage_preference);
+  const stages = parseJsonValue(
+    profile.stage_preference,
+    profile.stage_preference,
+  );
   const geographies = parseJsonValue(
     profile.geographic_preference,
     profile.geographic_preference,

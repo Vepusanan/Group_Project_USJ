@@ -3,7 +3,9 @@ import { Link as LinkIcon } from "lucide-react";
 
 const UrlField = ({ label, value, onChange, placeholder }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+    <label className="block text-sm font-medium text-gray-300 mb-2">
+      {label}
+    </label>
     <div className="relative">
       <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
       <input
@@ -21,8 +23,12 @@ const Step6Documents = ({ formData, updateFormData }) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Documents & Demo URLs</h2>
-        <p className="text-gray-400">Provide links to investor materials and product demo.</p>
+        <h2 className="text-2xl font-bold text-white mb-2">
+          Documents & Demo URLs
+        </h2>
+        <p className="text-gray-400">
+          Provide links to investor materials and product demo.
+        </p>
       </div>
 
       <UrlField

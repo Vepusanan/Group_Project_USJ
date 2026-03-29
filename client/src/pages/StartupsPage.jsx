@@ -215,7 +215,9 @@ const StartupsPage = () => {
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {startups.map((startup) => (
                 <StartupCard
-                  key={startup.startup_profile_id || startup.id || startup.user_id}
+                  key={
+                    startup.startup_profile_id || startup.id || startup.user_id
+                  }
                   startup={startup}
                   onConnect={handleConnect}
                   isConnecting={connectingUserId === startup.user_id}

@@ -76,7 +76,8 @@ const InvestorCard = ({ investor, onConnect, isConnecting }) => {
             {investor.investor_type || "Investor"}
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            {parseList(investor.geographic_preference).join(", ") || "No location available"}
+            {parseList(investor.geographic_preference).join(", ") ||
+              "No location available"}
           </p>
         </div>
         <span

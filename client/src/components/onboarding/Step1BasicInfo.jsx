@@ -6,7 +6,9 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Basic Information</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">
+          Basic Information
+        </h2>
         <p className="text-gray-400">Start with your company identity.</p>
       </div>
 

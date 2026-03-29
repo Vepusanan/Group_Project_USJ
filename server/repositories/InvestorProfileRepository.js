@@ -87,14 +87,30 @@ const toBooleanOrNull = (value) => {
 
 function buildCreatePayload(columns, payload) {
   const mapped = {
-    name_or_firm: getFirstDefined(payload.name_or_firm, payload.name, payload.firm_name),
+    name_or_firm: getFirstDefined(
+      payload.name_or_firm,
+      payload.name,
+      payload.firm_name,
+    ),
     investor_type: payload.investor_type,
     years_of_experience: toIntegerOrNull(payload.years_of_experience),
-    professional_background: getFirstDefined(payload.professional_background, payload.background),
+    professional_background: getFirstDefined(
+      payload.professional_background,
+      payload.background,
+    ),
     investment_thesis: payload.investment_thesis,
-    industries_of_interest: getFirstDefined(payload.industries_of_interest, payload.industries),
-    geographic_preference: getFirstDefined(payload.geographic_preference, payload.geography),
-    stage_preference: getFirstDefined(payload.stage_preference, payload.investment_stage),
+    industries_of_interest: getFirstDefined(
+      payload.industries_of_interest,
+      payload.industries,
+    ),
+    geographic_preference: getFirstDefined(
+      payload.geographic_preference,
+      payload.geography,
+    ),
+    stage_preference: getFirstDefined(
+      payload.stage_preference,
+      payload.investment_stage,
+    ),
     min_investment_size: toNumberOrNull(
       getFirstDefined(payload.min_investment_size, payload.investment_size_min),
     ),
@@ -108,13 +124,22 @@ function buildCreatePayload(columns, payload) {
       getFirstDefined(payload.number_of_investments, payload.total_investments),
     ),
     portfolio_companies: payload.portfolio_companies,
-    successful_exits: getFirstDefined(payload.successful_exits, payload.notable_exits),
+    successful_exits: getFirstDefined(
+      payload.successful_exits,
+      payload.notable_exits,
+    ),
     notable_achievements: payload.notable_achievements,
-    what_you_look_for: getFirstDefined(payload.what_you_look_for, payload.investment_criteria),
+    what_you_look_for: getFirstDefined(
+      payload.what_you_look_for,
+      payload.investment_criteria,
+    ),
     deal_breakers: getFirstDefined(payload.deal_breakers, payload.red_flags),
     value_add: payload.value_add,
     network_resources: payload.network_resources,
-    primary_contact_email: getFirstDefined(payload.primary_contact_email, payload.contact_email),
+    primary_contact_email: getFirstDefined(
+      payload.primary_contact_email,
+      payload.contact_email,
+    ),
     phone_number: getFirstDefined(payload.phone_number, payload.contact_phone),
     social_media: payload.social_media,
     preferred_contact_method: payload.preferred_contact_method,
@@ -166,7 +191,9 @@ const buildListInvestorsQuery = ({
 
   if (location) {
     const ref = addValue(`%${location.trim().toLowerCase()}%`);
-    clauses.push(`LOWER(COALESCE(ip.geographic_preference::text, '')) LIKE ${ref}`);
+    clauses.push(
+      `LOWER(COALESCE(ip.geographic_preference::text, '')) LIKE ${ref}`,
+    );
   }
 
   if (industries.length > 0) {
@@ -203,7 +230,8 @@ const buildListInvestorsQuery = ({
     clauses.push(`COALESCE(ps.profile_visibility, 'public') = 'public'`);
   }
 
-  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const whereClause =
+    clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
 
   return { whereClause, values };
 };
@@ -308,7 +336,10 @@ export async function updateInvestorProfile(id, userId, updates) {
   let idx = 1;
 
   for (const key of allowed) {
-    if (Object.prototype.hasOwnProperty.call(normalizedUpdates, key) && columns[key]) {
+    if (
+      Object.prototype.hasOwnProperty.call(normalizedUpdates, key) &&
+      columns[key]
+    ) {
       let val = normalizedUpdates[key];
 
       if (["years_of_experience", "number_of_investments"].includes(key)) {

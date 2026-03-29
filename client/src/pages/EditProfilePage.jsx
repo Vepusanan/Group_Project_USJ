@@ -189,7 +189,8 @@ const EditProfilePage = () => {
           portfolio_companies: Array.isArray(profile.portfolio_companies)
             ? profile.portfolio_companies.join(", ")
             : profile.portfolio_companies || "",
-          successful_exits: profile.successful_exits || profile.notable_exits || "",
+          successful_exits:
+            profile.successful_exits || profile.notable_exits || "",
           notable_achievements: profile.notable_achievements || "",
           what_you_look_for:
             profile.what_you_look_for || profile.investment_criteria || "",
@@ -437,7 +438,11 @@ const EditProfilePage = () => {
           "business_plan_url",
           startupForm.business_plan_url,
         );
-        appendIfPresent(formData, "product_demo_url", startupForm.product_demo_url);
+        appendIfPresent(
+          formData,
+          "product_demo_url",
+          startupForm.product_demo_url,
+        );
         appendIfPresent(
           formData,
           "primary_contact_name",
@@ -846,7 +851,10 @@ const EditProfilePage = () => {
               <input
                 value={startupForm.tagline}
                 onChange={(e) =>
-                  setStartupForm((prev) => ({ ...prev, tagline: e.target.value }))
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    tagline: e.target.value,
+                  }))
                 }
                 placeholder="Tagline"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
@@ -866,7 +874,10 @@ const EditProfilePage = () => {
               <input
                 value={startupForm.industry}
                 onChange={(e) =>
-                  setStartupForm((prev) => ({ ...prev, industry: e.target.value }))
+                  setStartupForm((prev) => ({
+                    ...prev,
+                    industry: e.target.value,
+                  }))
                 }
                 placeholder="Industry"
                 className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"

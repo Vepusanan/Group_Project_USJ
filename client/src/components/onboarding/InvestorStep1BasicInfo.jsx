@@ -15,8 +15,12 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Basic Information</h2>
-        <p className="text-gray-400">Tell startups who you are as an investor.</p>
+        <h2 className="text-2xl font-bold text-white mb-2">
+          Basic Information
+        </h2>
+        <p className="text-gray-400">
+          Tell startups who you are as an investor.
+        </p>
       </div>
 
       <Input
@@ -42,13 +46,19 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => {
             onChange={(e) => updateFormData({ investor_type: e.target.value })}
             className="w-full pl-10 pr-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
           >
-            <option value="" className="bg-gray-900">Select investor type</option>
+            <option value="" className="bg-gray-900">
+              Select investor type
+            </option>
             {INVESTOR_TYPES.map((type) => (
-              <option key={type} value={type} className="bg-gray-900">{type}</option>
+              <option key={type} value={type} className="bg-gray-900">
+                {type}
+              </option>
             ))}
           </select>
         </div>
-        {errors.investor_type && <p className="text-sm text-red-500 mt-1">{errors.investor_type}</p>}
+        {errors.investor_type && (
+          <p className="text-sm text-red-500 mt-1">{errors.investor_type}</p>
+        )}
       </div>
 
       <Input
@@ -57,7 +67,9 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => {
         min="0"
         placeholder="e.g., 7"
         value={formData.years_of_experience}
-        onChange={(e) => updateFormData({ years_of_experience: e.target.value })}
+        onChange={(e) =>
+          updateFormData({ years_of_experience: e.target.value })
+        }
         error={errors.years_of_experience}
         required
         icon={CalendarClock}
@@ -72,11 +84,15 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => {
           rows={5}
           placeholder="Share your investing/operator background and focus."
           value={formData.professional_background}
-          onChange={(e) => updateFormData({ professional_background: e.target.value })}
+          onChange={(e) =>
+            updateFormData({ professional_background: e.target.value })
+          }
           className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white resize-none"
         />
         {errors.professional_background && (
-          <p className="text-sm text-red-500 mt-1">{errors.professional_background}</p>
+          <p className="text-sm text-red-500 mt-1">
+            {errors.professional_background}
+          </p>
         )}
       </div>
     </div>

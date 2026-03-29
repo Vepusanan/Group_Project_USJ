@@ -10,20 +10,25 @@ export class InvestorProfile {
     this.name_or_firm = data.name_or_firm || data.name || data.firm_name;
     this.investor_type = data.investor_type;
     this.years_of_experience = data.years_of_experience;
-    this.professional_background = data.professional_background || data.background;
+    this.professional_background =
+      data.professional_background || data.background;
     this.investment_thesis = data.investment_thesis;
 
-    this.industries_of_interest = data.industries_of_interest || data.industries;
+    this.industries_of_interest =
+      data.industries_of_interest || data.industries;
     this.geographic_preference = data.geographic_preference || data.geography;
     this.stage_preference = data.stage_preference || data.investment_stage;
 
-    this.min_investment_size = data.min_investment_size || data.investment_size_min;
-    this.max_investment_size = data.max_investment_size || data.investment_size_max;
+    this.min_investment_size =
+      data.min_investment_size || data.investment_size_min;
+    this.max_investment_size =
+      data.max_investment_size || data.investment_size_max;
     this.investment_structure = data.investment_structure;
     this.follow_on_investment = data.follow_on_investment;
     this.investment_timeline = data.investment_timeline;
 
-    this.number_of_investments = data.number_of_investments || data.total_investments;
+    this.number_of_investments =
+      data.number_of_investments || data.total_investments;
     this.portfolio_companies = data.portfolio_companies;
     this.successful_exits = data.successful_exits || data.notable_exits;
     this.notable_achievements = data.notable_achievements;
@@ -33,7 +38,8 @@ export class InvestorProfile {
     this.value_add = data.value_add;
     this.network_resources = data.network_resources;
 
-    this.primary_contact_email = data.primary_contact_email || data.contact_email;
+    this.primary_contact_email =
+      data.primary_contact_email || data.contact_email;
     this.phone_number = data.phone_number || data.contact_phone;
     this.social_media = data.social_media;
     this.preferred_contact_method = data.preferred_contact_method;
@@ -140,11 +146,7 @@ export class InvestorProfile {
       },
       optional: {
         weight: 20,
-        fields: [
-          "notable_achievements",
-          "phone_number",
-          "social_media",
-        ],
+        fields: ["notable_achievements", "phone_number", "social_media"],
       },
     };
 

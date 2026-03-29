@@ -158,12 +158,18 @@ const StartupProfilePage = () => {
         {profile.key_team_members && (
           <div className="rounded-xl border border-white/15 bg-black/45 p-6">
             <h2 className="text-xl font-semibold text-white">Team</h2>
-            <p className="text-gray-200 mt-2">Team Size: {profile.team_size || "N/A"}</p>
+            <p className="text-gray-200 mt-2">
+              Team Size: {profile.team_size || "N/A"}
+            </p>
             <p className="text-gray-200 mt-2 whitespace-pre-line">
               {profile.key_team_members}
             </p>
             {profile.team_photo_url && (
-              <img src={profile.team_photo_url} alt="Team" className="mt-4 rounded-lg max-h-64" />
+              <img
+                src={profile.team_photo_url}
+                alt="Team"
+                className="mt-4 rounded-lg max-h-64"
+              />
             )}
           </div>
         )}
@@ -175,17 +181,27 @@ const StartupProfilePage = () => {
             <p>Funding Stage: {profile.funding_stage || "N/A"}</p>
             <p>Revenue Status: {profile.revenue_status || "N/A"}</p>
             {profile.amount_seeking && (
-              <p>Amount Seeking: ${parseFloat(profile.amount_seeking).toLocaleString()}</p>
+              <p>
+                Amount Seeking: $
+                {parseFloat(profile.amount_seeking).toLocaleString()}
+              </p>
             )}
             {profile.previous_funding && (
-              <p>Previous Funding: ${parseFloat(profile.previous_funding).toLocaleString()}</p>
+              <p>
+                Previous Funding: $
+                {parseFloat(profile.previous_funding).toLocaleString()}
+              </p>
             )}
           </div>
         </div>
 
-        {(profile.key_metrics || profile.major_achievements || profile.customer_testimonials) && (
+        {(profile.key_metrics ||
+          profile.major_achievements ||
+          profile.customer_testimonials) && (
           <div className="rounded-xl border border-white/15 bg-black/45 p-6">
-            <h2 className="text-xl font-semibold text-white">Metrics & Achievements</h2>
+            <h2 className="text-xl font-semibold text-white">
+              Metrics & Achievements
+            </h2>
             <div className="mt-3 space-y-4 text-gray-200">
               {profile.key_metrics && (
                 <div>
@@ -195,14 +211,22 @@ const StartupProfilePage = () => {
               )}
               {profile.major_achievements && (
                 <div>
-                  <h3 className="font-semibold text-gray-100">Major Achievements</h3>
-                  <p className="whitespace-pre-line">{profile.major_achievements}</p>
+                  <h3 className="font-semibold text-gray-100">
+                    Major Achievements
+                  </h3>
+                  <p className="whitespace-pre-line">
+                    {profile.major_achievements}
+                  </p>
                 </div>
               )}
               {profile.customer_testimonials && (
                 <div>
-                  <h3 className="font-semibold text-gray-100">Customer Testimonials</h3>
-                  <p className="whitespace-pre-line">{profile.customer_testimonials}</p>
+                  <h3 className="font-semibold text-gray-100">
+                    Customer Testimonials
+                  </h3>
+                  <p className="whitespace-pre-line">
+                    {profile.customer_testimonials}
+                  </p>
                 </div>
               )}
             </div>
@@ -269,7 +293,10 @@ const StartupProfilePage = () => {
             {profile.contact_email && (
               <p>
                 Email:{" "}
-                <a href={`mailto:${profile.contact_email}`} className="text-blue-300">
+                <a
+                  href={`mailto:${profile.contact_email}`}
+                  className="text-blue-300"
+                >
                   {profile.contact_email}
                 </a>
               </p>
@@ -277,7 +304,10 @@ const StartupProfilePage = () => {
             {profile.phone_number && (
               <p>
                 Phone:{" "}
-                <a href={`tel:${profile.phone_number}`} className="text-blue-300">
+                <a
+                  href={`tel:${profile.phone_number}`}
+                  className="text-blue-300"
+                >
                   {profile.phone_number}
                 </a>
               </p>
@@ -285,20 +315,21 @@ const StartupProfilePage = () => {
             {profile.social_media_links && (
               <div className="mt-2">
                 <p className="text-gray-100">Social Media:</p>
-                {Object.entries(profile.social_media_links).map(([key, value]) => (
-                  value && (
-                    <p key={key}>
-                      <a
-                        href={value}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-300 hover:text-blue-200 capitalize"
-                      >
-                        {key}
-                      </a>
-                    </p>
-                  )
-                ))}
+                {Object.entries(profile.social_media_links).map(
+                  ([key, value]) =>
+                    value && (
+                      <p key={key}>
+                        <a
+                          href={value}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-300 hover:text-blue-200 capitalize"
+                        >
+                          {key}
+                        </a>
+                      </p>
+                    ),
+                )}
               </div>
             )}
           </div>

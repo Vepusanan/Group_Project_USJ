@@ -1,11 +1,19 @@
 import React from "react";
 
-const InvestorStep6InvestmentCriteria = ({ formData, updateFormData, errors }) => {
+const InvestorStep6InvestmentCriteria = ({
+  formData,
+  updateFormData,
+  errors,
+}) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Criteria & Value Add</h2>
-        <p className="text-gray-400">Tell founders what you look for and how you help.</p>
+        <h2 className="text-2xl font-bold text-white mb-2">
+          Criteria & Value Add
+        </h2>
+        <p className="text-gray-400">
+          Tell founders what you look for and how you help.
+        </p>
       </div>
 
       <div>
@@ -17,10 +25,16 @@ const InvestorStep6InvestmentCriteria = ({ formData, updateFormData, errors }) =
           rows={5}
           placeholder="Key qualities, traction, and team signals you prioritize."
           value={formData.what_you_look_for}
-          onChange={(e) => updateFormData({ what_you_look_for: e.target.value })}
+          onChange={(e) =>
+            updateFormData({ what_you_look_for: e.target.value })
+          }
           className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white resize-none"
         />
-        {errors.what_you_look_for && <p className="text-sm text-red-500 mt-1">{errors.what_you_look_for}</p>}
+        {errors.what_you_look_for && (
+          <p className="text-sm text-red-500 mt-1">
+            {errors.what_you_look_for}
+          </p>
+        )}
       </div>
 
       <div>
@@ -35,7 +49,9 @@ const InvestorStep6InvestmentCriteria = ({ formData, updateFormData, errors }) =
           onChange={(e) => updateFormData({ value_add: e.target.value })}
           className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white resize-none"
         />
-        {errors.value_add && <p className="text-sm text-red-500 mt-1">{errors.value_add}</p>}
+        {errors.value_add && (
+          <p className="text-sm text-red-500 mt-1">{errors.value_add}</p>
+        )}
       </div>
     </div>
   );

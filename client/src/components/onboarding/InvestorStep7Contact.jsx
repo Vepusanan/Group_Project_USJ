@@ -17,7 +17,9 @@ const InvestorStep7Contact = ({ formData, updateFormData, errors }) => {
         type="email"
         placeholder="investor@firm.com"
         value={formData.primary_contact_email}
-        onChange={(e) => updateFormData({ primary_contact_email: e.target.value })}
+        onChange={(e) =>
+          updateFormData({ primary_contact_email: e.target.value })
+        }
         error={errors.primary_contact_email}
         required
         icon={Mail}
@@ -39,16 +41,24 @@ const InvestorStep7Contact = ({ formData, updateFormData, errors }) => {
         </label>
         <select
           value={formData.preferred_contact_method}
-          onChange={(e) => updateFormData({ preferred_contact_method: e.target.value })}
+          onChange={(e) =>
+            updateFormData({ preferred_contact_method: e.target.value })
+          }
           className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
         >
-          <option value="" className="bg-gray-900">Select contact method</option>
+          <option value="" className="bg-gray-900">
+            Select contact method
+          </option>
           {CONTACT_METHODS.map((method) => (
-            <option key={method} value={method} className="bg-gray-900">{method}</option>
+            <option key={method} value={method} className="bg-gray-900">
+              {method}
+            </option>
           ))}
         </select>
         {errors.preferred_contact_method && (
-          <p className="text-sm text-red-500 mt-1">{errors.preferred_contact_method}</p>
+          <p className="text-sm text-red-500 mt-1">
+            {errors.preferred_contact_method}
+          </p>
         )}
       </div>
 

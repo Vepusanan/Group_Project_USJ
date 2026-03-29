@@ -29,7 +29,9 @@ const renderValue = (value) => {
 const InfoRow = ({ label, value }) => (
   <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 py-2 border-b border-white/10">
     <span className="text-sm text-gray-400 md:w-56">{label}</span>
-    <span className="text-sm text-gray-100 break-words">{renderValue(value)}</span>
+    <span className="text-sm text-gray-100 break-words">
+      {renderValue(value)}
+    </span>
   </div>
 );
 
@@ -93,7 +95,9 @@ const MyProfilePage = () => {
   }
 
   const isInvestor = user?.userType === "investor";
-  const profileImage = isInvestor ? profile?.photo_url : profile?.team_photo_url;
+  const profileImage = isInvestor
+    ? profile?.photo_url
+    : profile?.team_photo_url;
   const investorSocial = parseJsonValue(profile.social_media, {});
   const startupSocial = parseJsonValue(
     profile.social_media_links || profile.social_media,

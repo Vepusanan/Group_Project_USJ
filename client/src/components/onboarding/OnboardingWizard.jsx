@@ -12,7 +12,11 @@ import profileService from "../../services/profileService";
 
 const STEPS = [
   { number: 1, title: "Basic Information", component: Step1BasicInfo },
-  { number: 2, title: "Business Description", component: Step2BusinessDescription },
+  {
+    number: 2,
+    title: "Business Description",
+    component: Step2BusinessDescription,
+  },
   { number: 3, title: "Team Information", component: Step3TeamInfo },
   { number: 4, title: "Funding Details", component: Step4FundingDetails },
   { number: 5, title: "Traction", component: Step5Traction },
@@ -72,20 +76,27 @@ const OnboardingWizard = () => {
         newErrors.detailed_description = "Detailed description is required";
       }
       if (!formData.industry) newErrors.industry = "Industry is required";
-      if (!formData.founded_date) newErrors.founded_date = "Founded date is required";
-      if (!formData.current_stage) newErrors.current_stage = "Current stage is required";
+      if (!formData.founded_date)
+        newErrors.founded_date = "Founded date is required";
+      if (!formData.current_stage)
+        newErrors.current_stage = "Current stage is required";
     }
 
     if (step === 3) {
       if (!formData.team_size) newErrors.team_size = "Team size is required";
-      if (!formData.founder_names.trim()) newErrors.founder_names = "Founder names are required";
+      if (!formData.founder_names.trim())
+        newErrors.founder_names = "Founder names are required";
     }
 
     if (step === 4) {
-      if (!formData.funding_stage) newErrors.funding_stage = "Funding stage is required";
-      if (!formData.amount_seeking) newErrors.amount_seeking = "Amount seeking is required";
-      if (!formData.use_of_funds.trim()) newErrors.use_of_funds = "Use of funds is required";
-      if (!formData.revenue_status) newErrors.revenue_status = "Revenue status is required";
+      if (!formData.funding_stage)
+        newErrors.funding_stage = "Funding stage is required";
+      if (!formData.amount_seeking)
+        newErrors.amount_seeking = "Amount seeking is required";
+      if (!formData.use_of_funds.trim())
+        newErrors.use_of_funds = "Use of funds is required";
+      if (!formData.revenue_status)
+        newErrors.revenue_status = "Revenue status is required";
     }
 
     if (step === 7) {
@@ -137,7 +148,9 @@ const OnboardingWizard = () => {
       for (const [key, value] of Object.entries(formData)) {
         if (value === undefined || value === null) continue;
         if (typeof value === "object") {
-          const hasData = Array.isArray(value) ? value.length > 0 : Object.keys(value).length > 0;
+          const hasData = Array.isArray(value)
+            ? value.length > 0
+            : Object.keys(value).length > 0;
           if (hasData) {
             submitData.append(key, JSON.stringify(value));
           }
@@ -171,8 +184,12 @@ const OnboardingWizard = () => {
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Complete Your Startup Profile</h1>
-          <p className="text-gray-400">Step {currentStep} of {STEPS.length}</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            Complete Your Startup Profile
+          </h1>
+          <p className="text-gray-400">
+            Step {currentStep} of {STEPS.length}
+          </p>
         </div>
 
         <div className="mb-8">
@@ -192,12 +209,16 @@ const OnboardingWizard = () => {
                     {step.number < currentStep ? (
                       <Check className="w-5 h-5 text-white" />
                     ) : (
-                      <span className="text-white text-sm font-semibold">{step.number}</span>
+                      <span className="text-white text-sm font-semibold">
+                        {step.number}
+                      </span>
                     )}
                   </div>
                   <span
                     className={`text-xs mt-2 hidden md:block ${
-                      step.number === currentStep ? "text-purple-400 font-semibold" : "text-gray-500"
+                      step.number === currentStep
+                        ? "text-purple-400 font-semibold"
+                        : "text-gray-500"
                     }`}
                   >
                     {step.title}
@@ -261,7 +282,11 @@ const OnboardingWizard = () => {
                 disabled={isSaving}
                 className="px-8 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium disabled:opacity-50"
               >
-                {isSaving ? "Submitting..." : currentStep === STEPS.length ? "Submit Profile" : "Next"}
+                {isSaving
+                  ? "Submitting..."
+                  : currentStep === STEPS.length
+                    ? "Submit Profile"
+                    : "Next"}
               </button>
             </div>
           </div>

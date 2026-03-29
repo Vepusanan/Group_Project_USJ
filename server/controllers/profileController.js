@@ -113,7 +113,10 @@ const normalizeLegacyStartupPayload = (body) => {
     if (!body.amount_seeking && body.funding.amount_seeking) {
       body.amount_seeking = body.funding.amount_seeking;
     }
-    if (body.previous_funding == null && body.funding.previous_funding != null) {
+    if (
+      body.previous_funding == null &&
+      body.funding.previous_funding != null
+    ) {
       body.previous_funding = body.funding.previous_funding;
     }
     if (!body.use_of_funds && body.funding.use_of_funds) {
@@ -237,7 +240,11 @@ export const updateProfile = async (req, res, next) => {
         .json({ error: "Profile not found or not owned by user" });
     }
 
-    const updated = await updateStartupProfile(profileId, req.user.id, req.body);
+    const updated = await updateStartupProfile(
+      profileId,
+      req.user.id,
+      req.body,
+    );
     if (!updated) {
       return res
         .status(404)
@@ -375,7 +382,8 @@ export const createInvestorProfileController = async (req, res, next) => {
     parseBodyNumericField(req.body, "investment_size_min");
     parseBodyNumericField(req.body, "investment_size_max");
 
-    const canonicalName = req.body.name_or_firm || req.body.name || req.body.firm_name;
+    const canonicalName =
+      req.body.name_or_firm || req.body.name || req.body.firm_name;
     if (!canonicalName) {
       return res.status(400).json({ error: "name_or_firm is required" });
     }
@@ -424,7 +432,11 @@ export const updateInvestorProfileController = async (req, res, next) => {
         .json({ error: "Profile not found or not owned by user" });
     }
 
-    const updated = await updateInvestorProfile(profileId, req.user.id, req.body);
+    const updated = await updateInvestorProfile(
+      profileId,
+      req.user.id,
+      req.body,
+    );
     if (!updated) {
       return res
         .status(404)

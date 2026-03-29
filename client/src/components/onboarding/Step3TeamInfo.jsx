@@ -6,7 +6,9 @@ const Step3TeamInfo = ({ formData, updateFormData, errors }) => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Team Information</h2>
-        <p className="text-gray-400">Share your founder and core team details.</p>
+        <p className="text-gray-400">
+          Share your founder and core team details.
+        </p>
       </div>
 
       <div>
@@ -22,7 +24,9 @@ const Step3TeamInfo = ({ formData, updateFormData, errors }) => {
           placeholder="e.g., 12"
           className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
         />
-        {errors.team_size && <p className="text-sm text-red-500 mt-1">{errors.team_size}</p>}
+        {errors.team_size && (
+          <p className="text-sm text-red-500 mt-1">{errors.team_size}</p>
+        )}
       </div>
 
       <div>
@@ -37,7 +41,9 @@ const Step3TeamInfo = ({ formData, updateFormData, errors }) => {
           rows={3}
           className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white resize-none"
         />
-        {errors.founder_names && <p className="text-sm text-red-500 mt-1">{errors.founder_names}</p>}
+        {errors.founder_names && (
+          <p className="text-sm text-red-500 mt-1">{errors.founder_names}</p>
+        )}
       </div>
 
       <div>

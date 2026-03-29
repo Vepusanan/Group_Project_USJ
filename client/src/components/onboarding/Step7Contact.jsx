@@ -1,12 +1,22 @@
 import React from "react";
-import { Mail, Phone, UserRound, Linkedin, Twitter, Facebook, Instagram } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  UserRound,
+  Linkedin,
+  Twitter,
+  Facebook,
+  Instagram,
+} from "lucide-react";
 import Input from "../common/Input";
 
 const Step7Contact = ({ formData, updateFormData, errors }) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Contact & Social Media</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">
+          Contact & Social Media
+        </h2>
         <p className="text-gray-400">How should investors contact you?</p>
       </div>
 
@@ -15,7 +25,9 @@ const Step7Contact = ({ formData, updateFormData, errors }) => {
         type="text"
         placeholder="Full name"
         value={formData.primary_contact_name}
-        onChange={(e) => updateFormData({ primary_contact_name: e.target.value })}
+        onChange={(e) =>
+          updateFormData({ primary_contact_name: e.target.value })
+        }
         error={errors.primary_contact_name}
         required
         icon={UserRound}

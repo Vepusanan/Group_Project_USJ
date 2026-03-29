@@ -86,7 +86,9 @@ const buildListStartupsQuery = ({
   }
 
   if (industries.length > 0) {
-    const queryRef = addValue(industries.map((industry) => industry.toLowerCase()));
+    const queryRef = addValue(
+      industries.map((industry) => industry.toLowerCase()),
+    );
     clauses.push(`LOWER(sp.industry) = ANY(${queryRef})`);
   }
 
@@ -114,7 +116,8 @@ const buildListStartupsQuery = ({
     clauses.push(`COALESCE(ps.profile_visibility, 'public') = 'public'`);
   }
 
-  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const whereClause =
+    clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
 
   return { whereClause, values };
 };

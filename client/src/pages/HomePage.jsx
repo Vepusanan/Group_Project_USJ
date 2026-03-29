@@ -6,7 +6,8 @@ import { Link, useNavigate } from "react-router-dom";
 const HomePage = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
-  const roleLandingPath = user?.userType === "investor" ? "/startups" : "/investors";
+  const roleLandingPath =
+    user?.userType === "investor" ? "/startups" : "/investors";
 
   const handleLogout = async () => {
     try {
