@@ -301,6 +301,49 @@ export async function uploadDocument(filePath, originalName, startupId) {
 }
 
 /**
+ * Upload document from buffer (Multer memory storage) to Supabase
+ * @param {Buffer} fileBuffer - The file buffer from Multer
+ * @param {string} fileName - The original filename
+ * @param {string} mimeType - The file's MIME type
+ * @param {string} documentType - Type of document (pitch_deck, business_plan, etc.)
+ * @returns {Promise<string>} Public URL of uploaded document
+ */
+export async function uploadDocumentBuffer(
+  fileBuffer,
+  fileName,
+  mimeType,
+  documentType = "document"
+) {
+  const timestamp = Date.now();
+  const ext = path.extname(fileName);
+  const baseName = path.basename(fileName, ext).replace(/[^a-z0-9_-]/gi, "_");
+  
+  const filePath = `documents/${documentType}/${timestamp}_${baseName}${ext}`;
+
+  // Upload to Supabase Storage
+  const { error } = await supabase.storage
+    .from(BUCKETS.DOCUMENTS)
+    .upload(filePath, fileBuffer, {
+      contentType: mimeType,
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(
+      `Supabase document upload error: ${error.message}`
+    );
+  }
+
+  // Get the public URL
+  const { data: urlData } = supabase.storage
+    .from(BUCKETS.DOCUMENTS)
+    .getPublicUrl(filePath);
+
+  return urlData.publicUrl;
+}
+
+/**
  * Delete file from Supabase Storage
  * @param {string} bucketName - Name of the storage bucket
  * @param {string} filePath - Path of file to delete

@@ -154,9 +154,15 @@ const OnboardingWizard = () => {
       for (const [key, value] of Object.entries(formData)) {
         if (value === undefined || value === null) continue;
 
-        // Handle File objects (e.g., team_photo_url)
+        // Handle File objects (e.g., team_photo_url, pitch_deck_url, business_plan_url)
         if (value instanceof File) {
-          submitData.append("team_photo", value);
+          if (key === "team_photo_url") {
+            submitData.append("team_photo", value);
+          } else if (key === "pitch_deck_url") {
+            submitData.append("pitch_deck_url", value);
+          } else if (key === "business_plan_url") {
+            submitData.append("business_plan_url", value);
+          }
           continue;
         }
 
