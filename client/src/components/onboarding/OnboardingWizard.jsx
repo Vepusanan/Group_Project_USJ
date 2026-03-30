@@ -35,7 +35,7 @@ const OnboardingWizard = () => {
     founded_date: "",
     current_stage: "",
     team_size: "",
-    founder_names: "",
+    founder_names: [],
     key_team_members: "",
     team_photo_url: "",
     funding_stage: "",
@@ -66,8 +66,16 @@ const OnboardingWizard = () => {
   const validateStep = (step) => {
     const newErrors = {};
 
-    if (step === 1 && !formData.company_name.trim()) {
-      newErrors.company_name = "Company name is required";
+    if (step === 1) {
+      if (!formData.company_name.trim()) {
+        newErrors.company_name = "Company name is required";
+      }
+      const founderNames = Array.isArray(formData.founder_names)
+        ? formData.founder_names.filter((name) => name.trim())
+        : [];
+      if (founderNames.length === 0) {
+        newErrors.founder_names = "At least one founder name is required";
+      }
     }
 
     if (step === 2) {
@@ -84,8 +92,6 @@ const OnboardingWizard = () => {
 
     if (step === 3) {
       if (!formData.team_size) newErrors.team_size = "Team size is required";
-      if (!formData.founder_names.trim())
-        newErrors.founder_names = "Founder names are required";
     }
 
     if (step === 4) {

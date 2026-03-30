@@ -146,7 +146,7 @@ export async function createStartupProfile(userId, payload) {
   const values = [
     userId,
     payload.company_name || null,
-    payload.founder_names || null,
+    safeStringify(payload.founder_names),
     payload.tagline || null,
     payload.detailed_description || null,
     payload.industry || null,

@@ -7,7 +7,7 @@ const Step3TeamInfo = ({ formData, updateFormData, errors }) => {
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Team Information</h2>
         <p className="text-gray-400">
-          Share your founder and core team details.
+          Share your core team details.
         </p>
       </div>
 
@@ -26,23 +26,6 @@ const Step3TeamInfo = ({ formData, updateFormData, errors }) => {
         />
         {errors.team_size && (
           <p className="text-sm text-red-500 mt-1">{errors.team_size}</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Founder Names
-          <span className="text-red-500 ml-1">*</span>
-        </label>
-        <textarea
-          value={formData.founder_names}
-          onChange={(e) => updateFormData({ founder_names: e.target.value })}
-          placeholder="List founder names (comma-separated or one per line)"
-          rows={3}
-          className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white resize-none"
-        />
-        {errors.founder_names && (
-          <p className="text-sm text-red-500 mt-1">{errors.founder_names}</p>
         )}
       </div>
 

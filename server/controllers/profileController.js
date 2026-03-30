@@ -93,10 +93,28 @@ const normalizeLegacyStartupPayload = (body) => {
     if (Array.isArray(body.founders)) {
       body.founder_names = body.founders
         .map((item) => (typeof item === "string" ? item : item?.name || ""))
-        .filter(Boolean)
-        .join(", ");
+        .filter(Boolean);
     } else if (typeof body.founders === "string") {
-      body.founder_names = body.founders;
+      body.founder_names = [body.founders];
+    }
+  }
+
+  // Parse founder_names if it's a JSON string and ensure it's an array
+  if (body.founder_names) {
+    if (typeof body.founder_names === "string") {
+      try {
+        const parsed = JSON.parse(body.founder_names);
+        if (Array.isArray(parsed)) {
+          body.founder_names = parsed.filter((name) => typeof name === "string" && name.trim());
+        } else {
+          body.founder_names = [body.founder_names].filter((name) => name && name.trim());
+        }
+      } catch {
+        // If not valid JSON, treat as string and wrap in array
+        body.founder_names = [body.founder_names].filter((name) => name && name.trim());
+      }
+    } else if (Array.isArray(body.founder_names)) {
+      body.founder_names = body.founder_names.filter((name) => typeof name === "string" && name.trim());
     }
   }
 

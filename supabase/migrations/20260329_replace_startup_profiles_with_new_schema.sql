@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS public.startup_profiles (
   
   -- Basic company information
   company_name VARCHAR(255),
-  founder_names TEXT,
+  founder_names JSONB,
   industry VARCHAR(100),
   founded_date DATE,
   
