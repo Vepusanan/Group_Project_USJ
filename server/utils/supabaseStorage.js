@@ -26,6 +26,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 // Storage bucket names (using your existing bucket names)
 export const BUCKETS = {
   STARTUP_LOGOS: "startup_logo",
+  STARTUP_TEAM_LOGO: "startup_team_logo",
   DOCUMENTS: "startup_documents",
   INVESTOR_PHOTOS: "investor_photos",
   MESSAGE_ATTACHMENTS: "message-attachments",
@@ -217,6 +218,43 @@ export async function uploadInvestorPhoto(filePath, investorId) {
     console.error("Error uploading investor photo:", error);
     throw error;
   }
+}
+
+/**
+ * Upload and process startup team photo from buffer (Multer memory storage)
+ * @param {Buffer} fileBuffer - The file buffer from Multer
+ * @param {string} fileName - The name to store the file as
+ * @param {string} mimeType - The file's MIME type
+ * @returns {Promise<string>} Public URL of uploaded team photo
+ */
+export async function uploadTeamPhotoBuffer(
+  fileBuffer,
+  fileName,
+  mimeType
+) {
+  const filePath = `team_photos/${fileName}`; // Subfolder within the bucket
+
+  // Upload to Supabase Storage
+  const { error } = await supabase.storage
+    .from(BUCKETS.STARTUP_TEAM_LOGO)
+    .upload(filePath, fileBuffer, {
+      contentType: mimeType, // Use the detected MIME type
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(
+      `Supabase team photo upload error: ${error.message}`
+    );
+  }
+
+  // Get the public URL
+  const { data: urlData } = supabase.storage
+    .from(BUCKETS.STARTUP_TEAM_LOGO)
+    .getPublicUrl(filePath);
+
+  return urlData.publicUrl;
 }
 
 /**

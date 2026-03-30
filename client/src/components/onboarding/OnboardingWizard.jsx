@@ -153,6 +153,13 @@ const OnboardingWizard = () => {
 
       for (const [key, value] of Object.entries(formData)) {
         if (value === undefined || value === null) continue;
+
+        // Handle File objects (e.g., team_photo_url)
+        if (value instanceof File) {
+          submitData.append("team_photo", value);
+          continue;
+        }
+
         if (typeof value === "object") {
           const hasData = Array.isArray(value)
             ? value.length > 0
