@@ -1,8 +1,11 @@
-import React from "react";
-import { Building2, Plus, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { Building2, Plus, Trash2, Upload, X } from "lucide-react";
 import Input from "../common/Input";
 
 const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [logoFileName, setLogoFileName] = useState("");
+
   const handleAddFounder = () => {
     updateFormData({
       founder_names: [...(Array.isArray(formData.founder_names) ? formData.founder_names : []), ""],
@@ -20,6 +23,41 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
     const updatedFounders = Array.isArray(formData.founder_names) ? [...formData.founder_names] : [];
     updatedFounders[index] = value;
     updateFormData({ founder_names: updatedFounders });
+  };
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Please upload a valid image file (JPG, PNG, GIF, or WebP)");
+      return;
+    }
+
+    // Validate file size (25MB)
+    if (file.size > 25 * 1024 * 1024) {
+      alert("File size must be less than 25MB");
+      return;
+    }
+
+    // Store the file object in form data
+    updateFormData({ startup_logo_url: file });
+    setLogoFileName(file.name);
+
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    updateFormData({ startup_logo_url: "" });
+    setLogoPreview(null);
+    setLogoFileName("");
   };
 
   const founderNames = Array.isArray(formData.founder_names) ? formData.founder_names : [];
@@ -43,6 +81,64 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
         required
         icon={Building2}
       />
+
+      {logoPreview ? (
+        <div className="flex items-center gap-4">
+          <div className="w-32 h-32 flex-shrink-0 rounded-full overflow-hidden border border-gray-600">
+            <img
+              src={logoPreview}
+              alt="Logo preview"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="flex flex-col justify-center gap-2">
+            <p className="text-sm font-medium text-white">Logo uploaded</p>
+            <p className="text-xs text-gray-400">{logoFileName}</p>
+            <button
+              type="button"
+              onClick={handleRemoveLogo}
+              className="px-4 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded-full text-red-400 text-xs font-medium transition w-fit"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-6">
+          <input
+            type="file"
+            onChange={handleLogoChange}
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            className="hidden"
+            id="logo-input"
+          />
+          <label htmlFor="logo-input" className="w-32 h-32 flex-shrink-0 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center border-2 border-gray-600 cursor-pointer hover:border-blue-500 transition">
+            <Upload className="w-10 h-10 text-gray-400" />
+          </label>
+
+          <div className="flex flex-col gap-2">
+            <h3 className="text-base font-semibold text-white">
+              Company Logo
+            </h3>
+            <p className="text-xs text-gray-400">
+              Select a file to upload.
+            </p>
+            <p className="text-xs text-gray-500">
+              .JPEG, .PNG, .GIF, .WebP max 25M
+            </p>
+            <label
+              htmlFor="logo-input"
+              className="px-4 py-1.5 bg-white/10 hover:bg-white/20 border border-gray-500 rounded-full text-gray-300 text-xs font-medium cursor-pointer transition w-fit"
+            >
+              Upload a file
+            </label>
+
+            {errors.startup_logo_url && (
+              <p className="text-xs text-red-500">{errors.startup_logo_url}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div>
         <div className="flex items-center gap-2 mb-3">

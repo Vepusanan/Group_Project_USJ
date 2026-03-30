@@ -135,17 +135,18 @@ const getSortClause = (sort) => {
 
 export async function createStartupProfile(userId, payload) {
   const q = `INSERT INTO startup_profiles
-    (user_id, company_name, founder_names, tagline, detailed_description, industry, founded_date,
+    (user_id, company_name, startup_logo_url, founder_names, tagline, detailed_description, industry, founded_date,
      current_stage, team_size, key_team_members, team_photo_url, funding_stage, amount_seeking,
      previous_funding, use_of_funds, revenue_status, key_metrics, major_achievements,
      customer_testimonials, pitch_deck_url, business_plan_url, product_demo_url,
      primary_contact_name, contact_email, phone_number, social_media_links)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
     RETURNING *`;
 
   const values = [
     userId,
     payload.company_name || null,
+    payload.startup_logo_url || null,
     safeStringify(payload.founder_names),
     payload.tagline || null,
     payload.detailed_description || null,
@@ -160,8 +161,8 @@ export async function createStartupProfile(userId, payload) {
     payload.previous_funding || 0,
     payload.use_of_funds || null,
     payload.revenue_status || null,
-    payload.key_metrics || null,
-    payload.major_achievements || null,
+    safeStringify(payload.key_metrics),
+    safeStringify(payload.major_achievements),
     payload.customer_testimonials || null,
     payload.pitch_deck_url || null,
     payload.business_plan_url || null,
@@ -191,6 +192,7 @@ export async function getStartupProfileByUserId(userId) {
 export async function updateStartupProfile(id, userId, updates) {
   const allowed = [
     "company_name",
+    "startup_logo_url",
     "founder_names",
     "tagline",
     "detailed_description",
@@ -224,7 +226,7 @@ export async function updateStartupProfile(id, userId, updates) {
   for (const key of allowed) {
     if (Object.prototype.hasOwnProperty.call(updates, key)) {
       let val = updates[key];
-      if (key === "social_media_links") {
+      if (key === "social_media_links" || key === "key_metrics" || key === "major_achievements") {
         val = safeStringify(val);
       }
       sets.push(`${key} = $${idx}`);

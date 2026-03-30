@@ -147,7 +147,45 @@ const normalizeLegacyStartupPayload = (body) => {
       body.key_metrics = body.traction.metrics;
     }
     if (!body.major_achievements && Array.isArray(body.traction.achievements)) {
-      body.major_achievements = body.traction.achievements.join("\n");
+      body.major_achievements = body.traction.achievements;
+    }
+  }
+
+  // Parse key_metrics if it's a JSON string and ensure it's an array
+  if (body.key_metrics) {
+    if (typeof body.key_metrics === "string") {
+      try {
+        const parsed = JSON.parse(body.key_metrics);
+        if (Array.isArray(parsed)) {
+          body.key_metrics = parsed.filter((metric) => typeof metric === "string" && metric.trim());
+        } else {
+          body.key_metrics = [body.key_metrics].filter((metric) => metric && metric.trim());
+        }
+      } catch {
+        // If not valid JSON, treat as string and wrap in array
+        body.key_metrics = [body.key_metrics].filter((metric) => metric && metric.trim());
+      }
+    } else if (Array.isArray(body.key_metrics)) {
+      body.key_metrics = body.key_metrics.filter((metric) => typeof metric === "string" && metric.trim());
+    }
+  }
+
+  // Parse major_achievements if it's a JSON string and ensure it's an array
+  if (body.major_achievements) {
+    if (typeof body.major_achievements === "string") {
+      try {
+        const parsed = JSON.parse(body.major_achievements);
+        if (Array.isArray(parsed)) {
+          body.major_achievements = parsed.filter((achievement) => typeof achievement === "string" && achievement.trim());
+        } else {
+          body.major_achievements = [body.major_achievements].filter((achievement) => achievement && achievement.trim());
+        }
+      } catch {
+        // If not valid JSON, treat as string and wrap in array
+        body.major_achievements = [body.major_achievements].filter((achievement) => achievement && achievement.trim());
+      }
+    } else if (Array.isArray(body.major_achievements)) {
+      body.major_achievements = body.major_achievements.filter((achievement) => typeof achievement === "string" && achievement.trim());
     }
   }
 

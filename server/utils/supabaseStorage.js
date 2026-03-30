@@ -344,6 +344,47 @@ export async function uploadDocumentBuffer(
 }
 
 /**
+ * Upload startup logo from buffer (Multer memory storage) to Supabase
+ * @param {Buffer} fileBuffer - The file buffer from Multer
+ * @param {string} fileName - The original filename
+ * @param {string} mimeType - The file's MIME type
+ * @returns {Promise<string>} Public URL of uploaded logo
+ */
+export async function uploadStartupLogoBuffer(
+  fileBuffer,
+  fileName,
+  mimeType
+) {
+  const timestamp = Date.now();
+  const ext = path.extname(fileName);
+  const baseName = path.basename(fileName, ext).replace(/[^a-z0-9_-]/gi, "_");
+  
+  const filePath = `logos/${timestamp}_${baseName}${ext}`;
+
+  // Upload to Supabase Storage
+  const { error } = await supabase.storage
+    .from(BUCKETS.STARTUP_LOGOS)
+    .upload(filePath, fileBuffer, {
+      contentType: mimeType,
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(
+      `Supabase startup logo upload error: ${error.message}`
+    );
+  }
+
+  // Get the public URL
+  const { data: urlData } = supabase.storage
+    .from(BUCKETS.STARTUP_LOGOS)
+    .getPublicUrl(filePath);
+
+  return urlData.publicUrl;
+}
+
+/**
  * Delete file from Supabase Storage
  * @param {string} bucketName - Name of the storage bucket
  * @param {string} filePath - Path of file to delete

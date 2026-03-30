@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../middleware/auth.js";
 import { upload } from "../utils/fileUpload.js";
+import { handleStartupLogoUpload } from "../middleware/startupLogoUpload.js";
 import { handleTeamPhotoUpload } from "../middleware/teamPhotoUpload.js";
 import { handleDocumentUploads } from "../middleware/documentUpload.js";
 import {
@@ -25,10 +26,10 @@ const multerFields = upload.fields([
   { name: "documents", maxCount: 6 },
 ]);
 
-router.post("/", protect, handleDocumentUploads, handleTeamPhotoUpload, multerFields, createProfile);
+router.post("/", protect, handleStartupLogoUpload, handleDocumentUploads, handleTeamPhotoUpload, multerFields, createProfile);
 router.get("/me", protect, getMyStartupProfile); // Must be BEFORE /:id route
 router.get("/completion", protect, getProfileCompletion); // Profile completion status
-router.put("/:id", protect, handleDocumentUploads, handleTeamPhotoUpload, multerFields, updateProfile);
+router.put("/:id", protect, handleStartupLogoUpload, handleDocumentUploads, handleTeamPhotoUpload, multerFields, updateProfile);
 router.get("/:id", protect, getProfile);
 
 export default router;

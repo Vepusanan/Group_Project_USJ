@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS public.startup_profiles (
   founder_names JSONB,
   industry VARCHAR(100),
   founded_date DATE,
+  startup_logo_url VARCHAR(500),
   
   -- Company description
   tagline VARCHAR(500),
@@ -60,8 +61,8 @@ CREATE TABLE IF NOT EXISTS public.startup_profiles (
   
   -- Business metrics and achievements
   revenue_status public.revenue_status_enum,
-  key_metrics TEXT,
-  major_achievements TEXT,
+  key_metrics JSONB,
+  major_achievements JSONB,
   customer_testimonials TEXT,
   
   -- Document URLs

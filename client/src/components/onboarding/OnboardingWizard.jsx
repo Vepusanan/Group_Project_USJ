@@ -29,6 +29,7 @@ const OnboardingWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     company_name: "",
+    startup_logo_url: "",
     tagline: "",
     detailed_description: "",
     industry: "",
@@ -43,8 +44,8 @@ const OnboardingWizard = () => {
     previous_funding: "0",
     use_of_funds: "",
     revenue_status: "",
-    key_metrics: "",
-    major_achievements: "",
+    key_metrics: [],
+    major_achievements: [],
     customer_testimonials: "",
     pitch_deck_url: "",
     business_plan_url: "",
@@ -154,9 +155,11 @@ const OnboardingWizard = () => {
       for (const [key, value] of Object.entries(formData)) {
         if (value === undefined || value === null) continue;
 
-        // Handle File objects (e.g., team_photo_url, pitch_deck_url, business_plan_url)
+        // Handle File objects (e.g., startup_logo_url, team_photo_url, pitch_deck_url, business_plan_url)
         if (value instanceof File) {
-          if (key === "team_photo_url") {
+          if (key === "startup_logo_url") {
+            submitData.append("startup_logo", value);
+          } else if (key === "team_photo_url") {
             submitData.append("team_photo", value);
           } else if (key === "pitch_deck_url") {
             submitData.append("pitch_deck_url", value);
