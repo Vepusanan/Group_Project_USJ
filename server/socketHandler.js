@@ -33,11 +33,15 @@ const socketAuthMiddleware = (socket, next) => {
   }
 };
 
+// Module-level io reference set by initSocketServer so emitNewMessage can use it
+let _io = null;
+
 /**
  * Initializes the Socket.io server and registers all event handlers.
  * @param {Server} io - The Socket.io Server instance
  */
 export const initSocketServer = (io) => {
+  _io = io;
   // Apply authentication middleware to all incoming connections
   io.use(socketAuthMiddleware);
 
@@ -107,21 +111,18 @@ export const initSocketServer = (io) => {
  * [Task: Emit new message events]
  */
 export const emitNewMessage = (messageData) => {
+  if (!_io) return;
+
   const receiverId = messageData.receiver_id;
   const senderId = messageData.sender_id;
 
-  // 1. Get the receiver's socket ID
   const receiverSocketId = onlineUsers.get(receiverId);
-
-  // 2. If the receiver is online, emit the message to their specific socket
   if (receiverSocketId) {
-    io.to(receiverSocketId).emit("message:new", messageData);
+    _io.to(receiverSocketId).emit("message:new", messageData);
   }
 
-  // 3. (Optional but recommended) Emit the message back to the sender
-  // to confirm delivery and update their own UI immediately
   const senderSocketId = onlineUsers.get(senderId);
   if (senderSocketId) {
-    io.to(senderSocketId).emit("message:new", messageData);
+    _io.to(senderSocketId).emit("message:new", messageData);
   }
 };

@@ -31,80 +31,13 @@ import SettingsPage from "./pages/SettingsPage";
 import Header from "./components/common/Header.jsx";
 import Footer from "./components/common/Footer";
 import { useAuth } from "./hooks/useAuth";
-import profileService from "./services/profileService";
-import investorProfileService from "./services/investorProfileService";
-
-const getOnboardingPath = (userType) =>
-  userType === "investor" ? "/investor-onboarding" : "/onboarding";
 
 const getRoleHomePath = (userType) =>
   userType === "investor" ? "/startups" : "/investors";
 
-const hasProfileId = (data, userType) => {
-  if (!data) return false;
-  if (userType === "investor") {
-    return Boolean(data.investor_profile_id || data.id);
-  }
-  return Boolean(data.startup_profile_id || data.id);
-};
-
 const AuthenticatedRedirect = () => {
   const { user } = useAuth();
-  const [redirectPath, setRedirectPath] = React.useState(null);
-
-  React.useEffect(() => {
-    let isMounted = true;
-
-    const resolveRedirect = async () => {
-      const userType = user?.userType;
-
-      if (!userType) {
-        if (isMounted) setRedirectPath("/");
-        return;
-      }
-
-      try {
-        const service =
-          userType === "investor" ? investorProfileService : profileService;
-        const result = await service.getMyProfile();
-        const data = result?.data?.data || result?.data;
-
-        if (!isMounted) return;
-
-        if (result?.success && hasProfileId(data, userType)) {
-          setRedirectPath(getRoleHomePath(userType));
-          return;
-        }
-
-        if (result?.success && !data) {
-          setRedirectPath(getOnboardingPath(userType));
-          return;
-        }
-
-        setRedirectPath(getRoleHomePath(userType));
-      } catch (error) {
-        if (isMounted) {
-          setRedirectPath(getRoleHomePath(userType));
-        }
-      }
-    };
-
-    resolveRedirect();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user]);
-
-  if (!redirectPath) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-black">
-        <div className="w-16 h-16 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  return <Navigate to={redirectPath} replace />;
+  return <Navigate to={user?.userType ? "/dashboard" : "/"} replace />;
 };
 
 const ProtectedRoute = ({ children }) => {

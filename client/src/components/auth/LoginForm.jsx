@@ -51,7 +51,7 @@ const LoginForm = () => {
         );
 
         if (result.success) {
-          navigate("/login", { replace: true });
+          navigate("/dashboard", { replace: true });
         } else {
           setErrors({
             general: result.error || "Login failed. Please try again.",
