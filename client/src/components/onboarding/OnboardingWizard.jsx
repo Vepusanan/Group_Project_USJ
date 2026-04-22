@@ -29,13 +29,18 @@ const OnboardingWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     company_name: "",
+    founder_names: "",
+    location_country: "",
+    location_city: "",
+    logo_url: "",
+    website_url: "",
+    linkedin_url: "",
     tagline: "",
     detailed_description: "",
     industry: "",
     founded_date: "",
     current_stage: "",
     team_size: "",
-    founder_names: "",
     key_team_members: "",
     team_photo_url: "",
     funding_stage: "",
@@ -66,8 +71,11 @@ const OnboardingWizard = () => {
   const validateStep = (step) => {
     const newErrors = {};
 
-    if (step === 1 && !formData.company_name.trim()) {
-      newErrors.company_name = "Company name is required";
+    if (step === 1) {
+      if (!formData.company_name.trim()) newErrors.company_name = "Company name is required";
+      if (!formData.founder_names.trim()) newErrors.founder_names = "Founder name(s) are required";
+      if (!formData.location_country) newErrors.location_country = "Country is required";
+      if (!formData.location_city.trim()) newErrors.location_city = "City is required";
     }
 
     if (step === 2) {
@@ -84,8 +92,6 @@ const OnboardingWizard = () => {
 
     if (step === 3) {
       if (!formData.team_size) newErrors.team_size = "Team size is required";
-      if (!formData.founder_names.trim())
-        newErrors.founder_names = "Founder names are required";
     }
 
     if (step === 4) {

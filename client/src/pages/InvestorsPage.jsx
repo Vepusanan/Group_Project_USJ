@@ -1,13 +1,37 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { LayoutGrid, List } from "lucide-react";
 import { apiService } from "../services/apiService";
 
 const defaultFilters = {
   q: "",
   investor_type: "",
   location: "",
+  industries: "",
+  investment_stage: "",
+  investment_min: "",
+  investment_max: "",
   sort: "newest",
 };
+
+const INVESTOR_TYPES = [
+  "ANGEL","VC","CORPORATE","FAMILY_OFFICE","ACCELERATOR","OTHER",
+];
+
+const INDUSTRIES = [
+  "FinTech","HealthTech","EdTech","AgriTech","CleanTech","AI/ML","SaaS","E-commerce",
+  "Logistics","LegalTech","PropTech","InsurTech","FoodTech","TravelTech","Gaming",
+  "Cybersecurity","Blockchain","IoT","BioTech","SpaceTech","Other",
+];
+
+const INVESTMENT_STAGES = [
+  { value: "PRE_SEED", label: "Pre-seed" },
+  { value: "SEED", label: "Seed" },
+  { value: "SERIES_A", label: "Series A" },
+  { value: "SERIES_B", label: "Series B" },
+  { value: "SERIES_C", label: "Series C" },
+  { value: "SERIES_D_PLUS", label: "Series D+" },
+];
 
 const statusBadgeClass = {
   self: "bg-slate-500/20 text-slate-200 border-slate-400/30",
@@ -26,7 +50,7 @@ const currencyRange = (min, max) => {
     if (numeric >= 1000) return `$${Math.round(numeric / 1000)}K`;
     return `$${numeric}`;
   };
-  return `${format(min)} - ${format(max)}`;
+  return `${format(min)} – ${format(max)}`;
 };
 
 const parseList = (value) => {
@@ -50,20 +74,56 @@ const truncateDescription = (value, maxLength = 130) => {
   return `${normalized.slice(0, maxLength).trimEnd()}...`;
 };
 
-const InvestorCard = ({ investor, onConnect, isConnecting }) => {
+const InvestorCard = ({ investor, onConnect, isConnecting, isListView }) => {
   const connectionStatus = investor.connection_status || "not_connected";
   const statusLabel =
-    connectionStatus === "accepted"
-      ? "connected"
-      : connectionStatus.replace("_", " ");
+    connectionStatus === "accepted" ? "connected" : connectionStatus.replace("_", " ");
   const description = truncateDescription(
-    investor.investment_thesis ||
-      investor.what_you_look_for ||
-      investor.value_add,
+    investor.investment_thesis || investor.what_you_look_for || investor.value_add,
   );
-  const canConnect = !["self", "pending", "accepted"].includes(
-    connectionStatus,
-  );
+  const canConnect = !["self", "pending", "accepted"].includes(connectionStatus);
+  const industries = parseList(investor.industries_of_interest).slice(0, 3);
+
+  if (isListView) {
+    return (
+      <div className="rounded-xl border border-white/15 bg-black/40 p-4 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h3 className="text-base font-semibold text-white">
+              {investor.name_or_firm || investor.name || "Unnamed Investor"}
+            </h3>
+            <span className={`px-2 py-0.5 text-xs border rounded-full ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}>
+              {statusLabel}
+            </span>
+          </div>
+          <p className="text-sm text-gray-300 mt-0.5">{investor.investor_type || "Investor"}</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {parseList(investor.geographic_preference).join(", ") || "No location"} •{" "}
+            {currencyRange(investor.min_investment_size, investor.max_investment_size)}
+          </p>
+          {industries.length > 0 && (
+            <p className="text-xs text-gray-500 mt-1">{industries.join(", ")}</p>
+          )}
+        </div>
+        <div className="flex gap-2 flex-shrink-0">
+          <Link
+            to={`/investors/${investor.investor_profile_id || investor.id}`}
+            className="px-3 py-1.5 text-sm rounded-lg border border-white/20 text-white hover:bg-white/10 transition-colors"
+          >
+            View Profile
+          </Link>
+          <button
+            type="button"
+            disabled={!canConnect || isConnecting}
+            onClick={() => onConnect(investor.user_id)}
+            className="px-3 py-1.5 text-sm rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isConnecting ? "Connecting..." : canConnect ? "Connect" : "Connected"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-white/15 bg-black/40 p-4 backdrop-blur-sm">
@@ -72,33 +132,31 @@ const InvestorCard = ({ investor, onConnect, isConnecting }) => {
           <h3 className="text-lg font-semibold text-white">
             {investor.name_or_firm || investor.name || "Unnamed Investor"}
           </h3>
-          <p className="text-sm text-gray-300">
-            {investor.investor_type || "Investor"}
-          </p>
+          <p className="text-sm text-gray-300">{investor.investor_type || "Investor"}</p>
           <p className="text-xs text-gray-400 mt-1">
-            {parseList(investor.geographic_preference).join(", ") ||
-              "No location available"}
+            {parseList(investor.geographic_preference).join(", ") || "No location available"}
           </p>
         </div>
-        <span
-          className={`px-2 py-1 text-xs border rounded-full ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}
-        >
+        <span className={`px-2 py-1 text-xs border rounded-full flex-shrink-0 ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}>
           {statusLabel}
         </span>
       </div>
 
+      {industries.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {industries.map((ind) => (
+            <span key={ind} className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-gray-300">
+              {ind}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="mt-3 text-sm text-gray-300">
-        <p>
-          {currencyRange(
-            investor.min_investment_size,
-            investor.max_investment_size,
-          )}
-        </p>
+        <p>{currencyRange(investor.min_investment_size, investor.max_investment_size)}</p>
       </div>
 
-      <p className="mt-2 text-sm text-gray-300 leading-relaxed">
-        {description}
-      </p>
+      <p className="mt-2 text-sm text-gray-300 leading-relaxed">{description}</p>
 
       <div className="mt-4 flex gap-2">
         <Link
@@ -107,18 +165,13 @@ const InvestorCard = ({ investor, onConnect, isConnecting }) => {
         >
           View Profile
         </Link>
-
         <button
           type="button"
           disabled={!canConnect || isConnecting}
           onClick={() => onConnect(investor.user_id)}
           className="px-3 py-1.5 text-sm rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isConnecting
-            ? "Connecting..."
-            : canConnect
-              ? "Connect"
-              : "Connected"}
+          {isConnecting ? "Connecting..." : canConnect ? "Connect" : "Connected"}
         </button>
       </div>
     </div>
@@ -133,16 +186,13 @@ const InvestorsPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [connectingUserId, setConnectingUserId] = useState(null);
+  const [isListView, setIsListView] = useState(false);
 
   const fetchInvestors = useCallback(async () => {
     setLoading(true);
     setError("");
 
-    const result = await apiService.getInvestors({
-      ...filters,
-      page,
-      limit: 9,
-    });
+    const result = await apiService.getInvestors({ ...filters, page, limit: 9 });
 
     if (!result.success) {
       setError(result.error || "Failed to load investors");
@@ -166,11 +216,13 @@ const InvestorsPage = () => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleConnect = async (userId) => {
-    if (!userId) {
-      return;
-    }
+  const clearFilters = () => {
+    setPage(1);
+    setFilters(defaultFilters);
+  };
 
+  const handleConnect = async (userId) => {
+    if (!userId) return;
     setConnectingUserId(userId);
     const response = await apiService.createConnection(userId);
     setConnectingUserId(null);
@@ -179,55 +231,130 @@ const InvestorsPage = () => {
       setError(response.error || "Failed to send connection request");
       return;
     }
-
     await fetchInvestors();
   };
+
+  const hasActiveFilters = Object.entries(filters).some(
+    ([k, v]) => k !== "sort" && v !== ""
+  );
 
   return (
     <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
       <div className="mx-auto max-w-7xl min-h-[calc(100vh-9rem)] flex flex-col">
-        <h1 className="text-3xl md:text-4xl font-bold text-white">
-          Discover Investors
-        </h1>
-        <p className="text-gray-300 mt-1">
-          Find investors who match your startup stage and industry.
-        </p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-white">Discover Investors</h1>
+            <p className="text-gray-300 mt-1">Find investors who match your startup stage and industry.</p>
+          </div>
+          {/* Grid / List toggle */}
+          <div className="flex items-center gap-1 rounded-lg border border-white/15 bg-black/30 p-1">
+            <button
+              type="button"
+              onClick={() => setIsListView(false)}
+              className={`p-1.5 rounded-md transition-colors ${!isListView ? "bg-purple-500/30 text-white" : "text-gray-400 hover:text-white"}`}
+              title="Grid view"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsListView(true)}
+              className={`p-1.5 rounded-md transition-colors ${isListView ? "bg-purple-500/30 text-white" : "text-gray-400 hover:text-white"}`}
+              title="List view"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
 
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Filters */}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           <input
             type="text"
             placeholder="Search by name, firm, or keyword"
             value={filters.q}
-            onChange={(event) => handleFilterChange("q", event.target.value)}
-            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500"
-          />
-          <input
-            type="text"
-            placeholder="Investor type"
-            value={filters.investor_type}
-            onChange={(event) =>
-              handleFilterChange("investor_type", event.target.value)
-            }
-            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500"
-          />
-          <input
-            type="text"
-            placeholder="Location"
-            value={filters.location}
-            onChange={(event) =>
-              handleFilterChange("location", event.target.value)
-            }
+            onChange={(e) => handleFilterChange("q", e.target.value)}
             className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500"
           />
           <select
-            value={filters.sort}
-            onChange={(event) => handleFilterChange("sort", event.target.value)}
+            value={filters.investor_type}
+            onChange={(e) => handleFilterChange("investor_type", e.target.value)}
             className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+          >
+            <option value="">All Investor Types</option>
+            {INVESTOR_TYPES.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <select
+            value={filters.industries}
+            onChange={(e) => handleFilterChange("industries", e.target.value)}
+            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+          >
+            <option value="">All Industries</option>
+            {INDUSTRIES.map((ind) => (
+              <option key={ind} value={ind}>{ind}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            placeholder="Location / Country"
+            value={filters.location}
+            onChange={(e) => handleFilterChange("location", e.target.value)}
+            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500"
+          />
+          <select
+            value={filters.investment_stage}
+            onChange={(e) => handleFilterChange("investment_stage", e.target.value)}
+            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
+          >
+            <option value="">All Stages</option>
+            {INVESTMENT_STAGES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+          {/* Investment size range */}
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              placeholder="Min $"
+              value={filters.investment_min}
+              onChange={(e) => handleFilterChange("investment_min", e.target.value)}
+              className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500"
+              min="0"
+            />
+            <span className="text-gray-500 text-sm flex-shrink-0">–</span>
+            <input
+              type="number"
+              placeholder="Max $"
+              value={filters.investment_max}
+              onChange={(e) => handleFilterChange("investment_max", e.target.value)}
+              className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500"
+              min="0"
+            />
+          </div>
+        </div>
+
+        {/* Sort + clear */}
+        <div className="mt-3 flex items-center gap-3 flex-wrap">
+          <select
+            value={filters.sort}
+            onChange={(e) => handleFilterChange("sort", e.target.value)}
+            className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white text-sm"
           >
             <option value="newest">Newest First</option>
             <option value="alphabetical">Alphabetical</option>
             <option value="most_experienced">Most Experienced</option>
           </select>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-sm text-gray-400 hover:text-white underline"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
 
         {error && (
@@ -240,13 +367,14 @@ const InvestorsPage = () => {
           <div className="mt-8 text-gray-300">Loading investors...</div>
         ) : (
           <>
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className={`mt-6 ${isListView ? "flex flex-col gap-3" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"}`}>
               {investors.map((investor) => (
                 <InvestorCard
                   key={investor.id}
                   investor={investor}
                   onConnect={handleConnect}
                   isConnecting={connectingUserId === investor.user_id}
+                  isListView={isListView}
                 />
               ))}
             </div>
@@ -269,9 +397,7 @@ const InvestorsPage = () => {
               </span>
               <button
                 type="button"
-                onClick={() =>
-                  setPage((prev) => Math.min(totalPages || 1, prev + 1))
-                }
+                onClick={() => setPage((prev) => Math.min(totalPages || 1, prev + 1))}
                 disabled={page >= totalPages}
                 className="px-3 py-1.5 rounded-lg border border-white/20 text-white disabled:opacity-40"
               >

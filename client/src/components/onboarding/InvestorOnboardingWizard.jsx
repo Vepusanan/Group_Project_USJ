@@ -43,6 +43,11 @@ const InvestorOnboardingWizard = () => {
     name_or_firm: "",
     investor_type: "",
     years_of_experience: "",
+    location_country: "",
+    location_city: "",
+    profile_photo_url: "",
+    website_url: "",
+    linkedin_url: "",
     professional_background: "",
     investment_thesis: "",
     industries_of_interest: [],
@@ -88,9 +93,17 @@ const InvestorOnboardingWizard = () => {
       if (!formData.years_of_experience) {
         newErrors.years_of_experience = "Years of experience is required";
       }
+      if (!formData.location_country) {
+        newErrors.location_country = "Country is required";
+      }
+      if (!(formData.location_city || "").trim()) {
+        newErrors.location_city = "City is required";
+      }
+      if (!formData.linkedin_url || !formData.linkedin_url.trim()) {
+        newErrors.linkedin_url = "LinkedIn profile is required";
+      }
       if (!formData.professional_background.trim()) {
-        newErrors.professional_background =
-          "Professional background is required";
+        newErrors.professional_background = "Professional background is required";
       }
     }
 

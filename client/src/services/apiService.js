@@ -436,6 +436,30 @@ export const apiService = {
     }
   },
 
+  getSessions: async () => {
+    try {
+      const response = await api.get("/auth/sessions");
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || "Failed to get sessions",
+      };
+    }
+  },
+
+  logoutAllDevices: async () => {
+    try {
+      const response = await api.post("/auth/logout-all");
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || "Failed to logout all devices",
+      };
+    }
+  },
+
   /**
    * Update user profile
    * @param {Object} profileData - Profile data to update

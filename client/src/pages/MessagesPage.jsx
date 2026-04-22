@@ -29,6 +29,8 @@ const MessagesPage = () => {
   const { user } = useAuth();
 
   const [conversations, setConversations] = useState([]);
+  const [conversationSearch, setConversationSearch] = useState("");
+  const [conversationSort, setConversationSort] = useState("recent");
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [composeTarget, setComposeTarget] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -174,6 +176,23 @@ const MessagesPage = () => {
     shouldScrollToBottomRef.current = false;
   }, [messages.length]);
 
+  const filteredConversations = useMemo(() => {
+    let list = [...conversations];
+
+    if (conversationSearch.trim()) {
+      const q = conversationSearch.toLowerCase();
+      list = list.filter((c) => (c.other_user_name || "").toLowerCase().includes(q));
+    }
+
+    if (conversationSort === "unread") {
+      list = list.filter((c) => Number(c.unread_count || 0) > 0);
+    } else if (conversationSort === "recent") {
+      list.sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0));
+    }
+
+    return list;
+  }, [conversations, conversationSearch, conversationSort]);
+
   const selectedReceiverId = useMemo(() => {
     if (selectedConversation?.other_user_id) return selectedConversation.other_user_id;
     if (composeTarget?.other_user_id) return composeTarget.other_user_id;
@@ -261,8 +280,24 @@ const MessagesPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4">
           {/* ── SIDEBAR ── */}
           <aside className="rounded-xl border border-white/15 bg-black/45 overflow-hidden flex flex-col lg:max-h-[calc(100vh-180px)]">
-            <div className="p-3 border-b border-white/10">
+            <div className="p-3 border-b border-white/10 space-y-2">
               <h2 className="text-white font-semibold text-sm">Conversations</h2>
+              <input
+                type="text"
+                value={conversationSearch}
+                onChange={(e) => setConversationSearch(e.target.value)}
+                placeholder="Search by name…"
+                className="w-full rounded-md bg-black/40 border border-white/15 px-2 py-1.5 text-sm text-white placeholder:text-gray-500"
+              />
+              <select
+                value={conversationSort}
+                onChange={(e) => setConversationSort(e.target.value)}
+                className="w-full rounded-md bg-black/40 border border-white/15 px-2 py-1.5 text-sm text-white"
+              >
+                <option value="recent">Recent</option>
+                <option value="unread">Unread only</option>
+                <option value="all">All</option>
+              </select>
             </div>
 
             {loading ? (
@@ -294,6 +329,9 @@ const MessagesPage = () => {
               </div>
             ) : (
               <div className="overflow-y-auto flex-1">
+                {filteredConversations.length === 0 && conversations.length > 0 && (
+                  <p className="text-center text-gray-500 text-xs p-4">No conversations match your search.</p>
+                )}
                 {composeTarget && !conversations.find(
                   (c) => String(c.other_user_id) === String(composeTarget.other_user_id)
                 ) && (
@@ -307,7 +345,7 @@ const MessagesPage = () => {
                   </button>
                 )}
 
-                {conversations.map((conversation) => {
+                {filteredConversations.map((conversation) => {
                   const isSelected = selectedConversationId === conversation.conversation_id;
                   const unread = Number(conversation.unread_count || 0);
                   return (
