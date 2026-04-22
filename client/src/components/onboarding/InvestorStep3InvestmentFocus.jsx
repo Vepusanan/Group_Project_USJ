@@ -1,157 +1,143 @@
 import React from "react";
+import { DollarSign } from "lucide-react";
 
 const STRUCTURES = [
-  "EQUITY",
-  "SAFE",
-  "CONVERTIBLE_NOTE",
-  "DEBT",
-  "GRANT",
-  "OTHER",
+  { value: "EQUITY", label: "Equity" },
+  { value: "SAFE", label: "SAFE" },
+  { value: "CONVERTIBLE_NOTE", label: "Convertible Note" },
+  { value: "DEBT", label: "Debt" },
+  { value: "GRANT", label: "Grant" },
+  { value: "OTHER", label: "Other" },
 ];
-const TIMELINES = ["IMMEDIATE", "1_3_MONTHS", "3_6_MONTHS", "6_PLUS_MONTHS"];
 
-const toggleArrayItem = (items, value) => {
-  if (items.includes(value)) return items.filter((item) => item !== value);
-  return [...items, value];
-};
+const TIMELINES = [
+  { value: "IMMEDIATE", label: "Immediate" },
+  { value: "1_3_MONTHS", label: "1–3 months" },
+  { value: "3_6_MONTHS", label: "3–6 months" },
+  { value: "6_PLUS_MONTHS", label: "6+ months" },
+];
 
-const InvestorStep3InvestmentFocus = ({ formData, updateFormData, errors }) => {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Investment Focus</h2>
-        <p className="text-gray-400">
-          Set your check size and deal structure preferences.
-        </p>
-      </div>
+const toggle = (arr, val) =>
+  arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Min Investment Size (USD)
-            <span className="text-red-500 ml-1">*</span>
-          </label>
+const iconInputCls =
+  "w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all appearance-none";
+
+const Field = ({ label, required, error, children }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+      {label}
+      {required && <span className="text-red-400 ml-1">*</span>}
+    </label>
+    {children}
+    {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+  </div>
+);
+
+const InvestorStep3InvestmentFocus = ({ formData, updateFormData, errors }) => (
+  <div className="space-y-5">
+    <div className="pb-2">
+      <h2 className="text-xl font-semibold text-white">Investment Details</h2>
+      <p className="text-sm text-gray-400 mt-1">Set your check size, structure preferences, and timeline.</p>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Field label="Min Investment (USD)" required error={errors.min_investment_size}>
+        <div className="relative">
+          <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
           <input
             type="number"
             min="0"
-            step="0.01"
+            placeholder="e.g., 25000"
             value={formData.min_investment_size}
-            onChange={(e) =>
-              updateFormData({ min_investment_size: e.target.value })
-            }
-            className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
+            onChange={(e) => updateFormData({ min_investment_size: e.target.value })}
+            className={iconInputCls}
           />
-          {errors.min_investment_size && (
-            <p className="text-sm text-red-500 mt-1">
-              {errors.min_investment_size}
-            </p>
-          )}
         </div>
+      </Field>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Max Investment Size (USD)
-            <span className="text-red-500 ml-1">*</span>
-          </label>
+      <Field label="Max Investment (USD)" required error={errors.max_investment_size}>
+        <div className="relative">
+          <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
           <input
             type="number"
             min="0"
-            step="0.01"
+            placeholder="e.g., 500000"
             value={formData.max_investment_size}
-            onChange={(e) =>
-              updateFormData({ max_investment_size: e.target.value })
-            }
-            className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
+            onChange={(e) => updateFormData({ max_investment_size: e.target.value })}
+            className={iconInputCls}
           />
-          {errors.max_investment_size && (
-            <p className="text-sm text-red-500 mt-1">
-              {errors.max_investment_size}
-            </p>
-          )}
         </div>
-      </div>
+      </Field>
+    </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Investment Structure<span className="text-red-500 ml-1">*</span>
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {STRUCTURES.map((structure) => {
-            const selected = formData.investment_structure.includes(structure);
-            return (
-              <button
-                key={structure}
-                type="button"
-                onClick={() =>
-                  updateFormData({
-                    investment_structure: toggleArrayItem(
-                      formData.investment_structure,
-                      structure,
-                    ),
-                  })
-                }
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                  selected
-                    ? "bg-indigo-600/30 border-indigo-500 text-indigo-200"
-                    : "bg-white/5 border-gray-600 text-gray-300 hover:border-gray-500"
-                }`}
-              >
-                {structure}
-              </button>
-            );
-          })}
-        </div>
-        {errors.investment_structure && (
-          <p className="text-sm text-red-500 mt-1">
-            {errors.investment_structure}
-          </p>
+    <Field label="Investment Structure" required error={errors.investment_structure}>
+      <div className="flex flex-wrap gap-2">
+        {STRUCTURES.map((s) => {
+          const selected = formData.investment_structure.includes(s.value);
+          return (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => updateFormData({ investment_structure: toggle(formData.investment_structure, s.value) })}
+              className={`px-3.5 py-1.5 rounded-full text-sm border transition-all ${
+                selected
+                  ? "bg-indigo-600/25 border-indigo-500/50 text-indigo-300 font-medium"
+                  : "bg-white/3 border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-300"
+              }`}
+            >
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+    </Field>
+
+    <Field label="Investment Timeline" required error={errors.investment_timeline}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {TIMELINES.map((t) => {
+          const selected = formData.investment_timeline === t.value;
+          return (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => updateFormData({ investment_timeline: t.value })}
+              className={`py-2.5 px-3 rounded-xl text-sm border transition-all text-center ${
+                selected
+                  ? "bg-violet-600/25 border-violet-500/50 text-violet-300 font-medium"
+                  : "bg-white/3 border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-300"
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+    </Field>
+
+    <div
+      onClick={() => updateFormData({ follow_on_investment: !formData.follow_on_investment })}
+      className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+        formData.follow_on_investment
+          ? "bg-violet-600/10 border-violet-500/30"
+          : "bg-white/3 border-white/10 hover:border-white/20"
+      }`}
+    >
+      <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${
+        formData.follow_on_investment ? "bg-violet-600 border-violet-500" : "border-gray-600 bg-white/5"
+      }`}>
+        {formData.follow_on_investment && (
+          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
+            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         )}
       </div>
-
-      <div className="flex items-center gap-3">
-        <input
-          id="follow-on"
-          type="checkbox"
-          checked={Boolean(formData.follow_on_investment)}
-          onChange={(e) =>
-            updateFormData({ follow_on_investment: e.target.checked })
-          }
-          className="h-4 w-4 rounded border-gray-500 bg-white/5"
-        />
-        <label htmlFor="follow-on" className="text-sm text-gray-300">
-          Open to follow-on investments
-        </label>
-      </div>
-
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Investment Timeline
-          <span className="text-red-500 ml-1">*</span>
-        </label>
-        <select
-          value={formData.investment_timeline}
-          onChange={(e) =>
-            updateFormData({ investment_timeline: e.target.value })
-          }
-          className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
-        >
-          <option value="" className="bg-gray-900">
-            Select timeline
-          </option>
-          {TIMELINES.map((timeline) => (
-            <option key={timeline} value={timeline} className="bg-gray-900">
-              {timeline}
-            </option>
-          ))}
-        </select>
-        {errors.investment_timeline && (
-          <p className="text-sm text-red-500 mt-1">
-            {errors.investment_timeline}
-          </p>
-        )}
+        <p className="text-sm font-medium text-white">Open to follow-on investments</p>
+        <p className="text-xs text-gray-500 mt-0.5">You're willing to invest in subsequent rounds for portfolio companies</p>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 export default InvestorStep3InvestmentFocus;

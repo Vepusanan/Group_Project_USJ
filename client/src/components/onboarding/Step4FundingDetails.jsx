@@ -1,128 +1,156 @@
 import React from "react";
+import { DollarSign, Link as LinkIcon, TrendingUp } from "lucide-react";
 
 const FUNDING_STAGES = [
-  "PRE_SEED",
-  "SEED",
-  "SERIES_A",
-  "SERIES_B",
-  "SERIES_C",
-  "SERIES_D_PLUS",
+  { value: "PRE_SEED", label: "Pre-Seed" },
+  { value: "SEED", label: "Seed" },
+  { value: "SERIES_A", label: "Series A" },
+  { value: "SERIES_B", label: "Series B" },
+  { value: "SERIES_C", label: "Series C" },
+  { value: "SERIES_D_PLUS", label: "Series D+" },
 ];
 
-const REVENUE_STATUSES = ["PRE_REVENUE", "REVENUE_GENERATING", "PROFITABLE"];
+const REVENUE_STATUSES = [
+  { value: "PRE_REVENUE", label: "Pre-Revenue" },
+  { value: "REVENUE_GENERATING", label: "Revenue Generating" },
+  { value: "PROFITABLE", label: "Profitable" },
+];
 
-const Step4FundingDetails = ({ formData, updateFormData, errors }) => {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Funding Details</h2>
-        <p className="text-gray-400">
-          Provide funding and revenue profile details.
-        </p>
-      </div>
+const iconInputCls =
+  "w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all appearance-none";
 
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Funding Stage
-          <span className="text-red-500 ml-1">*</span>
-        </label>
-        <select
-          value={formData.funding_stage}
-          onChange={(e) => updateFormData({ funding_stage: e.target.value })}
-          className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
-        >
-          <option value="" className="bg-gray-900">
-            Select funding stage
-          </option>
-          {FUNDING_STAGES.map((stage) => (
-            <option key={stage} value={stage} className="bg-gray-900">
-              {stage}
-            </option>
-          ))}
-        </select>
-        {errors.funding_stage && (
-          <p className="text-sm text-red-500 mt-1">{errors.funding_stage}</p>
-        )}
-      </div>
+const Field = ({ label, required, error, hint, children }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+      {label}
+      {required && <span className="text-red-400 ml-1">*</span>}
+      {hint && <span className="text-gray-500 font-normal ml-2 text-xs">{hint}</span>}
+    </label>
+    {children}
+    {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+  </div>
+);
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Amount Seeking (USD)
-            <span className="text-red-500 ml-1">*</span>
-          </label>
+const UrlField = ({ label, value, onChange, placeholder }) => (
+  <Field label={label} hint="optional">
+    <div className="relative">
+      <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+      <input
+        type="url"
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={iconInputCls}
+      />
+    </div>
+  </Field>
+);
+
+const Step4FundingDetails = ({ formData, updateFormData, errors }) => (
+  <div className="space-y-5">
+    <div className="pb-2">
+      <h2 className="text-xl font-semibold text-white">Funding & Documents</h2>
+      <p className="text-sm text-gray-400 mt-1">Define your raise and share investor materials.</p>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Field label="Funding Stage" required error={errors.funding_stage}>
+        <div className="relative">
+          <TrendingUp className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px] pointer-events-none" />
+          <select
+            value={formData.funding_stage}
+            onChange={(e) => updateFormData({ funding_stage: e.target.value })}
+            className={iconInputCls}
+          >
+            <option value="" className="bg-gray-900">Select stage</option>
+            {FUNDING_STAGES.map((s) => (
+              <option key={s.value} value={s.value} className="bg-gray-900">{s.label}</option>
+            ))}
+          </select>
+        </div>
+      </Field>
+
+      <Field label="Revenue Status" required error={errors.revenue_status}>
+        <div className="relative">
+          <TrendingUp className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px] pointer-events-none" />
+          <select
+            value={formData.revenue_status}
+            onChange={(e) => updateFormData({ revenue_status: e.target.value })}
+            className={iconInputCls}
+          >
+            <option value="" className="bg-gray-900">Select status</option>
+            {REVENUE_STATUSES.map((s) => (
+              <option key={s.value} value={s.value} className="bg-gray-900">{s.label}</option>
+            ))}
+          </select>
+        </div>
+      </Field>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Field label="Amount Seeking (USD)" required error={errors.amount_seeking}>
+        <div className="relative">
+          <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
           <input
             type="number"
             min="1"
-            step="0.01"
+            placeholder="e.g., 500000"
             value={formData.amount_seeking}
             onChange={(e) => updateFormData({ amount_seeking: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
+            className={iconInputCls}
           />
-          {errors.amount_seeking && (
-            <p className="text-sm text-red-500 mt-1">{errors.amount_seeking}</p>
-          )}
         </div>
+      </Field>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Previous Funding (USD)
-          </label>
+      <Field label="Previous Funding (USD)" hint="optional">
+        <div className="relative">
+          <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
           <input
             type="number"
             min="0"
-            step="0.01"
+            placeholder="e.g., 0"
             value={formData.previous_funding}
-            onChange={(e) =>
-              updateFormData({ previous_funding: e.target.value })
-            }
-            className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
+            onChange={(e) => updateFormData({ previous_funding: e.target.value })}
+            className={iconInputCls}
           />
         </div>
-      </div>
+      </Field>
+    </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Revenue Status
-          <span className="text-red-500 ml-1">*</span>
-        </label>
-        <select
-          value={formData.revenue_status}
-          onChange={(e) => updateFormData({ revenue_status: e.target.value })}
-          className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
-        >
-          <option value="" className="bg-gray-900">
-            Select revenue status
-          </option>
-          {REVENUE_STATUSES.map((status) => (
-            <option key={status} value={status} className="bg-gray-900">
-              {status}
-            </option>
-          ))}
-        </select>
-        {errors.revenue_status && (
-          <p className="text-sm text-red-500 mt-1">{errors.revenue_status}</p>
-        )}
-      </div>
+    <Field label="Use of Funds" required error={errors.use_of_funds}>
+      <textarea
+        rows={4}
+        placeholder="How will this round be allocated? e.g., 40% product, 35% hiring, 25% marketing"
+        value={formData.use_of_funds}
+        onChange={(e) => updateFormData({ use_of_funds: e.target.value })}
+        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all resize-none"
+      />
+    </Field>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Use of Funds
-          <span className="text-red-500 ml-1">*</span>
-        </label>
-        <textarea
-          value={formData.use_of_funds}
-          onChange={(e) => updateFormData({ use_of_funds: e.target.value })}
-          placeholder="Explain how this round will be allocated"
-          rows={5}
-          className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white resize-none"
+    <div className="border-t border-white/5 pt-5">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Investor Materials</p>
+      <div className="space-y-4">
+        <UrlField
+          label="Pitch Deck URL"
+          value={formData.pitch_deck_url}
+          onChange={(e) => updateFormData({ pitch_deck_url: e.target.value })}
+          placeholder="https://drive.google.com/..."
         />
-        {errors.use_of_funds && (
-          <p className="text-sm text-red-500 mt-1">{errors.use_of_funds}</p>
-        )}
+        <UrlField
+          label="Business Plan URL"
+          value={formData.business_plan_url}
+          onChange={(e) => updateFormData({ business_plan_url: e.target.value })}
+          placeholder="https://..."
+        />
+        <UrlField
+          label="Product Demo URL"
+          value={formData.product_demo_url}
+          onChange={(e) => updateFormData({ product_demo_url: e.target.value })}
+          placeholder="https://loom.com/..."
+        />
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 export default Step4FundingDetails;

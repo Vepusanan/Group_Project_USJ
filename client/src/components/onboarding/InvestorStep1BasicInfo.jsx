@@ -1,14 +1,13 @@
 import React from "react";
-import { Building2, BadgeCheck, CalendarClock, Globe, Image, Linkedin, MapPin } from "lucide-react";
-import Input from "../common/Input";
+import { BadgeCheck, Building2, CalendarClock, Globe, Linkedin, MapPin } from "lucide-react";
 
 const INVESTOR_TYPES = [
-  "ANGEL",
-  "VC",
-  "CORPORATE",
-  "FAMILY_OFFICE",
-  "ACCELERATOR",
-  "OTHER",
+  { value: "ANGEL", label: "Angel Investor" },
+  { value: "VC", label: "Venture Capital" },
+  { value: "CORPORATE", label: "Corporate Investor" },
+  { value: "FAMILY_OFFICE", label: "Family Office" },
+  { value: "ACCELERATOR", label: "Accelerator / Incubator" },
+  { value: "OTHER", label: "Other" },
 ];
 
 const COUNTRIES = [
@@ -23,143 +22,142 @@ const COUNTRIES = [
   "United Kingdom","United States","Vietnam","Zimbabwe",
 ];
 
-const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Basic Information</h2>
-        <p className="text-gray-400">Tell startups who you are as an investor.</p>
+const iconInputCls =
+  "w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all appearance-none";
+
+const Field = ({ label, required, error, hint, children }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+      {label}
+      {required && <span className="text-red-400 ml-1">*</span>}
+      {hint && <span className="text-gray-500 font-normal ml-2 text-xs">{hint}</span>}
+    </label>
+    {children}
+    {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+  </div>
+);
+
+const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
+  <div className="space-y-5">
+    <div className="pb-2">
+      <h2 className="text-xl font-semibold text-white">Your Identity</h2>
+      <p className="text-sm text-gray-400 mt-1">Tell startups who you are as an investor.</p>
+    </div>
+
+    <Field label="Name or Firm" required error={errors.name_or_firm}>
+      <div className="relative">
+        <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+        <input
+          type="text"
+          placeholder="e.g., Acme Ventures or Jane Doe"
+          value={formData.name_or_firm}
+          onChange={(e) => updateFormData({ name_or_firm: e.target.value })}
+          className={iconInputCls}
+        />
       </div>
+    </Field>
 
-      <Input
-        label="Name or Firm"
-        type="text"
-        placeholder="e.g., Acme Ventures"
-        value={formData.name_or_firm}
-        onChange={(e) => updateFormData({ name_or_firm: e.target.value })}
-        error={errors.name_or_firm}
-        required
-        icon={Building2}
-      />
-
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Investor Type <span className="text-red-500 ml-1">*</span>
-        </label>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Field label="Investor Type" required error={errors.investor_type}>
         <div className="relative">
-          <BadgeCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <BadgeCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px] pointer-events-none" />
           <select
             value={formData.investor_type}
             onChange={(e) => updateFormData({ investor_type: e.target.value })}
-            className="w-full pl-10 pr-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
+            className={iconInputCls}
           >
-            <option value="" className="bg-gray-900">Select investor type</option>
-            {INVESTOR_TYPES.map((type) => (
-              <option key={type} value={type} className="bg-gray-900">{type}</option>
+            <option value="" className="bg-gray-900">Select type</option>
+            {INVESTOR_TYPES.map((t) => (
+              <option key={t.value} value={t.value} className="bg-gray-900">{t.label}</option>
             ))}
           </select>
         </div>
-        {errors.investor_type && (
-          <p className="text-sm text-red-500 mt-1">{errors.investor_type}</p>
-        )}
-      </div>
+      </Field>
 
-      <Input
-        label="Years of Experience"
-        type="number"
-        min="0"
-        placeholder="e.g., 7"
-        value={formData.years_of_experience}
-        onChange={(e) => updateFormData({ years_of_experience: e.target.value })}
-        error={errors.years_of_experience}
-        required
-        icon={CalendarClock}
-      />
-
-      {/* Location */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Country <span className="text-red-500 ml-1">*</span>
-          </label>
-          <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <select
-              value={formData.location_country || ""}
-              onChange={(e) => updateFormData({ location_country: e.target.value })}
-              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white"
-            >
-              <option value="" className="bg-gray-900">Select country</option>
-              {COUNTRIES.map((c) => (
-                <option key={c} value={c} className="bg-gray-900">{c}</option>
-              ))}
-            </select>
-          </div>
-          {errors.location_country && (
-            <p className="text-sm text-red-500 mt-1">{errors.location_country}</p>
-          )}
+      <Field label="Years of Experience" required error={errors.years_of_experience}>
+        <div className="relative">
+          <CalendarClock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <input
+            type="number"
+            min="0"
+            placeholder="e.g., 7"
+            value={formData.years_of_experience}
+            onChange={(e) => updateFormData({ years_of_experience: e.target.value })}
+            className={iconInputCls}
+          />
         </div>
-
-        <Input
-          label="City"
-          type="text"
-          placeholder="e.g., New York"
-          value={formData.location_city || ""}
-          onChange={(e) => updateFormData({ location_city: e.target.value })}
-          error={errors.location_city}
-          required
-          icon={MapPin}
-        />
-      </div>
-
-      <Input
-        label="Profile Photo / Logo URL"
-        type="url"
-        placeholder="https://example.com/photo.jpg (JPG/PNG, max 2MB)"
-        value={formData.profile_photo_url || ""}
-        onChange={(e) => updateFormData({ profile_photo_url: e.target.value })}
-        error={errors.profile_photo_url}
-        icon={Image}
-      />
-
-      <Input
-        label="Website"
-        type="url"
-        placeholder="https://yourfirm.com"
-        value={formData.website_url || ""}
-        onChange={(e) => updateFormData({ website_url: e.target.value })}
-        error={errors.website_url}
-        icon={Globe}
-      />
-
-      <Input
-        label="LinkedIn Profile"
-        type="url"
-        placeholder="https://linkedin.com/in/yourprofile"
-        value={formData.linkedin_url || ""}
-        onChange={(e) => updateFormData({ linkedin_url: e.target.value })}
-        error={errors.linkedin_url}
-        required
-        icon={Linkedin}
-      />
-
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Professional Background <span className="text-red-500 ml-1">*</span>
-        </label>
-        <textarea
-          rows={5}
-          placeholder="Share your investing/operator background and focus."
-          value={formData.professional_background}
-          onChange={(e) => updateFormData({ professional_background: e.target.value })}
-          className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white resize-none"
-        />
-        {errors.professional_background && (
-          <p className="text-sm text-red-500 mt-1">{errors.professional_background}</p>
-        )}
-      </div>
+      </Field>
     </div>
-  );
-};
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Field label="Country" required error={errors.location_country}>
+        <div className="relative">
+          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px] pointer-events-none" />
+          <select
+            value={formData.location_country || ""}
+            onChange={(e) => updateFormData({ location_country: e.target.value })}
+            className={iconInputCls}
+          >
+            <option value="" className="bg-gray-900">Select country</option>
+            {COUNTRIES.map((c) => (
+              <option key={c} value={c} className="bg-gray-900">{c}</option>
+            ))}
+          </select>
+        </div>
+      </Field>
+
+      <Field label="City" required error={errors.location_city}>
+        <div className="relative">
+          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <input
+            type="text"
+            placeholder="e.g., New York"
+            value={formData.location_city || ""}
+            onChange={(e) => updateFormData({ location_city: e.target.value })}
+            className={iconInputCls}
+          />
+        </div>
+      </Field>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Field label="Website" hint="optional">
+        <div className="relative">
+          <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <input
+            type="url"
+            placeholder="https://yourfirm.com"
+            value={formData.website_url || ""}
+            onChange={(e) => updateFormData({ website_url: e.target.value })}
+            className={iconInputCls}
+          />
+        </div>
+      </Field>
+
+      <Field label="LinkedIn Profile" required error={errors.linkedin_url}>
+        <div className="relative">
+          <Linkedin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <input
+            type="url"
+            placeholder="https://linkedin.com/in/..."
+            value={formData.linkedin_url || ""}
+            onChange={(e) => updateFormData({ linkedin_url: e.target.value })}
+            className={iconInputCls}
+          />
+        </div>
+      </Field>
+    </div>
+
+    <Field label="Professional Background" required error={errors.professional_background}>
+      <textarea
+        rows={4}
+        placeholder="Share your investing or operator background, areas of focus, and what drives your investment approach."
+        value={formData.professional_background}
+        onChange={(e) => updateFormData({ professional_background: e.target.value })}
+        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all resize-none"
+      />
+    </Field>
+  </div>
+);
 
 export default InvestorStep1BasicInfo;
