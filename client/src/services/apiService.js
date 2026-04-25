@@ -30,7 +30,12 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
-      window.location.href = "/login";
+      localStorage.removeItem("userData");
+      // Notify AuthContext so in-memory state is also cleared before redirect
+      window.dispatchEvent(new Event("auth:force-logout"));
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   },

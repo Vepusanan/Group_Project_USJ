@@ -7,6 +7,8 @@ import Step3TeamInfo from "./Step3TeamInfo";
 import Step4FundingDetails from "./Step4FundingDetails";
 import Step7Contact from "./Step7Contact";
 import profileService from "../../services/profileService";
+import { useAuth } from "../../hooks/useAuth";
+import { onboardingCheckCache } from "../../App";
 
 const STEPS = [
   { number: 1, title: "Identity",  short: "Who you are",    component: Step1BasicInfo },
@@ -18,10 +20,13 @@ const STEPS = [
 
 const OnboardingWizard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     company_name: "",
-    founder_names: "",
+    founder_names: [""],
+    logo_file: null,
+    logo_preview: null,
     location_country: "",
     location_city: "",
     website_url: "",
@@ -61,7 +66,8 @@ const OnboardingWizard = () => {
 
     if (step === 1) {
       if (!formData.company_name.trim()) e.company_name = "Company name is required";
-      if (!formData.founder_names.trim()) e.founder_names = "Founder name(s) are required";
+      const founders = Array.isArray(formData.founder_names) ? formData.founder_names : [formData.founder_names];
+      if (!founders.some((n) => n.trim())) e.founder_names = "At least one founder name is required";
       if (!formData.location_country) e.location_country = "Country is required";
       if (!(formData.location_city || "").trim()) e.location_city = "City is required";
     }
@@ -119,8 +125,20 @@ const OnboardingWizard = () => {
     setSubmitError(null);
     try {
       const fd = new FormData();
+
+      // Attach logo file if selected
+      if (formData.logo_file) {
+        fd.append("logo", formData.logo_file);
+      }
+
       for (const [key, value] of Object.entries(formData)) {
+        if (key === "logo_file" || key === "logo_preview") continue;
         if (value === undefined || value === null) continue;
+        if (key === "founder_names") {
+          const filtered = (Array.isArray(value) ? value : [value]).map((n) => n.trim()).filter(Boolean);
+          if (filtered.length) fd.append("founder_names", JSON.stringify(filtered));
+          continue;
+        }
         if (typeof value === "object") {
           const has = Array.isArray(value) ? value.length > 0 : Object.keys(value).length > 0;
           if (has) fd.append(key, JSON.stringify(value));
@@ -130,6 +148,8 @@ const OnboardingWizard = () => {
       }
       const result = await profileService.createProfile(fd);
       if (result.success) {
+        // Mark profile as created so OnboardingGuard skips the API check
+        if (user?.id) onboardingCheckCache.set(user.id, null);
         navigate("/investors", { state: { message: "Profile created successfully!" } });
       } else {
         setSubmitError(result.error || "Failed to create profile");
@@ -231,16 +251,6 @@ const OnboardingWizard = () => {
             </button>
 
             <div className="flex items-center gap-3">
-              {currentStep < STEPS.length && (
-                <button
-                  onClick={handleSkip}
-                  disabled={isSaving}
-                  className="px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40"
-                >
-                  Skip
-                </button>
-              )}
-
               <button
                 onClick={handleNext}
                 disabled={isSaving}

@@ -1,73 +1,13 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
   AlertCircle, CheckCircle2, Loader2, Monitor, Smartphone,
-  LogOut, Shield, User, Bell, Eye, Settings2,
+  LogOut, Shield, Bell, Eye, Settings2,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiService } from "../services/apiService";
-import { profileService } from "../services/profileService";
-import { investorProfileService } from "../services/investorProfileService";
 import { useAuth } from "../hooks/useAuth";
 
-// ─── constants ───────────────────────────────────────────────────────────────
-
-const COUNTRIES = [
-  "Afghanistan","Albania","Algeria","Argentina","Australia","Austria","Bangladesh",
-  "Belgium","Brazil","Canada","Chile","China","Colombia","Czech Republic","Denmark",
-  "Egypt","Ethiopia","Finland","France","Germany","Ghana","Greece","Hungary","India",
-  "Indonesia","Iran","Iraq","Ireland","Israel","Italy","Japan","Jordan","Kenya",
-  "Malaysia","Mexico","Morocco","Netherlands","New Zealand","Nigeria","Norway",
-  "Pakistan","Peru","Philippines","Poland","Portugal","Romania","Russia","Saudi Arabia",
-  "Singapore","South Africa","South Korea","Spain","Sri Lanka","Sweden","Switzerland",
-  "Tanzania","Thailand","Turkey","Uganda","Ukraine","United Arab Emirates",
-  "United Kingdom","United States","Vietnam","Zimbabwe",
-];
-
-const INVESTOR_TYPES = ["ANGEL","VC","CORPORATE","FAMILY_OFFICE","ACCELERATOR","OTHER"];
-
-const INDUSTRIES = [
-  "FinTech","HealthTech","EdTech","AgriTech","CleanTech","AI/ML","SaaS","E-commerce",
-  "Logistics","LegalTech","PropTech","InsurTech","FoodTech","TravelTech","Gaming",
-  "Cybersecurity","Blockchain","IoT","BioTech","SpaceTech","Other",
-];
-
-const FUNDING_STAGES = [
-  { value: "PRE_SEED", label: "Pre-seed" },
-  { value: "SEED", label: "Seed" },
-  { value: "SERIES_A", label: "Series A" },
-  { value: "SERIES_B", label: "Series B" },
-  { value: "SERIES_C", label: "Series C" },
-  { value: "SERIES_D_PLUS", label: "Series D+" },
-];
-
-const REVENUE_STATUSES = [
-  { value: "PRE_REVENUE", label: "Pre-revenue" },
-  { value: "REVENUE_GENERATING", label: "Revenue-generating" },
-  { value: "PROFITABLE", label: "Profitable" },
-];
-
-const CURRENT_STAGES = [
-  { value: "IDEA", label: "Idea" },
-  { value: "MVP", label: "MVP" },
-  { value: "EARLY_TRACTION", label: "Early Traction" },
-  { value: "GROWTH", label: "Growth" },
-  { value: "SCALE", label: "Scale" },
-];
-
-const INVESTMENT_STAGES = [
-  { value: "PRE_SEED", label: "Pre-seed" },
-  { value: "SEED", label: "Seed" },
-  { value: "SERIES_A", label: "Series A" },
-  { value: "SERIES_B", label: "Series B" },
-  { value: "SERIES_C", label: "Series C" },
-  { value: "SERIES_D_PLUS", label: "Series D+" },
-];
-
-const INVESTMENT_STRUCTURES = ["EQUITY","CONVERTIBLE_NOTE","SAFE","DEBT","GRANTS","OTHER"];
-const INVESTMENT_TIMELINES = ["SHORT_TERM","MEDIUM_TERM","LONG_TERM"];
-
 const NAV_ITEMS = [
-  { key: "profile",       label: "Profile Settings",    icon: User },
   { key: "account",       label: "Account Settings",    icon: Settings2 },
   { key: "privacy",       label: "Privacy Settings",    icon: Eye },
   { key: "notifications", label: "Notification Settings", icon: Bell },
@@ -106,7 +46,6 @@ const Field = ({ label, required, error, children }) => (
 
 const inputCls = "w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500 text-sm";
 const selectCls = "w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white text-sm";
-const textareaCls = "w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500 text-sm resize-none";
 
 const PasswordStrength = ({ password }) => {
   const checks = [
@@ -154,85 +93,17 @@ const SectionHeader = ({ title, description }) => (
   </div>
 );
 
-const SaveBtn = ({ loading, label = "Save Changes", loadingLabel = "Saving..." }) => (
-  <button
-    type="submit"
-    disabled={loading}
-    className="px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium disabled:opacity-50 inline-flex items-center gap-2"
-  >
-    {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-    {loading ? loadingLabel : label}
-  </button>
-);
-
-// ─── multi-select checkbox group ─────────────────────────────────────────────
-
-const CheckGroup = ({ options, values, onChange, label }) => {
-  const selected = Array.isArray(values) ? values : [];
-  const toggle = (v) => onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
-  return (
-    <Field label={label}>
-      <div className="flex flex-wrap gap-2 mt-1">
-        {options.map((opt) => {
-          const val = typeof opt === "string" ? opt : opt.value;
-          const lbl = typeof opt === "string" ? opt : opt.label;
-          const active = selected.includes(val);
-          return (
-            <button
-              key={val}
-              type="button"
-              onClick={() => toggle(val)}
-              className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${active ? "bg-purple-600/40 border-purple-400/60 text-white" : "bg-white/5 border-white/15 text-gray-300 hover:border-white/30"}`}
-            >
-              {lbl}
-            </button>
-          );
-        })}
-      </div>
-    </Field>
-  );
-};
-
 // ─── main page ───────────────────────────────────────────────────────────────
 
 const SettingsPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const role = user?.role || user?.user_type || "startup";
-  const isInvestor = role === "investor";
 
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("account");
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [feedback, setFeedback] = useState({});
-
-  // ── profile state ──────────────────────────────────────────────────────────
-  const [profileId, setProfileId] = useState(null);
-  const [profileCompletion, setProfileCompletion] = useState(null);
-
-  // startup profile fields
-  const [startupProfile, setStartupProfile] = useState({
-    company_name: "", founder_names: "", location_country: "", location_city: "",
-    logo_url: "", website_url: "", linkedin_url: "", tagline: "",
-    detailed_description: "", industry: "", founded_date: "", current_stage: "",
-    team_size: "", key_team_members: "", funding_stage: "", amount_seeking: "",
-    previous_funding: "", use_of_funds: "", revenue_status: "",
-    key_metrics: "", major_achievements: "", primary_contact_name: "",
-    contact_email: "", phone_number: "",
-  });
-
-  // investor profile fields
-  const [investorProfile, setInvestorProfile] = useState({
-    name_or_firm: "", investor_type: "", years_of_experience: "",
-    location_country: "", location_city: "", profile_photo_url: "",
-    website_url: "", linkedin_url: "", professional_background: "",
-    investment_thesis: "", industries_of_interest: [], geographic_preference: [],
-    stage_preference: [], min_investment_size: "", max_investment_size: "",
-    investment_structure: [], investment_timeline: "", number_of_investments: "",
-    portfolio_companies: "", notable_achievements: "", what_you_look_for: "",
-    deal_breakers: "", value_add: "", primary_contact_email: "",
-    phone_number: "", preferred_contact_method: "",
-  });
 
   // ── privacy / notifications state ──────────────────────────────────────────
   const [privacy, setPrivacy] = useState({
@@ -268,53 +139,23 @@ const SettingsPage = () => {
   const setFb = (tab, type, message) => setFeedback((p) => ({ ...p, [tab]: { type, message } }));
   const clearFb = (tab) => setFeedback((p) => ({ ...p, [tab]: null }));
 
-  const parseList = (val) => {
-    if (!val) return [];
-    if (Array.isArray(val)) return val;
-    try { const p = JSON.parse(val); return Array.isArray(p) ? p : []; } catch { return []; }
-  };
-
   // ── initial data load ──────────────────────────────────────────────────────
   const loadAll = useCallback(async () => {
     setSettingsLoading(true);
-
-    const requests = [
-      apiService.getPrivacySettings(),
-      apiService.getNotificationSettings(),
-      isInvestor ? investorProfileService.getMyProfile() : profileService.getMyProfile(),
-      isInvestor ? null : profileService.getProfileCompletion(),
-    ];
-
-    const [privRes, notifRes, profileRes, completionRes] = await Promise.all(
-      requests.map((p) => p || Promise.resolve({ success: true, data: null }))
-    );
-
-    if (privRes.success) setPrivacy((p) => ({ ...p, ...(privRes.data?.data || {}) }));
-    if (notifRes.success) setNotifications((p) => ({ ...p, ...(notifRes.data?.data || {}) }));
-
-    if (profileRes.success && profileRes.data) {
-      const raw = profileRes.data?.data || profileRes.data;
-      if (isInvestor) {
-        setProfileId(raw.investor_profile_id || raw.id);
-        setInvestorProfile((p) => ({
-          ...p,
-          ...raw,
-          industries_of_interest: parseList(raw.industries_of_interest),
-          geographic_preference: parseList(raw.geographic_preference),
-          stage_preference: parseList(raw.stage_preference),
-          investment_structure: parseList(raw.investment_structure),
-        }));
-      } else {
-        setProfileId(raw.startup_profile_id || raw.id);
-        setStartupProfile((p) => ({ ...p, ...raw }));
-        if (completionRes?.success) {
-          setProfileCompletion(completionRes.data?.data?.completionPercentage ?? null);
-        }
-      }
+    try {
+      const [privRes, notifRes] = await Promise.all([
+        apiService.getPrivacySettings(),
+        apiService.getNotificationSettings(),
+      ]);
+      if (privRes.success) setPrivacy((p) => ({ ...p, ...(privRes.data?.data || {}) }));
+      else setFb("privacy", "error", privRes.error || "Failed to load privacy settings");
+      if (notifRes.success) setNotifications((p) => ({ ...p, ...(notifRes.data?.data || {}) }));
+      else setFb("notifications", "error", notifRes.error || "Failed to load notification settings");
+    } catch {
+      setFb("account", "error", "Network error — settings could not be loaded. Please refresh.");
     }
-
     setSettingsLoading(false);
-  }, [isInvestor]);
+  }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -324,45 +165,17 @@ const SettingsPage = () => {
 
   const loadSessions = async () => {
     setSessionsLoading(true);
-    const res = await apiService.getSessions();
+    try {
+      const res = await apiService.getSessions();
+      if (res.success) setSessions(res.data?.sessions || res.data || []);
+      else setFb("security", "error", res.error || "Failed to load sessions");
+    } catch {
+      setFb("security", "error", "Network error — sessions could not be loaded.");
+    }
     setSessionsLoading(false);
-    if (res.success) setSessions(res.data?.sessions || res.data || []);
   };
 
   // ── save handlers ──────────────────────────────────────────────────────────
-
-  const saveProfile = async (e) => {
-    e.preventDefault();
-    clearFb("profile");
-    setBusy("profile");
-
-    const fd = new FormData();
-    const source = isInvestor ? investorProfile : startupProfile;
-
-    for (const [key, value] of Object.entries(source)) {
-      if (value === null || value === undefined) continue;
-      if (Array.isArray(value)) {
-        if (value.length > 0) fd.append(key, JSON.stringify(value));
-      } else if (String(value).trim() !== "") {
-        fd.append(key, value);
-      }
-    }
-
-    let result;
-    if (profileId) {
-      result = isInvestor
-        ? await investorProfileService.updateProfile(profileId, fd)
-        : await profileService.updateProfile(profileId, fd);
-    } else {
-      setFb("profile", "error", "No existing profile found. Please complete onboarding first.");
-      setBusy("");
-      return;
-    }
-
-    setBusy("");
-    if (!result.success) { setFb("profile", "error", result.error || "Failed to save profile"); return; }
-    setFb("profile", "success", "Profile updated successfully.");
-  };
 
   const savePrivacy = async () => {
     clearFb("privacy");
@@ -410,7 +223,7 @@ const SettingsPage = () => {
     e.preventDefault();
     const { currentPassword, newPassword, confirmPassword } = securityForm;
     if (!currentPassword || !newPassword) { setFb("security", "error", "All fields are required"); return; }
-    if (newPassword.length < 8) { setFb("security", "error", "Password must be at least 8 characters"); return; }
+    if (newPassword.length < 10) { setFb("security", "error", "Password must be at least 10 characters"); return; }
     if (newPassword !== confirmPassword) { setFb("security", "error", "Passwords do not match"); return; }
     clearFb("security");
     setBusy("security.pw");
@@ -432,8 +245,7 @@ const SettingsPage = () => {
   };
 
   const downloadData = () => {
-    const data = isInvestor ? investorProfile : startupProfile;
-    const blob = new Blob([JSON.stringify({ user, profile: data }, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ user }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -449,273 +261,6 @@ const SettingsPage = () => {
   // ─────────────────────────────────────────────────────────────────────────
   // Tab content renderers
   // ─────────────────────────────────────────────────────────────────────────
-
-  const renderProfile = () => {
-    if (isInvestor) {
-      const ip = investorProfile;
-      const upd = (patch) => setInvestorProfile((p) => ({ ...p, ...patch }));
-      return (
-        <form onSubmit={saveProfile} className="space-y-5">
-          <SectionHeader title="Profile Settings" description="Edit information from your onboarding. Changes take effect immediately." />
-          <Feedback feedback={feedback.profile} />
-
-          {/* Basic */}
-          <div className="rounded-lg border border-white/10 p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Basic Information</h3>
-            <Field label="Name or Firm" required>
-              <input className={inputCls} value={ip.name_or_firm} onChange={(e) => upd({ name_or_firm: e.target.value })} placeholder="e.g., Acme Ventures" />
-            </Field>
-            <Field label="Investor Type">
-              <select className={selectCls} value={ip.investor_type} onChange={(e) => upd({ investor_type: e.target.value })}>
-                <option value="">Select type</option>
-                {INVESTOR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </Field>
-            <Field label="Years of Experience">
-              <input className={inputCls} type="number" min="0" value={ip.years_of_experience} onChange={(e) => upd({ years_of_experience: e.target.value })} />
-            </Field>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Country">
-                <select className={selectCls} value={ip.location_country} onChange={(e) => upd({ location_country: e.target.value })}>
-                  <option value="">Select country</option>
-                  {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </Field>
-              <Field label="City">
-                <input className={inputCls} value={ip.location_city} onChange={(e) => upd({ location_city: e.target.value })} placeholder="e.g., New York" />
-              </Field>
-            </div>
-            <Field label="Profile Photo / Logo URL">
-              <input className={inputCls} type="url" value={ip.profile_photo_url} onChange={(e) => upd({ profile_photo_url: e.target.value })} placeholder="https://..." />
-            </Field>
-            <Field label="Website">
-              <input className={inputCls} type="url" value={ip.website_url} onChange={(e) => upd({ website_url: e.target.value })} placeholder="https://yourfirm.com" />
-            </Field>
-            <Field label="LinkedIn">
-              <input className={inputCls} type="url" value={ip.linkedin_url} onChange={(e) => upd({ linkedin_url: e.target.value })} placeholder="https://linkedin.com/in/..." />
-            </Field>
-            <Field label="Professional Background">
-              <textarea className={textareaCls} rows={4} value={ip.professional_background} onChange={(e) => upd({ professional_background: e.target.value })} />
-            </Field>
-          </div>
-
-          {/* Investment Focus */}
-          <div className="rounded-lg border border-white/10 p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Investment Focus</h3>
-            <Field label="Investment Thesis">
-              <textarea className={textareaCls} rows={4} value={ip.investment_thesis} onChange={(e) => upd({ investment_thesis: e.target.value })} />
-            </Field>
-            <CheckGroup label="Industries of Interest" options={INDUSTRIES} values={ip.industries_of_interest} onChange={(v) => upd({ industries_of_interest: v })} />
-            <CheckGroup label="Stage Preference" options={INVESTMENT_STAGES} values={ip.stage_preference} onChange={(v) => upd({ stage_preference: v })} />
-          </div>
-
-          {/* Investment Details */}
-          <div className="rounded-lg border border-white/10 p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Investment Details</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Min Investment ($)">
-                <input className={inputCls} type="number" min="0" value={ip.min_investment_size} onChange={(e) => upd({ min_investment_size: e.target.value })} />
-              </Field>
-              <Field label="Max Investment ($)">
-                <input className={inputCls} type="number" min="0" value={ip.max_investment_size} onChange={(e) => upd({ max_investment_size: e.target.value })} />
-              </Field>
-            </div>
-            <CheckGroup label="Investment Structure" options={INVESTMENT_STRUCTURES} values={ip.investment_structure} onChange={(v) => upd({ investment_structure: v })} />
-            <Field label="Investment Timeline">
-              <select className={selectCls} value={ip.investment_timeline} onChange={(e) => upd({ investment_timeline: e.target.value })}>
-                <option value="">Select</option>
-                {INVESTMENT_TIMELINES.map((t) => <option key={t} value={t}>{t.replace("_", " ")}</option>)}
-              </select>
-            </Field>
-          </div>
-
-          {/* Portfolio */}
-          <div className="rounded-lg border border-white/10 p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Portfolio</h3>
-            <Field label="Number of Investments">
-              <input className={inputCls} type="number" min="0" value={ip.number_of_investments} onChange={(e) => upd({ number_of_investments: e.target.value })} />
-            </Field>
-            <Field label="Portfolio Companies">
-              <textarea className={textareaCls} rows={3} value={ip.portfolio_companies} onChange={(e) => upd({ portfolio_companies: e.target.value })} />
-            </Field>
-            <Field label="Notable Achievements">
-              <textarea className={textareaCls} rows={3} value={ip.notable_achievements} onChange={(e) => upd({ notable_achievements: e.target.value })} />
-            </Field>
-          </div>
-
-          {/* Criteria */}
-          <div className="rounded-lg border border-white/10 p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Criteria & Value Add</h3>
-            <Field label="What You Look For">
-              <textarea className={textareaCls} rows={3} value={ip.what_you_look_for} onChange={(e) => upd({ what_you_look_for: e.target.value })} />
-            </Field>
-            <Field label="Deal Breakers">
-              <textarea className={textareaCls} rows={3} value={ip.deal_breakers} onChange={(e) => upd({ deal_breakers: e.target.value })} />
-            </Field>
-            <Field label="Value Add">
-              <textarea className={textareaCls} rows={3} value={ip.value_add} onChange={(e) => upd({ value_add: e.target.value })} />
-            </Field>
-          </div>
-
-          {/* Contact */}
-          <div className="rounded-lg border border-white/10 p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Contact</h3>
-            <Field label="Primary Contact Email">
-              <input className={inputCls} type="email" value={ip.primary_contact_email} onChange={(e) => upd({ primary_contact_email: e.target.value })} />
-            </Field>
-            <Field label="Phone Number">
-              <input className={inputCls} type="tel" value={ip.phone_number} onChange={(e) => upd({ phone_number: e.target.value })} />
-            </Field>
-            <Field label="Preferred Contact Method">
-              <select className={selectCls} value={ip.preferred_contact_method} onChange={(e) => upd({ preferred_contact_method: e.target.value })}>
-                <option value="">Select</option>
-                <option value="email">Email</option>
-                <option value="phone">Phone</option>
-                <option value="linkedin">LinkedIn</option>
-              </select>
-            </Field>
-          </div>
-
-          <SaveBtn loading={busy === "profile"} />
-        </form>
-      );
-    }
-
-    // startup
-    const sp = startupProfile;
-    const upd = (patch) => setStartupProfile((p) => ({ ...p, ...patch }));
-    return (
-      <form onSubmit={saveProfile} className="space-y-5">
-        <SectionHeader title="Profile Settings" description="Edit information from your onboarding. Changes take effect immediately." />
-        <Feedback feedback={feedback.profile} />
-
-        {/* Basic */}
-        <div className="rounded-lg border border-white/10 p-4 space-y-4">
-          <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Basic Information</h3>
-          <Field label="Company Name" required>
-            <input className={inputCls} value={sp.company_name} onChange={(e) => upd({ company_name: e.target.value })} />
-          </Field>
-          <Field label="Founder Name(s)" required>
-            <input className={inputCls} value={sp.founder_names} onChange={(e) => upd({ founder_names: e.target.value })} />
-          </Field>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Country">
-              <select className={selectCls} value={sp.location_country} onChange={(e) => upd({ location_country: e.target.value })}>
-                <option value="">Select country</option>
-                {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </Field>
-            <Field label="City">
-              <input className={inputCls} value={sp.location_city} onChange={(e) => upd({ location_city: e.target.value })} placeholder="e.g., San Francisco" />
-            </Field>
-          </div>
-          <Field label="Company Logo URL">
-            <input className={inputCls} type="url" value={sp.logo_url} onChange={(e) => upd({ logo_url: e.target.value })} placeholder="https://..." />
-          </Field>
-          <Field label="Website URL">
-            <input className={inputCls} type="url" value={sp.website_url} onChange={(e) => upd({ website_url: e.target.value })} placeholder="https://yourcompany.com" />
-          </Field>
-          <Field label="LinkedIn">
-            <input className={inputCls} type="url" value={sp.linkedin_url} onChange={(e) => upd({ linkedin_url: e.target.value })} placeholder="https://linkedin.com/company/..." />
-          </Field>
-        </div>
-
-        {/* Business */}
-        <div className="rounded-lg border border-white/10 p-4 space-y-4">
-          <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Business Description</h3>
-          <Field label="Tagline">
-            <input className={inputCls} value={sp.tagline} onChange={(e) => upd({ tagline: e.target.value })} />
-          </Field>
-          <Field label="Detailed Description">
-            <textarea className={textareaCls} rows={5} value={sp.detailed_description} onChange={(e) => upd({ detailed_description: e.target.value })} />
-          </Field>
-          <Field label="Industry">
-            <select className={selectCls} value={sp.industry} onChange={(e) => upd({ industry: e.target.value })}>
-              <option value="">Select industry</option>
-              {INDUSTRIES.map((ind) => <option key={ind} value={ind}>{ind}</option>)}
-            </select>
-          </Field>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Founded Date">
-              <input className={inputCls} type="date" value={sp.founded_date ? sp.founded_date.slice(0,10) : ""} onChange={(e) => upd({ founded_date: e.target.value })} />
-            </Field>
-            <Field label="Current Stage">
-              <select className={selectCls} value={sp.current_stage} onChange={(e) => upd({ current_stage: e.target.value })}>
-                <option value="">Select stage</option>
-                {CURRENT_STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
-            </Field>
-          </div>
-        </div>
-
-        {/* Team */}
-        <div className="rounded-lg border border-white/10 p-4 space-y-4">
-          <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Team Information</h3>
-          <Field label="Team Size">
-            <input className={inputCls} type="number" min="1" value={sp.team_size} onChange={(e) => upd({ team_size: e.target.value })} />
-          </Field>
-          <Field label="Key Team Members">
-            <textarea className={textareaCls} rows={3} value={sp.key_team_members} onChange={(e) => upd({ key_team_members: e.target.value })} />
-          </Field>
-        </div>
-
-        {/* Funding */}
-        <div className="rounded-lg border border-white/10 p-4 space-y-4">
-          <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Funding Details</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Funding Stage">
-              <select className={selectCls} value={sp.funding_stage} onChange={(e) => upd({ funding_stage: e.target.value })}>
-                <option value="">Select stage</option>
-                {FUNDING_STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
-            </Field>
-            <Field label="Revenue Status">
-              <select className={selectCls} value={sp.revenue_status} onChange={(e) => upd({ revenue_status: e.target.value })}>
-                <option value="">Select status</option>
-                {REVENUE_STATUSES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select>
-            </Field>
-          </div>
-          <Field label="Amount Seeking ($)">
-            <input className={inputCls} type="number" min="0" value={sp.amount_seeking} onChange={(e) => upd({ amount_seeking: e.target.value })} />
-          </Field>
-          <Field label="Previous Funding ($)">
-            <input className={inputCls} type="number" min="0" value={sp.previous_funding} onChange={(e) => upd({ previous_funding: e.target.value })} />
-          </Field>
-          <Field label="Use of Funds">
-            <textarea className={textareaCls} rows={3} value={sp.use_of_funds} onChange={(e) => upd({ use_of_funds: e.target.value })} />
-          </Field>
-        </div>
-
-        {/* Traction */}
-        <div className="rounded-lg border border-white/10 p-4 space-y-4">
-          <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Traction & Achievements</h3>
-          <Field label="Key Metrics">
-            <textarea className={textareaCls} rows={3} value={sp.key_metrics} onChange={(e) => upd({ key_metrics: e.target.value })} />
-          </Field>
-          <Field label="Major Achievements">
-            <textarea className={textareaCls} rows={3} value={sp.major_achievements} onChange={(e) => upd({ major_achievements: e.target.value })} />
-          </Field>
-        </div>
-
-        {/* Contact */}
-        <div className="rounded-lg border border-white/10 p-4 space-y-4">
-          <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Contact</h3>
-          <Field label="Primary Contact Name">
-            <input className={inputCls} value={sp.primary_contact_name} onChange={(e) => upd({ primary_contact_name: e.target.value })} />
-          </Field>
-          <Field label="Contact Email">
-            <input className={inputCls} type="email" value={sp.contact_email} onChange={(e) => upd({ contact_email: e.target.value })} />
-          </Field>
-          <Field label="Phone Number">
-            <input className={inputCls} type="tel" value={sp.phone_number} onChange={(e) => upd({ phone_number: e.target.value })} />
-          </Field>
-        </div>
-
-        <SaveBtn loading={busy === "profile"} />
-      </form>
-    );
-  };
 
   const renderAccount = () => (
     <div className="space-y-5">
@@ -737,19 +282,8 @@ const SettingsPage = () => {
           </div>
           <div className="rounded-lg bg-white/5 px-3 py-2">
             <p className="text-xs text-gray-500">Member Since</p>
-            <p className="text-sm text-white mt-0.5">{fmtDate(user?.created_at)}</p>
+            <p className="text-sm text-white mt-0.5">{fmtDate(user?.createdAt)}</p>
           </div>
-          {profileCompletion !== null && (
-            <div className="rounded-lg bg-white/5 px-3 py-2">
-              <p className="text-xs text-gray-500">Profile Completion</p>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${profileCompletion}%` }} />
-                </div>
-                <span className="text-xs text-white">{profileCompletion}%</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -936,17 +470,18 @@ const SettingsPage = () => {
         ) : (
           <ul className="space-y-2">
             {sessions.map((s, idx) => {
-              const mobile = /mobile|android|iphone|ipad/i.test(s.user_agent || "");
+              const deviceStr = s.device_info || s.user_agent || "";
+              const mobile = /mobile|android|iphone|ipad/i.test(deviceStr);
               return (
                 <li key={s.id || idx} className="flex items-start gap-3 py-2 border-b border-white/10 last:border-0">
                   <div className="mt-0.5 text-gray-400 flex-shrink-0">
                     {mobile ? <Smartphone className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{s.user_agent ? s.user_agent.slice(0, 70) + (s.user_agent.length > 70 ? "…" : "") : "Unknown device"}</p>
+                    <p className="text-sm text-white truncate">{deviceStr ? deviceStr.slice(0, 70) + (deviceStr.length > 70 ? "…" : "") : "Unknown device"}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       Last active: {fmtSession(s.last_used_at || s.created_at)}
-                      {s.ip_address ? ` · ${s.ip_address}` : ""}
+                      {s.client_ip ? ` · ${s.client_ip}` : ""}
                     </p>
                   </div>
                   {idx === 0 && (
@@ -988,7 +523,6 @@ const SettingsPage = () => {
   );
 
   const tabContent = {
-    profile: renderProfile,
     account: renderAccount,
     privacy: renderPrivacy,
     notifications: renderNotifications,
@@ -1008,7 +542,7 @@ const SettingsPage = () => {
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-white">Settings</h1>
-          <p className="text-gray-400 mt-1">Manage your profile, privacy, and account security.</p>
+          <p className="text-gray-400 mt-1">Manage your account, privacy, and security.</p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">

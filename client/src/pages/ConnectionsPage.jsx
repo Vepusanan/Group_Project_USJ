@@ -97,6 +97,7 @@ const ConnectionsPage = () => {
     const params = new URLSearchParams({
       userId: String(connection.other_user_id),
       name: connection.other_user_name || "User",
+      ...(connection.other_user_photo_url ? { photo: connection.other_user_photo_url } : {}),
     });
     navigate(`/messages?${params.toString()}`);
   };
@@ -204,10 +205,11 @@ const ConnectionsPage = () => {
                         className="rounded-lg border border-white/15 bg-black/30 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/15 flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm font-semibold text-white/50">
-                              {(connection.other_user_name || "U").charAt(0).toUpperCase()}
-                            </span>
+                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {connection.other_user_photo_url
+                              ? <img src={connection.other_user_photo_url} alt={connection.other_user_name} className="w-full h-full object-cover" />
+                              : <span className="text-sm font-semibold text-white/50">{(connection.other_user_name || "U").charAt(0).toUpperCase()}</span>
+                            }
                           </div>
                           <div>
                             {profilePath ? (
@@ -281,10 +283,11 @@ const ConnectionsPage = () => {
                         className="rounded-lg border border-white/15 bg-black/30 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/15 flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm font-semibold text-white/50">
-                              {(request.target_user_name || "U").charAt(0).toUpperCase()}
-                            </span>
+                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {request.other_user_photo_url
+                              ? <img src={request.other_user_photo_url} alt={request.target_user_name} className="w-full h-full object-cover" />
+                              : <span className="text-sm font-semibold text-white/50">{(request.target_user_name || "U").charAt(0).toUpperCase()}</span>
+                            }
                           </div>
                           <div>
                             {profilePath ? (
@@ -346,7 +349,7 @@ const ConnectionsPage = () => {
                   pendingReceived.map((request) => {
                     const profilePath = getProfilePath(
                       request.requester_user_type,
-                      request.requester_profile_id || request.requester_id,
+                      request.requester_profile_id || request.requester_user_id,
                     );
                     return (
                       <div
@@ -354,10 +357,11 @@ const ConnectionsPage = () => {
                         className="rounded-lg border border-white/15 bg-black/30 p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-sm font-semibold text-white/50">
-                              {(request.requester_name || "U").charAt(0).toUpperCase()}
-                            </span>
+                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/15 flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden">
+                            {request.other_user_photo_url
+                              ? <img src={request.other_user_photo_url} alt={request.requester_name} className="w-full h-full object-cover" />
+                              : <span className="text-sm font-semibold text-white/50">{(request.requester_name || "U").charAt(0).toUpperCase()}</span>
+                            }
                           </div>
                           <div>
                             {profilePath ? (

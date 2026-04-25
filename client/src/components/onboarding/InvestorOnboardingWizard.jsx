@@ -7,6 +7,8 @@ import InvestorStep3InvestmentFocus from "./InvestorStep3InvestmentFocus";
 import InvestorStep4InvestmentDetails from "./InvestorStep4InvestmentDetails";
 import InvestorStep7Contact from "./InvestorStep7Contact";
 import investorProfileService from "../../services/investorProfileService";
+import { useAuth } from "../../hooks/useAuth";
+import { onboardingCheckCache } from "../../App";
 
 const STEPS = [
   { number: 1, title: "Identity",   short: "Who you are",     component: InvestorStep1BasicInfo },
@@ -18,6 +20,7 @@ const STEPS = [
 
 const InvestorOnboardingWizard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     name_or_firm: "",
@@ -140,6 +143,8 @@ const InvestorOnboardingWizard = () => {
       }
       const result = await investorProfileService.createProfile(fd);
       if (result.success) {
+        // Mark profile as created so OnboardingGuard skips the API check
+        if (user?.id) onboardingCheckCache.set(user.id, null);
         navigate("/startups", { state: { message: "Investor profile created successfully!" } });
       } else {
         setSubmitError(result.error || "Failed to create investor profile");
@@ -241,16 +246,6 @@ const InvestorOnboardingWizard = () => {
             </button>
 
             <div className="flex items-center gap-3">
-              {currentStep < STEPS.length && (
-                <button
-                  onClick={handleSkip}
-                  disabled={isSaving}
-                  className="px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40"
-                >
-                  Skip
-                </button>
-              )}
-
               <button
                 onClick={handleNext}
                 disabled={isSaving}

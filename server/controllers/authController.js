@@ -250,7 +250,7 @@ export const login = async (req, res) => {
     }
 
     const result = await pool.query(
-      "SELECT id, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until FROM users WHERE email = $1",
+      "SELECT id, email, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until, created_at FROM users WHERE email = $1",
       [email.toLowerCase()],
     );
 
@@ -351,6 +351,7 @@ export const login = async (req, res) => {
         fullName: user.full_name,
         userType: user.user_type,
         emailVerified: user.email_verified,
+        createdAt: user.created_at,
         sessionExpires: expiresAt.toISOString(),
       },
     });
@@ -657,6 +658,7 @@ export const getCurrentUser = async (req, res) => {
         fullName: req.user.full_name,
         userType: req.user.user_type,
         emailVerified: req.user.email_verified,
+        createdAt: req.user.created_at,
       },
     });
   } catch (error) {

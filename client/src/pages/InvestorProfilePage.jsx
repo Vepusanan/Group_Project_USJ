@@ -160,6 +160,7 @@ const InvestorProfilePage = () => {
   const [error, setError]                   = useState("");
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [connectionId, setConnectionId]     = useState(null);
+  const [connectionRequesterId, setConnectionRequesterId] = useState(null);
   const [showModal, setShowModal]           = useState(false);
   const [connectMsg, setConnectMsg]         = useState("");
   const [actionLoading, setActionLoading]   = useState(false);
@@ -176,6 +177,7 @@ const InvestorProfilePage = () => {
       setProfile(data);
       setConnectionStatus(data.connection_status || null);
       setConnectionId(data.connection_id || null);
+      setConnectionRequesterId(data.connection_requester_id || null);
       setLoading(false);
     })();
   }, [id]);
@@ -194,9 +196,17 @@ const InvestorProfilePage = () => {
     </div>
   );
 
-  const isOwn       = Boolean(user?.id && profile?.user_id && user.id === profile.user_id);
-  const isConnected  = connectionStatus === "accepted";
-  const isPending    = connectionStatus === "pending";
+  const isOwn              = Boolean(user?.id && profile?.user_id && user.id === profile.user_id);
+  const isConnected        = connectionStatus === "accepted";
+  const isPending          = connectionStatus === "pending";
+  const canSendRequest     = user?.userType === "startup";
+  // Investors always send requests; if there's a pending connection on this investor's profile,
+  // the investor is always the requester — so the current (startup) user is always the receiver.
+  const isReceivedRequest  = isPending && !isOwn && (
+    connectionRequesterId
+      ? String(connectionRequesterId) !== String(user?.id)
+      : String(profile.user_id) !== String(user?.id)
+  );
 
   const name        = profile.name_or_firm || "Investor";
   const initial     = name.charAt(0).toUpperCase();
@@ -228,11 +238,28 @@ const InvestorProfilePage = () => {
     setActionLoading(true);
     const res = await apiService.removeConnection(connectionId);
     setActionLoading(false);
-    if (res.success) { setConnectionStatus(null); setConnectionId(null); }
+    if (res.success) { setConnectionStatus(null); setConnectionId(null); setConnectionRequesterId(null); }
+  };
+
+  const acceptRequest = async () => {
+    if (!connectionId) return;
+    setActionLoading(true);
+    const res = await apiService.respondToConnection(connectionId, "accepted");
+    setActionLoading(false);
+    if (res.success) { setConnectionStatus("accepted"); } else { setError(res.error || "Failed to accept request"); }
+  };
+
+  const declineRequest = async () => {
+    if (!connectionId) return;
+    setActionLoading(true);
+    const res = await apiService.respondToConnection(connectionId, "declined");
+    setActionLoading(false);
+    if (res.success) { setConnectionStatus(null); setConnectionId(null); setConnectionRequesterId(null); } else { setError(res.error || "Failed to decline request"); }
   };
 
   const goMessage = () => {
     const p = new URLSearchParams({ userId: String(profile.user_id), name });
+    if (profile.photo_url) p.set("photo", profile.photo_url);
     navigate(`/messages?${p}`);
   };
 
@@ -272,16 +299,17 @@ const InvestorProfilePage = () => {
           </div>
 
           <div className="bg-black/40 backdrop-blur-sm px-6 pb-6">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-8">
+            {/* avatar row: sits half inside cover, half below */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               {/* avatar + name */}
-              <div className="flex items-end gap-4">
-                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${gFrom} ${gTo} border-4 border-black/40 flex items-center justify-center flex-shrink-0 shadow-xl overflow-hidden`}>
-                  {profile.profile_photo_url
-                    ? <img src={profile.profile_photo_url} alt={name} className="w-full h-full object-cover" />
+              <div className="flex items-center gap-4 -mt-10">
+                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${gFrom} ${gTo} border-4 border-[#0d0d0d] flex items-center justify-center flex-shrink-0 shadow-xl overflow-hidden`}>
+                  {(profile.photo_url || profile.profile_photo_url)
+                    ? <img src={profile.photo_url || profile.profile_photo_url} alt={name} className="w-full h-full object-cover" />
                     : <span className="text-3xl font-bold text-white">{initial}</span>
                   }
                 </div>
-                <div className="pb-1">
+                <div className="mt-10">
                   <h1 className="text-2xl font-bold text-white">{name}</h1>
                   {profile.investor_type && (
                     <p className="text-purple-200/80 text-sm font-medium mt-0.5">{profile.investor_type}</p>
@@ -290,7 +318,7 @@ const InvestorProfilePage = () => {
               </div>
 
               {/* CTA */}
-              {!isOwn && (
+              {!isOwn && (canSendRequest || isConnected) && (
                 <div className="flex gap-2 pb-1">
                   {isConnected ? (
                     <>
@@ -300,6 +328,17 @@ const InvestorProfilePage = () => {
                       <button type="button" onClick={goMessage}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
                         <MessageCircle className="w-4 h-4" /> Message
+                      </button>
+                    </>
+                  ) : isReceivedRequest ? (
+                    <>
+                      <button type="button" onClick={acceptRequest} disabled={actionLoading}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium disabled:opacity-50 transition-colors">
+                        {actionLoading ? "…" : "Accept"}
+                      </button>
+                      <button type="button" onClick={declineRequest} disabled={actionLoading}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 text-sm font-medium disabled:opacity-50 transition-colors">
+                        Decline
                       </button>
                     </>
                   ) : isPending ? (
@@ -565,7 +604,7 @@ const InvestorProfilePage = () => {
       </div>
 
       {/* ── CONNECT MODAL ─────────────────────────────────────────────────── */}
-      {showModal && (
+      {showModal && canSendRequest && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0f0d1a] shadow-2xl p-6">
             <div className="flex items-center gap-3 mb-4">

@@ -9,11 +9,12 @@ const Input = ({
   error,
   disabled = false,
   required = false,
+  compact = false,
   className = '',
   icon: Icon,
   ...props
 }) => {
-  const baseClasses = 'w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all duration-200';
+  const baseClasses = `w-full px-4 ${compact ? 'py-2' : 'py-3'} bg-white/5 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all duration-200`;
   const errorClasses = error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : '';
   const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : '';
   const combinedClasses = `${baseClasses} ${errorClasses} ${disabledClasses} ${className}`;
@@ -21,7 +22,7 @@ const Input = ({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className={`block text-sm font-medium text-gray-300 ${compact ? 'mb-1' : 'mb-2'}`}>
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>

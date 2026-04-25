@@ -120,14 +120,18 @@ export async function getConversationsByUserId(userId) {
         SELECT
             c.id AS conversation_id,
             -- Determine the "other" user in the conversation
-            CASE 
+            CASE
                 WHEN c.user1_id = $1 THEN u2.id
                 ELSE u1.id
             END AS other_user_id,
-            CASE 
+            CASE
                 WHEN c.user1_id = $1 THEN u2.full_name
                 ELSE u1.full_name
             END AS other_user_name,
+            CASE
+                WHEN c.user1_id = $1 THEN COALESCE(ip2.photo_url, sp2.logo_url)
+                ELSE COALESCE(ip1.photo_url, sp1.logo_url)
+            END AS other_user_photo_url,
             -- Data from CTEs
             UM.last_message_preview,
             COALESCE(UC.unread_count, 0) AS unread_count,
@@ -137,6 +141,10 @@ export async function getConversationsByUserId(userId) {
         JOIN users u2 ON c.user2_id = u2.id
         JOIN UserMessages UM ON c.id = UM.conversation_id
         LEFT JOIN UnreadCounts UC ON c.id = UC.conversation_id
+        LEFT JOIN investor_profiles ip1 ON ip1.user_id = u1.id AND u1.user_type = 'investor'
+        LEFT JOIN startup_profiles sp1 ON sp1.user_id = u1.id AND u1.user_type = 'startup'
+        LEFT JOIN investor_profiles ip2 ON ip2.user_id = u2.id AND u2.user_type = 'investor'
+        LEFT JOIN startup_profiles sp2 ON sp2.user_id = u2.id AND u2.user_type = 'startup'
         WHERE c.user1_id = $1 OR c.user2_id = $1
         ORDER BY UM.last_message_time DESC;
     `;

@@ -147,10 +147,14 @@ export const getConnectionsForUser = async (userId) => {
         c.updated_at,
         CASE WHEN c.investor_id = $1 THEN c.startup_id ELSE c.investor_id END AS other_user_id,
         u.full_name AS other_user_name,
-        u.user_type AS other_user_type
+        u.user_type AS other_user_type,
+        COALESCE(ip.photo_url, sp.logo_url) AS other_user_photo_url,
+        COALESCE(ip.investor_profile_id, sp.startup_profile_id) AS other_user_profile_id
       FROM public.connections c
       JOIN public.users u
         ON u.id = CASE WHEN c.investor_id = $1 THEN c.startup_id ELSE c.investor_id END
+      LEFT JOIN investor_profiles ip ON ip.user_id = u.id AND u.user_type = 'investor'
+      LEFT JOIN startup_profiles sp ON sp.user_id = u.id AND u.user_type = 'startup'
       WHERE c.investor_id = $1 OR c.startup_id = $1
       ORDER BY c.updated_at DESC NULLS LAST, c.created_at DESC
     `,
@@ -196,10 +200,14 @@ export const getPendingSentRequestsForUser = async (userId) => {
         CASE WHEN c.investor_id = $1 THEN c.startup_id ELSE c.investor_id END AS target_user_id,
         u.full_name AS target_user_name,
         u.user_type AS target_user_type,
-        u.email AS target_user_email
+        u.email AS target_user_email,
+        COALESCE(ip.photo_url, sp.logo_url) AS other_user_photo_url,
+        COALESCE(ip.investor_profile_id, sp.startup_profile_id) AS target_user_profile_id
       FROM public.connections c
       JOIN public.users u
         ON u.id = CASE WHEN c.investor_id = $1 THEN c.startup_id ELSE c.investor_id END
+      LEFT JOIN investor_profiles ip ON ip.user_id = u.id AND u.user_type = 'investor'
+      LEFT JOIN startup_profiles sp ON sp.user_id = u.id AND u.user_type = 'startup'
       WHERE (c.investor_id = $1 OR c.startup_id = $1)
         AND LOWER(c.status) = 'pending'
       ORDER BY c.created_at DESC
@@ -216,10 +224,10 @@ export const getPendingReceivedRequestsForUser = async (userId) => {
     return [];
   }
 
-  const recipientColumn =
-    me.user_type === "startup" ? "startup_id" : "investor_id";
-  const requesterColumn =
-    me.user_type === "startup" ? "investor_id" : "startup_id";
+  // Investors always send requests; only startups receive them.
+  if (me.user_type !== "startup") {
+    return [];
+  }
 
   const result = await pool.query(
     `
@@ -228,13 +236,16 @@ export const getPendingReceivedRequestsForUser = async (userId) => {
         c.status,
         c.created_at,
         c.updated_at,
-        c.${requesterColumn} AS requester_user_id,
+        c.investor_id AS requester_user_id,
         u.full_name AS requester_name,
         u.user_type AS requester_user_type,
-        u.email AS requester_email
+        u.email AS requester_email,
+        ip.photo_url AS other_user_photo_url,
+        ip.investor_profile_id AS requester_profile_id
       FROM public.connections c
-      JOIN public.users u ON u.id = c.${requesterColumn}
-      WHERE c.${recipientColumn} = $1
+      JOIN public.users u ON u.id = c.investor_id
+      LEFT JOIN investor_profiles ip ON ip.user_id = c.investor_id
+      WHERE c.startup_id = $1
         AND LOWER(c.status) = 'pending'
       ORDER BY c.created_at DESC
     `,
@@ -257,7 +268,7 @@ export const removeConnectionById = async ({ connectionId, userId }) => {
   }
 
   const connection = existing.rows[0];
-  if (connection.investor_id !== userId && connection.startup_id !== userId) {
+  if (String(connection.investor_id) !== String(userId) && String(connection.startup_id) !== String(userId)) {
     const error = new Error("You are not allowed to remove this connection");
     error.code = "FORBIDDEN";
     throw error;
@@ -296,7 +307,7 @@ export const updateConnectionStatus = async ({
 
   const connection = existing.rows[0];
 
-  if (connection.startup_id !== userId) {
+  if (String(connection.startup_id) !== String(userId)) {
     const error = new Error(
       "Only the startup user can respond to this connection request",
     );

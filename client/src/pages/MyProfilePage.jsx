@@ -1,245 +1,342 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  Building2, Calendar, DollarSign, Edit3, ExternalLink,
+  Facebook, Globe, Instagram, Linkedin, Mail, MapPin,
+  Phone, Twitter, User, Users,
+} from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import profileService from "../services/profileService";
 import investorProfileService from "../services/investorProfileService";
 
-const parseJsonValue = (value, fallback) => {
+const parseJson = (value, fallback = null) => {
   if (value == null) return fallback;
-  if (typeof value === "string") {
-    try {
-      return JSON.parse(value);
-    } catch {
-      return fallback;
-    }
-  }
-  return value;
+  if (typeof value !== "string") return value;
+  try { return JSON.parse(value); } catch { return fallback; }
 };
 
-const renderValue = (value) => {
-  if (value == null || value === "") return "N/A";
-  if (Array.isArray(value)) return value.join(", ") || "N/A";
-  if (typeof value === "object") {
-    const vals = Object.values(value).filter(Boolean);
-    return vals.length ? vals.join(", ") : "N/A";
-  }
-  return String(value);
+const formatDate = (value) => {
+  if (!value) return null;
+  const d = new Date(value);
+  if (isNaN(d)) return value;
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 };
 
-const InfoRow = ({ label, value }) => (
-  <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 py-2 border-b border-white/10">
-    <span className="text-sm text-gray-400 md:w-56">{label}</span>
-    <span className="text-sm text-gray-100 break-words">
-      {renderValue(value)}
-    </span>
+const formatCurrency = (value) => {
+  if (!value && value !== 0) return null;
+  const n = Number(value);
+  if (isNaN(n)) return String(value);
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n}`;
+};
+
+const Section = ({ title, children }) => (
+  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+    <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{title}</h2>
+    {children}
   </div>
 );
+
+const Field = ({ label, value, wide }) => {
+  if (!value && value !== 0) return null;
+  return (
+    <div className={wide ? "col-span-full" : ""}>
+      <p className="text-xs text-gray-500 mb-1">{label}</p>
+      <p className="text-sm text-gray-100 leading-relaxed whitespace-pre-line break-words">{value}</p>
+    </div>
+  );
+};
+
+const TagList = ({ label, items }) => {
+  if (!items?.length) return null;
+  return (
+    <div className="col-span-full">
+      <p className="text-xs text-gray-500 mb-2">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item, i) => (
+          <span key={i} className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-gray-200">
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const SocialLinks = ({ links, platform }) => {
+  const PLATFORMS = {
+    linkedin: { icon: Linkedin, label: "LinkedIn", color: "hover:border-blue-400/50 hover:text-blue-400" },
+    twitter:  { icon: Twitter,  label: "Twitter / X", color: "hover:border-sky-400/50 hover:text-sky-400" },
+    facebook: { icon: Facebook, label: "Facebook", color: "hover:border-blue-500/50 hover:text-blue-500" },
+    instagram:{ icon: Instagram,label: "Instagram", color: "hover:border-pink-400/50 hover:text-pink-400" },
+    website:  { icon: Globe,    label: "Website", color: "hover:border-emerald-400/50 hover:text-emerald-400" },
+  };
+
+  const entries = Object.entries(links || {}).filter(([, v]) => v);
+  if (!entries.length) return null;
+
+  return (
+    <div className="col-span-full">
+      <p className="text-xs text-gray-500 mb-2">Social / Links</p>
+      <div className="flex flex-wrap gap-2">
+        {entries.map(([key, url]) => {
+          const cfg = PLATFORMS[key] || { icon: Globe, label: key, color: "hover:border-white/30" };
+          const Icon = cfg.icon;
+          const href = url.startsWith("http") ? url : `https://${url}`;
+          return (
+            <a
+              key={key}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-xs text-gray-300 transition-all ${cfg.color}`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {cfg.label}
+              <ExternalLink className="w-3 h-3 opacity-50" />
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 const MyProfilePage = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError("");
-
-      const result =
-        user?.userType === "investor"
+      try {
+        const result = user?.userType === "investor"
           ? await investorProfileService.getMyProfile()
           : await profileService.getMyProfile();
 
-      if (!result.success) {
-        setError(result.error || "Failed to load profile");
-        setProfile(null);
-        setLoading(false);
-        return;
+        if (!result.success) { setError(result.error || "Failed to load profile"); setLoading(false); return; }
+        setProfile(result.data?.data || result.data || null);
+      } catch {
+        setError("Network error — check your connection and try again.");
       }
-
-      const data = result.data?.data || result.data || null;
-      setProfile(data);
       setLoading(false);
     };
-
     load();
-  }, [user?.userType]);
+  }, [user?.userType, retryCount]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen px-6 py-10 text-gray-300">
-        Loading profile...
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="w-10 h-10 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
+    </div>
+  );
 
-  if (error) {
-    return (
-      <div className="min-h-screen px-6 py-10">
-        <div className="max-w-5xl mx-auto rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-100">
-          {error}
-        </div>
+  if (error) return (
+    <div className="min-h-screen px-6 py-10">
+      <div className="max-w-3xl mx-auto rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-100 flex items-center justify-between gap-4">
+        <span>{error}</span>
+        <button
+          onClick={() => setRetryCount((c) => c + 1)}
+          className="shrink-0 px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-200 text-sm hover:bg-rose-500/30 transition-colors"
+        >
+          Retry
+        </button>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (!profile) {
-    return (
-      <div className="min-h-screen px-6 py-10">
-        <div className="max-w-5xl mx-auto rounded-xl border border-white/15 bg-black/45 p-5 text-gray-200">
-          Profile not created yet. Complete onboarding first.
-        </div>
+  if (!profile) return (
+    <div className="min-h-screen px-6 py-10">
+      <div className="max-w-3xl mx-auto rounded-xl border border-white/15 bg-black/45 p-6 text-gray-300">
+        Profile not created yet.{" "}
+        <Link to={user?.userType === "investor" ? "/investor-onboarding" : "/onboarding"} className="text-blue-400 underline">
+          Complete onboarding
+        </Link>
       </div>
-    );
-  }
+    </div>
+  );
 
   const isInvestor = user?.userType === "investor";
-  const profileImage = isInvestor
-    ? profile?.photo_url
-    : profile?.team_photo_url;
-  const investorSocial = parseJsonValue(profile.social_media, {});
-  const startupSocial = parseJsonValue(
-    profile.social_media_links || profile.social_media,
-    {},
-  );
+
+  if (isInvestor) {
+    const social = parseJson(profile.social_media, {});
+    const industries = parseJson(profile.industries_of_interest, []);
+    const geoPrefs = parseJson(profile.geographic_preference, []);
+    const stagePrefs = parseJson(profile.stage_preference, []);
+    const structures = parseJson(profile.investment_structure, []);
+
+    return (
+      <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
+        <div className="max-w-3xl mx-auto space-y-4">
+          {/* Header card */}
+          <div className="rounded-xl border border-white/15 bg-black/45 p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+              <div className="w-20 h-20 rounded-2xl border border-white/15 bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+                {profile.photo_url
+                  ? <img src={profile.photo_url} alt="Profile" className="w-full h-full object-cover" />
+                  : <User className="w-8 h-8 text-gray-500" />}
+              </div>
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold text-white">{profile.name_or_firm || "—"}</h1>
+                <p className="text-gray-400 text-sm mt-0.5">{profile.investor_type?.replace(/_/g, " ")} · {profile.years_of_experience} yrs experience</p>
+              </div>
+              <Link to="/profile/edit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity shrink-0">
+                <Edit3 className="w-4 h-4" /> Edit Profile
+              </Link>
+            </div>
+          </div>
+
+          <Section title="Investment Focus">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Investment Thesis" value={profile.investment_thesis} wide />
+              <TagList label="Industries of Interest" items={Array.isArray(industries) ? industries : []} />
+              <TagList label="Geographic Preference" items={Array.isArray(geoPrefs) ? geoPrefs : []} />
+              <TagList label="Stage Preference" items={Array.isArray(stagePrefs) ? stagePrefs : []} />
+              <TagList label="Investment Structure" items={Array.isArray(structures) ? structures : []} />
+              <Field label="Min Check Size" value={formatCurrency(profile.min_investment_size)} />
+              <Field label="Max Check Size" value={formatCurrency(profile.max_investment_size)} />
+              <Field label="Investment Timeline" value={profile.investment_timeline} />
+              <Field label="Follow-On Investment" value={profile.follow_on_investment ? "Yes" : "No"} />
+            </div>
+          </Section>
+
+          <Section title="Background & Criteria">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Professional Background" value={profile.professional_background} wide />
+              <Field label="What I Look For" value={profile.what_you_look_for} wide />
+              <Field label="Value Add" value={profile.value_add} wide />
+              <Field label="Deal Breakers" value={profile.deal_breakers} wide />
+              <Field label="Network & Resources" value={profile.network_resources} wide />
+            </div>
+          </Section>
+
+          <Section title="Portfolio">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Number of Investments" value={profile.number_of_investments} />
+              <Field label="Successful Exits" value={profile.successful_exits} />
+              <Field label="Portfolio Companies" value={profile.portfolio_companies} wide />
+              <Field label="Notable Achievements" value={profile.notable_achievements} wide />
+            </div>
+          </Section>
+
+          <Section title="Contact">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Email" value={profile.primary_contact_email} />
+              <Field label="Phone" value={profile.phone_number} />
+              <Field label="Preferred Contact Method" value={profile.preferred_contact_method} />
+              <SocialLinks links={social} />
+            </div>
+          </Section>
+        </div>
+      </div>
+    );
+  }
+
+  // Startup profile
+  const social = parseJson(profile.social_media_links || profile.social_media, {});
+  const founders = parseJson(profile.founder_names, null);
+  const founderDisplay = Array.isArray(founders)
+    ? founders.join(" · ")
+    : typeof founders === "string"
+    ? founders
+    : profile.founder_names;
 
   return (
     <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-      <div className="max-w-5xl mx-auto space-y-4">
+      <div className="max-w-3xl mx-auto space-y-4">
+        {/* Header card */}
         <div className="rounded-xl border border-white/15 bg-black/45 p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-white">My Profile</h1>
-              <p className="text-gray-300 mt-1">
-                Review your current profile information.
-              </p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+            <div className="w-20 h-20 rounded-2xl border border-white/15 bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+              {profile.logo_url
+                ? <img src={profile.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                : <Building2 className="w-8 h-8 text-gray-500" />}
             </div>
-            <Link
-              to="/profile/edit"
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 transition-opacity"
-            >
-              Edit Profile
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-white">{profile.company_name || "—"}</h1>
+              {profile.tagline && <p className="text-gray-400 text-sm mt-0.5">{profile.tagline}</p>}
+              <div className="flex flex-wrap items-center gap-3 mt-2">
+                {profile.industry && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-400/20 text-xs text-blue-300">{profile.industry}</span>
+                )}
+                {profile.current_stage && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/20 text-xs text-emerald-300">{profile.current_stage.replace(/_/g, " ")}</span>
+                )}
+              </div>
+            </div>
+            <Link to="/profile/edit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity shrink-0">
+              <Edit3 className="w-4 h-4" /> Edit Profile
             </Link>
           </div>
         </div>
 
-        <div className="rounded-xl border border-white/15 bg-black/45 p-6">
-          {profileImage && (
-            <div className="mb-5 pb-4 border-b border-white/10 flex items-center gap-4">
-              <img
-                src={profileImage}
-                alt="Profile"
-                className="w-16 h-16 rounded-full object-cover border border-white/20"
-              />
-              <div className="text-sm text-gray-300">
-                Current {isInvestor ? "photo" : "team photo"}
-              </div>
-            </div>
-          )}
+        <Section title="Company Overview">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Detailed Description" value={profile.detailed_description} wide />
+            <Field label="Founder(s)" value={founderDisplay} wide />
+            <Field label="Founded" value={formatDate(profile.founded_date)} />
+            <Field label="Team Size" value={profile.team_size ? `${profile.team_size} people` : null} />
+            <Field label="Industry" value={profile.industry} />
+            <Field label="Current Stage" value={profile.current_stage?.replace(/_/g, " ")} />
+          </div>
+        </Section>
 
-          {isInvestor ? (
-            <>
-              <InfoRow label="Name / Firm" value={profile.name_or_firm} />
-              <InfoRow label="Investor Type" value={profile.investor_type} />
-              <InfoRow
-                label="Experience (Years)"
-                value={profile.years_of_experience}
-              />
-              <InfoRow
-                label="Industries of Interest"
-                value={parseJsonValue(
-                  profile.industries_of_interest,
-                  profile.industries_of_interest,
-                )}
-              />
-              <InfoRow
-                label="Geographic Preference"
-                value={parseJsonValue(
-                  profile.geographic_preference,
-                  profile.geographic_preference,
-                )}
-              />
-              <InfoRow
-                label="Stage Preference"
-                value={parseJsonValue(
-                  profile.stage_preference,
-                  profile.stage_preference,
-                )}
-              />
-              <InfoRow
-                label="Min Check Size"
-                value={profile.min_investment_size}
-              />
-              <InfoRow
-                label="Max Check Size"
-                value={profile.max_investment_size}
-              />
-              <InfoRow
-                label="Investment Structure"
-                value={parseJsonValue(
-                  profile.investment_structure,
-                  profile.investment_structure,
-                )}
-              />
-              <InfoRow
-                label="Investment Timeline"
-                value={profile.investment_timeline}
-              />
-              <InfoRow
-                label="Investment Thesis"
-                value={profile.investment_thesis}
-              />
-              <InfoRow
-                label="What You Look For"
-                value={profile.what_you_look_for}
-              />
-              <InfoRow label="Value Add" value={profile.value_add} />
-              <InfoRow
-                label="Primary Contact Email"
-                value={profile.primary_contact_email}
-              />
-              <InfoRow label="Phone Number" value={profile.phone_number} />
-              <InfoRow
-                label="Preferred Contact Method"
-                value={profile.preferred_contact_method}
-              />
-              <InfoRow label="Social" value={investorSocial} />
-            </>
-          ) : (
-            <>
-              <InfoRow label="Company Name" value={profile.company_name} />
-              <InfoRow label="Tagline" value={profile.tagline} />
-              <InfoRow
-                label="Detailed Description"
-                value={profile.detailed_description}
-              />
-              <InfoRow label="Industry" value={profile.industry} />
-              <InfoRow label="Founded Date" value={profile.founded_date} />
-              <InfoRow label="Current Stage" value={profile.current_stage} />
-              <InfoRow label="Funding Stage" value={profile.funding_stage} />
-              <InfoRow label="Amount Seeking" value={profile.amount_seeking} />
-              <InfoRow label="Revenue Status" value={profile.revenue_status} />
-              <InfoRow label="Founder Names" value={profile.founder_names} />
-              <InfoRow
-                label="Primary Contact Name"
-                value={profile.primary_contact_name}
-              />
-              <InfoRow label="Contact Email" value={profile.contact_email} />
-              <InfoRow label="Phone Number" value={profile.phone_number} />
-              <InfoRow label="Pitch Deck URL" value={profile.pitch_deck_url} />
-              <InfoRow
-                label="Business Plan URL"
-                value={profile.business_plan_url}
-              />
-              <InfoRow
-                label="Product Demo URL"
-                value={profile.product_demo_url}
-              />
-              <InfoRow label="Social" value={startupSocial} />
-            </>
-          )}
-        </div>
+        <Section title="Team & Traction">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Key Team Members" value={profile.key_team_members} wide />
+            <Field label="Key Metrics" value={profile.key_metrics} wide />
+            <Field label="Major Achievements" value={profile.major_achievements} wide />
+            <Field label="Customer Testimonials" value={profile.customer_testimonials} wide />
+          </div>
+        </Section>
+
+        <Section title="Funding">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Funding Stage" value={profile.funding_stage?.replace(/_/g, " ")} />
+            <Field label="Revenue Status" value={profile.revenue_status?.replace(/_/g, " ")} />
+            <Field label="Amount Seeking" value={formatCurrency(profile.amount_seeking)} />
+            <Field label="Previous Funding" value={profile.previous_funding ? formatCurrency(profile.previous_funding) : "None"} />
+            <Field label="Use of Funds" value={profile.use_of_funds} wide />
+          </div>
+        </Section>
+
+        {(profile.pitch_deck_url || profile.business_plan_url || profile.product_demo_url) && (
+          <Section title="Investor Materials">
+            <div className="flex flex-wrap gap-3">
+              {profile.pitch_deck_url && (
+                <a href={profile.pitch_deck_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all">
+                  <ExternalLink className="w-4 h-4" /> Pitch Deck
+                </a>
+              )}
+              {profile.business_plan_url && (
+                <a href={profile.business_plan_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all">
+                  <ExternalLink className="w-4 h-4" /> Business Plan
+                </a>
+              )}
+              {profile.product_demo_url && (
+                <a href={profile.product_demo_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all">
+                  <ExternalLink className="w-4 h-4" /> Product Demo
+                </a>
+              )}
+            </div>
+          </Section>
+        )}
+
+        <Section title="Contact">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Contact Name" value={profile.primary_contact_name} />
+            <Field label="Contact Email" value={profile.contact_email} />
+            <Field label="Phone" value={profile.phone_number} />
+            <SocialLinks links={social} />
+          </div>
+        </Section>
       </div>
     </div>
   );

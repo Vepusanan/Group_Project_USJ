@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { LayoutGrid, List, MapPin, Tag, Rocket } from "lucide-react";
 import { apiService } from "../services/apiService";
+import { useAuth } from "../hooks/useAuth";
 
 const defaultFilters = {
   q: "",
@@ -66,7 +67,7 @@ const STAGE_LABEL = {
   SERIES_B: "Series B", SERIES_C: "Series C", SERIES_D_PLUS: "Series D+",
 };
 
-const StartupCard = ({ startup, onConnect, isConnecting, isListView }) => {
+const StartupCard = ({ startup, onConnect, isConnecting, isListView, canSendRequest }) => {
   const startupProfileId = startup.startup_profile_id || startup.id;
   const connectionStatus = startup.connection_status || "not_connected";
   const canConnect = !["self", "pending", "accepted"].includes(connectionStatus);
@@ -86,8 +87,11 @@ const StartupCard = ({ startup, onConnect, isConnecting, isListView }) => {
       <div className="group relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.02] hover:border-emerald-500/25 hover:from-white/[0.07] hover:to-white/[0.03] backdrop-blur-sm transition-all duration-300 p-4">
         <div className="flex items-center gap-4">
           {/* Avatar */}
-          <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg`}>
-            <span className="text-white font-bold text-base">{avatarInitial}</span>
+          <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden`}>
+            {startup.logo_url
+              ? <img src={startup.logo_url} alt={name} className="w-full h-full object-cover" />
+              : <span className="text-white font-bold text-base">{avatarInitial}</span>
+            }
           </div>
 
           {/* Info */}
@@ -119,21 +123,23 @@ const StartupCard = ({ startup, onConnect, isConnecting, isListView }) => {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <Link
               to={profileUrl}
               className="px-3 py-1.5 text-xs rounded-lg border border-white/20 text-gray-300 hover:text-white hover:border-white/40 hover:bg-white/5 transition-all"
             >
               View Profile
             </Link>
-            <button
-              type="button"
-              disabled={!canConnect || isConnecting}
-              onClick={() => onConnect(startup.user_id)}
-              className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/30"
-            >
-              {connectLabel}
-            </button>
+            {canSendRequest && (
+              <button
+                type="button"
+                disabled={!canConnect || isConnecting}
+                onClick={() => onConnect(startup.user_id)}
+                className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/30"
+              >
+                {connectLabel}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -148,8 +154,11 @@ const StartupCard = ({ startup, onConnect, isConnecting, isListView }) => {
       <div className="p-5 flex flex-col flex-1">
         {/* Header row */}
         <div className="flex items-start gap-3">
-          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg`}>
-            <span className="text-white font-bold text-lg">{avatarInitial}</span>
+          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden`}>
+            {startup.logo_url
+              ? <img src={startup.logo_url} alt={name} className="w-full h-full object-cover" />
+              : <span className="text-white font-bold text-lg">{avatarInitial}</span>
+            }
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-semibold text-white leading-tight truncate">{name}</h3>
@@ -190,14 +199,16 @@ const StartupCard = ({ startup, onConnect, isConnecting, isListView }) => {
           >
             View Profile
           </Link>
-          <button
-            type="button"
-            disabled={!canConnect || isConnecting}
-            onClick={() => onConnect(startup.user_id)}
-            className="flex-1 px-3 py-2 text-xs rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/40"
-          >
-            {connectLabel}
-          </button>
+          {canSendRequest && (
+            <button
+              type="button"
+              disabled={!canConnect || isConnecting}
+              onClick={() => onConnect(startup.user_id)}
+              className="flex-1 px-3 py-2 text-xs rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/40"
+            >
+              {connectLabel}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -205,6 +216,7 @@ const StartupCard = ({ startup, onConnect, isConnecting, isListView }) => {
 };
 
 const StartupsPage = () => {
+  const { user } = useAuth();
   const [filters, setFilters] = useState(defaultFilters);
   const [startups, setStartups] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -381,6 +393,7 @@ const StartupsPage = () => {
                   onConnect={handleConnect}
                   isConnecting={connectingUserId === startup.user_id}
                   isListView={isListView}
+                  canSendRequest={user?.userType === "investor"}
                 />
               ))}
             </div>

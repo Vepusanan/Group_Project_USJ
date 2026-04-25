@@ -119,6 +119,7 @@ export class StartupProfile {
       contact_email: this.contact_email,
       contact_phone: this.phone_number,
       phone_number: this.phone_number,
+      logo_url: this.logo_url,
       social_media_links: this.social_media_links,
       social_media: this.social_media_links,
       created_at: this.created_at,

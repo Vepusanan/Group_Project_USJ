@@ -53,8 +53,9 @@ const MessagesPage = () => {
     const params = new URLSearchParams(location.search);
     const userId = params.get("userId");
     const name = params.get("name") || "User";
+    const photo = params.get("photo") || null;
     if (!userId) return null;
-    return { userId, name };
+    return { userId, name, photo };
   }, [location.search]);
 
   const loadConversations = useCallback(async (isBackground = false) => {
@@ -87,6 +88,7 @@ const MessagesPage = () => {
           setComposeTarget({
             other_user_id: queryTarget.userId,
             other_user_name: queryTarget.name,
+            other_user_photo_url: queryTarget.photo || null,
           });
         }
       } else if (!selectedConversation && list.length > 0) {
@@ -340,8 +342,18 @@ const MessagesPage = () => {
                     onClick={() => { setSelectedConversation(null); }}
                     className="w-full text-left px-3 py-3 border-b border-white/10 bg-purple-500/15 border-l-2 border-l-purple-400"
                   >
-                    <p className="text-white text-sm font-medium">{composeTarget.other_user_name}</p>
-                    <p className="text-xs text-gray-400 truncate">New conversation</p>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {composeTarget.other_user_photo_url
+                          ? <img src={composeTarget.other_user_photo_url} alt={composeTarget.other_user_name} className="w-full h-full object-cover" />
+                          : <span className="text-xs font-semibold text-white/50">{(composeTarget.other_user_name || "U").charAt(0).toUpperCase()}</span>
+                        }
+                      </div>
+                      <div>
+                        <p className="text-white text-sm font-medium">{composeTarget.other_user_name}</p>
+                        <p className="text-xs text-gray-400">New conversation</p>
+                      </div>
+                    </div>
                   </button>
                 )}
 
@@ -361,10 +373,11 @@ const MessagesPage = () => {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-semibold text-white/50">
-                              {(conversation.other_user_name || "U").charAt(0).toUpperCase()}
-                            </span>
+                          <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {conversation.other_user_photo_url
+                              ? <img src={conversation.other_user_photo_url} alt={conversation.other_user_name} className="w-full h-full object-cover" />
+                              : <span className="text-xs font-semibold text-white/50">{(conversation.other_user_name || "U").charAt(0).toUpperCase()}</span>
+                            }
                           </div>
                           <div className="min-w-0">
                             <p className="text-white text-sm font-medium truncate">
@@ -404,24 +417,24 @@ const MessagesPage = () => {
             ) : (
               <>
                 {/* Chat header */}
-                <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-white/50">
-                        {(selectedConversation?.other_user_name || composeTarget?.other_user_name || "U")
-                          .charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <h3 className="text-white font-semibold">
+                <div className="px-5 py-3 border-b border-white/10 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {(selectedConversation?.other_user_photo_url || composeTarget?.other_user_photo_url)
+                      ? <img src={selectedConversation?.other_user_photo_url || composeTarget?.other_user_photo_url} alt="" className="w-full h-full object-cover" />
+                      : <span className="text-sm font-bold text-white/60">{(selectedConversation?.other_user_name || composeTarget?.other_user_name || "U").charAt(0).toUpperCase()}</span>
+                    }
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold leading-tight">
                       {selectedConversation?.other_user_name || composeTarget?.other_user_name || "User"}
                     </h3>
                   </div>
                 </div>
 
                 {/* Messages area */}
-                <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-2">
+                <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-1">
                   {messageLoading && (
-                    <div className="flex justify-center">
+                    <div className="flex justify-center py-4">
                       <div className="w-5 h-5 border-4 border-purple-600/30 border-t-purple-600 rounded-full animate-spin" />
                     </div>
                   )}
@@ -433,54 +446,63 @@ const MessagesPage = () => {
                     </div>
                   )}
 
-                  {messages.map((message) => {
+                  {messages.map((message, idx) => {
                     const isMine = String(message.sender_id) === String(user?.id);
+                    const prevMsg = messages[idx - 1];
+                    const nextMsg = messages[idx + 1];
+                    const isFirstInGroup = !prevMsg || String(prevMsg.sender_id) !== String(message.sender_id);
+                    const isLastInGroup = !nextMsg || String(nextMsg.sender_id) !== String(message.sender_id);
+                    const otherPhoto = selectedConversation?.other_user_photo_url || composeTarget?.other_user_photo_url;
+                    const otherName = selectedConversation?.other_user_name || composeTarget?.other_user_name || "User";
+
                     return (
-                      <div key={message.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                        <div
-                          className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 border ${
+                      <div key={message.id} className={`flex items-end gap-2 ${isMine ? "justify-end" : "justify-start"} ${isFirstInGroup ? "mt-3" : "mt-0.5"}`}>
+                        {/* Avatar for received messages */}
+                        {!isMine && (
+                          <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center mb-0.5">
+                            {isLastInGroup ? (
+                              otherPhoto
+                                ? <img src={otherPhoto} alt={otherName} className="w-full h-full object-cover" />
+                                : <span className="text-[10px] font-bold text-white/50">{otherName.charAt(0).toUpperCase()}</span>
+                            ) : null}
+                          </div>
+                        )}
+
+                        <div className={`max-w-[75%] md:max-w-[60%] flex flex-col ${isMine ? "items-end" : "items-start"}`}>
+                          {isFirstInGroup && !isMine && (
+                            <span className="text-[11px] text-gray-500 mb-1 ml-1">{otherName}</span>
+                          )}
+                          <div className={`px-4 py-2.5 text-sm break-words ${
                             isMine
-                              ? "bg-gradient-to-r from-purple-700/90 to-indigo-700/90 border-purple-400/40 text-white"
-                              : "bg-black/35 border-white/15 text-gray-100"
-                          }`}
-                        >
-                          <p className={`text-[11px] mb-1 font-medium ${isMine ? "text-purple-100" : "text-gray-400"}`}>
-                            {isMine
-                              ? "You"
-                              : selectedConversation?.other_user_name || composeTarget?.other_user_name || "User"}
-                          </p>
-
-                          {message.text && (
-                            <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+                              ? `bg-gradient-to-br from-purple-600 to-indigo-600 text-white ${isFirstInGroup ? "rounded-t-2xl" : "rounded-t-lg"} rounded-bl-2xl ${isLastInGroup ? "rounded-br-sm" : "rounded-br-lg"}`
+                              : `bg-white/8 border border-white/10 text-gray-100 ${isFirstInGroup ? "rounded-t-2xl" : "rounded-t-lg"} rounded-br-2xl ${isLastInGroup ? "rounded-bl-sm" : "rounded-bl-lg"}`
+                          }`}>
+                            {message.text && (
+                              <p className="whitespace-pre-wrap">{message.text}</p>
+                            )}
+                            {message.attachment_url && (
+                              <div className={message.text ? "mt-2" : ""}>
+                                {isImageAttachment(message.attachment_url) ? (
+                                  <a href={message.attachment_url} target="_blank" rel="noreferrer">
+                                    <img src={message.attachment_url} alt="Attachment" className="max-h-56 rounded-lg border border-white/15" />
+                                  </a>
+                                ) : (
+                                  <a href={message.attachment_url} target="_blank" rel="noreferrer" className="text-blue-300 hover:text-blue-200 underline">
+                                    View attachment
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {isLastInGroup && (
+                            <span className={`text-[10px] mt-1 ${isMine ? "text-gray-500 mr-1" : "text-gray-600 ml-1"}`}>
+                              {formatTime(message.created_at)}
+                            </span>
                           )}
-
-                          {message.attachment_url && (
-                            <div className="mt-2">
-                              {isImageAttachment(message.attachment_url) ? (
-                                <a href={message.attachment_url} target="_blank" rel="noreferrer">
-                                  <img
-                                    src={message.attachment_url}
-                                    alt="Attachment"
-                                    className="max-h-56 rounded-lg border border-white/15"
-                                  />
-                                </a>
-                              ) : (
-                                <a
-                                  href={message.attachment_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-blue-200 hover:text-blue-100 text-sm underline"
-                                >
-                                  View attachment
-                                </a>
-                              )}
-                            </div>
-                          )}
-
-                          <p className={`text-[10px] mt-2 ${isMine ? "text-purple-100/70" : "text-gray-500"}`}>
-                            {formatTime(message.created_at)}
-                          </p>
                         </div>
+
+                        {/* Spacer for sent messages to keep avatar column width consistent */}
+                        {isMine && <div className="w-7 flex-shrink-0" />}
                       </div>
                     );
                   })}
@@ -488,82 +510,80 @@ const MessagesPage = () => {
                 </div>
 
                 {/* Compose area */}
-                <form onSubmit={handleSend} className="px-4 pt-3 pb-4 border-t border-white/10 space-y-2">
-                  <div className="flex gap-2">
+                <form onSubmit={handleSend} className="px-4 py-3 border-t border-white/10">
+                  {/* Upload progress */}
+                  {sending && attachmentProgress > 0 && attachmentProgress < 100 && (
+                    <div className="h-1 bg-white/10 rounded-full overflow-hidden mb-2">
+                      <div className="h-full bg-purple-500 transition-all" style={{ width: `${attachmentProgress}%` }} />
+                    </div>
+                  )}
+
+                  {/* Attachment preview */}
+                  {attachmentFile && (
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <span className="text-xs text-gray-300 truncate max-w-[260px]">{attachmentFile.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => { setAttachmentFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                        className="text-gray-500 hover:text-gray-300 text-xs flex-shrink-0"
+                      >✕</button>
+                    </div>
+                  )}
+
+                  {/* Input row */}
+                  <div className="flex items-center gap-2">
+                    {/* Attach button */}
+                    <label className="cursor-pointer flex-shrink-0">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,application/pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          if (!file) return;
+                          if (file.size > 10 * 1024 * 1024) {
+                            setError("Attachment must be 10 MB or smaller");
+                            return;
+                          }
+                          setAttachmentFile(file);
+                          setError("");
+                        }}
+                      />
+                      <span className="flex items-center justify-center w-10 h-10 rounded-xl border border-white/15 text-gray-400 hover:text-white hover:border-white/30 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                          <path fillRule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
+                        </svg>
+                      </span>
+                    </label>
+
+                    {/* Textarea */}
                     <textarea
                       value={text}
-                      onChange={(e) => {
-                        if (e.target.value.length <= MAX_CHARS) setText(e.target.value);
-                      }}
+                      onChange={(e) => { if (e.target.value.length <= MAX_CHARS) setText(e.target.value); }}
                       onKeyDown={handleKeyDown}
-                      rows={2}
-                      placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
-                      className="flex-1 rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500 text-sm resize-none"
+                      rows={1}
+                      placeholder="Type a message…"
+                      className="flex-1 rounded-xl bg-white/5 border border-white/15 px-4 py-2.5 text-white placeholder:text-gray-500 text-sm resize-none focus:outline-none focus:border-purple-500/50 transition-colors leading-5"
+                      style={{ height: "42px", maxHeight: "120px", overflowY: "auto" }}
                     />
+
+                    {/* Send button */}
                     <button
                       type="submit"
                       disabled={sending || (!text.trim() && !attachmentFile)}
-                      className="px-4 py-2 self-end rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm disabled:opacity-40 hover:opacity-90 transition-opacity"
+                      className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white disabled:opacity-40 hover:opacity-90 transition-opacity"
                     >
-                      {sending ? "…" : "Send"}
+                      {sending ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                          <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                        </svg>
+                      )}
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <label className="cursor-pointer">
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*,application/pdf"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0] || null;
-                            if (!file) return;
-                            if (file.size > 10 * 1024 * 1024) {
-                              setError("Attachment must be 10 MB or smaller");
-                              return;
-                            }
-                            setAttachmentFile(file);
-                            setError("");
-                          }}
-                        />
-                        <span className="text-xs text-gray-400 hover:text-gray-200 border border-white/15 rounded-md px-2 py-1 transition-colors">
-                          Attach file
-                        </span>
-                      </label>
-                      {attachmentFile && (
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-xs text-gray-300 truncate max-w-[180px]">
-                            {attachmentFile.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAttachmentFile(null);
-                              if (fileInputRef.current) fileInputRef.current.value = "";
-                            }}
-                            className="text-gray-500 hover:text-gray-300 text-xs flex-shrink-0"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <span className={`text-[11px] flex-shrink-0 ${charsLeft < 200 ? "text-amber-400" : "text-gray-600"}`}>
-                      {charsLeft.toLocaleString()} left
-                    </span>
-                  </div>
-
-                  {sending && attachmentProgress > 0 && attachmentProgress < 100 && (
-                    <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-purple-500 transition-all"
-                        style={{ width: `${attachmentProgress}%` }}
-                      />
-                    </div>
-                  )}
                 </form>
               </>
             )}

@@ -180,9 +180,10 @@ const StartupProfilePage = () => {
     </div>
   );
 
-  const isOwn      = !!(user?.id && profile?.user_id && user.id === profile.user_id);
+  const isOwn       = !!(user?.id && profile?.user_id && user.id === profile.user_id);
   const isConnected = connectionStatus === "accepted";
   const isPending   = connectionStatus === "pending";
+  const canSendRequest = user?.userType === "investor";
 
   const name = profile.company_name || "Startup";
   const [gFrom, gTo] = getGradient(name);
@@ -210,6 +211,7 @@ const StartupProfilePage = () => {
 
   const goMessage = () => {
     const p = new URLSearchParams({ userId: String(profile.user_id), name });
+    if (profile.logo_url) p.set("photo", profile.logo_url);
     navigate(`/messages?${p}`);
   };
 
@@ -271,7 +273,7 @@ const StartupProfilePage = () => {
               </div>
 
               {/* CTA */}
-              {!isOwn && (
+              {!isOwn && (canSendRequest || isConnected) && (
                 <div className="flex gap-2 pb-1">
                   {isConnected ? (
                     <>
@@ -541,7 +543,7 @@ const StartupProfilePage = () => {
       </div>
 
       {/* ── CONNECT MODAL ─────────────────────────────────────────────────── */}
-      {showModal && (
+      {showModal && canSendRequest && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0f0d1a] shadow-2xl p-6">
             <div className="flex items-center gap-3 mb-4">

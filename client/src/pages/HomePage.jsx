@@ -21,9 +21,11 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black overflow-hidden bg-[url('../../public/images/hero-background/hero-background.png')] bg-cover bg-center relative z-10">
-      {/* Header Section */}
-      <div className="relative w-full max-w-full flex justify-between items-center px-6 py-4 md:px-8 lg:px-12 xl:px-16 mb-4">
+    <div className="relative">
+      {/* ── HERO SECTION — full viewport height ── */}
+      <div className="h-screen bg-black bg-[url('../../public/images/hero-background/hero-background.png')] bg-cover bg-center relative z-10 flex flex-col overflow-hidden">
+        {/* Header Section */}
+        <div className="relative w-full max-w-full flex justify-between items-center px-6 py-4 md:px-8 lg:px-12 xl:px-16 mb-4">
         {/* Logo Section */}
         <Link to="/" className="flex items-center space-x-2 group">
           <div className="w-8 h-8 flex items-center justify-center">
@@ -201,6 +203,106 @@ const HomePage = () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+      </div>{/* end hero */}
+
+      {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
+      <div className="relative bg-[#080808] border-t border-white/5">
+        <div className="container mx-auto px-6 md:px-10 lg:px-20 py-24">
+
+          {/* Section header */}
+          <div className="text-center mb-16">
+            <span className="inline-block px-4 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold tracking-widest uppercase mb-4">
+              How it works
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              From Profile to Partnership
+            </h2>
+            <p className="text-gray-400 max-w-xl mx-auto text-base leading-relaxed">
+              Three simple steps to connect founders with the right investors and turn ideas into funded ventures.
+            </p>
+          </div>
+
+          {/* Steps */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10 relative">
+            {/* Connector line (desktop) */}
+            <div className="hidden md:block absolute top-10 left-[calc(16.67%+1rem)] right-[calc(16.67%+1rem)] h-px bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
+
+            {[
+              {
+                number: "01",
+                title: "Create Your Profile",
+                description: "Startups showcase their vision, team, traction, and funding needs. Investors highlight their thesis, check size, and portfolio focus.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                    <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                  </svg>
+                ),
+                accent: "from-purple-600 to-indigo-600",
+                border: "border-purple-500/20",
+                glow: "bg-purple-500/5",
+              },
+              {
+                number: "02",
+                title: "Discover & Connect",
+                description: "Browse curated profiles filtered by industry, stage, and location. Send connection requests to the partners that match your goals.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                    <path d="M8.25 10.875a2.625 2.625 0 115.25 0 2.625 2.625 0 01-5.25 0z" />
+                    <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.125 4.5a4.125 4.125 0 102.338 7.524l2.007 2.006a.75.75 0 101.06-1.06l-2.006-2.007a4.125 4.125 0 00-3.399-6.463z" clipRule="evenodd" />
+                  </svg>
+                ),
+                accent: "from-blue-600 to-cyan-600",
+                border: "border-blue-500/20",
+                glow: "bg-blue-500/5",
+              },
+              {
+                number: "03",
+                title: "Collaborate & Grow",
+                description: "Once connected, message directly, share pitch decks, and build the relationships that turn promising startups into success stories.",
+                icon: (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                    <path d="M4.5 6.375a4.125 4.125 0 118.25 0 4.125 4.125 0 01-8.25 0zM14.25 8.625a3.375 3.375 0 116.75 0 3.375 3.375 0 01-6.75 0zM1.5 19.125a7.125 7.125 0 0114.25 0v.003l-.001.119a.75.75 0 01-.363.63 13.067 13.067 0 01-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 01-.364-.63l-.001-.122zM17.25 19.128l-.001.144a2.25 2.25 0 01-.233.96 10.088 10.088 0 005.06-1.01.75.75 0 00.42-.643 4.875 4.875 0 00-6.957-4.611 8.586 8.586 0 011.71 5.157v.003z" />
+                  </svg>
+                ),
+                accent: "from-emerald-600 to-teal-600",
+                border: "border-emerald-500/20",
+                glow: "bg-emerald-500/5",
+              },
+            ].map((step) => (
+              <div
+                key={step.number}
+                className={`relative rounded-2xl border ${step.border} ${step.glow} p-8 flex flex-col items-center text-center backdrop-blur-sm`}
+              >
+                {/* Step number */}
+                <div className="text-[11px] font-bold tracking-widest text-gray-600 mb-4">{step.number}</div>
+
+                {/* Icon circle */}
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${step.accent} flex items-center justify-center text-white mb-5 shadow-lg`}>
+                  {step.icon}
+                </div>
+
+                <h3 className="text-white font-bold text-lg mb-3">{step.title}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{step.description}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          {!isAuthenticated && (
+            <div className="text-center mt-16">
+              <Link
+                to="/signup"
+                className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-90 transition-opacity shadow-lg shadow-purple-900/40"
+              >
+                Get Started Free
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" />
+                </svg>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>

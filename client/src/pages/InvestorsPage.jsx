@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { LayoutGrid, List, MapPin, DollarSign, Briefcase, TrendingUp } from "lucide-react";
 import { apiService } from "../services/apiService";
+import { useAuth } from "../hooks/useAuth";
 
 const defaultFilters = {
   q: "",
@@ -87,8 +88,11 @@ const getAvatarGradient = (name = "") => {
   return INVESTOR_AVATAR_GRADIENTS[idx];
 };
 
-const InvestorCard = ({ investor, onConnect, isConnecting, isListView }) => {
+const InvestorCard = ({ investor, onConnect, onAccept, onDecline, isConnecting, isListView, currentUserId, canSendRequest }) => {
   const connectionStatus = investor.connection_status || "not_connected";
+  const isReceivedRequest = connectionStatus === "pending" &&
+    investor.connection_requester_id &&
+    String(investor.connection_requester_id) !== String(currentUserId);
   const statusLabel =
     connectionStatus === "accepted" ? "Connected" : connectionStatus === "pending" ? "Pending" : connectionStatus === "self" ? "You" : "Connect";
   const description = truncateDescription(
@@ -105,53 +109,76 @@ const InvestorCard = ({ investor, onConnect, isConnecting, isListView }) => {
 
   if (isListView) {
     return (
-      <div className="group relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.02] hover:border-purple-500/30 hover:from-white/[0.07] hover:to-white/[0.03] backdrop-blur-sm transition-all duration-300 p-4">
-        <div className="flex items-center gap-4">
-          {/* Avatar */}
-          <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg`}>
-            <span className="text-white font-bold text-base">{avatarInitial}</span>
-          </div>
+      <div className="group relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.02] hover:border-purple-500/30 hover:from-white/[0.07] hover:to-white/[0.03] backdrop-blur-sm transition-all duration-300 p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-5">
+          <div className="min-w-0 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2">
+            <div className={`row-span-3 h-12 w-12 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center shrink-0 shadow-lg overflow-hidden`}>
+              {investor.photo_url
+                ? <img src={investor.photo_url} alt={name} className="w-full h-full object-cover" />
+                : <span className="text-white font-bold text-base">{avatarInitial}</span>
+              }
+            </div>
 
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-semibold text-white truncate">{name}</h3>
-              <span className={`px-2 py-0.5 text-[10px] font-medium border rounded-full ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}>
+            <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h3 className="truncate text-sm font-semibold text-white sm:text-base">{name}</h3>
+              <span className={`px-2 py-0.5 text-[10px] font-medium border rounded-full shrink-0 ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}>
                 {connectionStatus === "accepted" ? "Connected" : connectionStatus === "pending" ? "Pending" : connectionStatus === "self" ? "You" : "Not connected"}
               </span>
             </div>
-            <p className="text-xs text-purple-300/80 mt-0.5 font-medium">{investor.investor_type || "Investor"}</p>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
+
+            <p className="min-w-0 text-xs font-medium text-purple-300/80">{investor.investor_type || "Investor"}</p>
+
+            <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1.5">
               {location && (
                 <span className="flex items-center gap-1 text-xs text-gray-400">
-                  <MapPin className="w-3 h-3" />{location}
+                  <MapPin className="h-3 w-3 shrink-0" />{location}
                 </span>
               )}
               <span className="flex items-center gap-1 text-xs text-gray-400">
-                <DollarSign className="w-3 h-3" />{checkSize}
+                <DollarSign className="h-3 w-3 shrink-0" />{checkSize}
               </span>
               {industries.length > 0 && (
-                <span className="text-xs text-gray-500">{industries.join(" · ")}</span>
+                <span className="max-w-full truncate text-xs text-gray-500">{industries.join(" · ")}</span>
               )}
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex shrink-0 items-center justify-end gap-2 md:self-center">
             <Link
               to={profileUrl}
-              className="px-3 py-1.5 text-xs rounded-lg border border-white/20 text-gray-300 hover:text-white hover:border-white/40 hover:bg-white/5 transition-all"
+              className="h-9 px-3 text-xs rounded-lg border border-white/20 text-gray-300 hover:text-white hover:border-white/40 hover:bg-white/5 transition-all inline-flex items-center"
             >
               View Profile
             </Link>
-            <button
-              type="button"
-              disabled={!canConnect || isConnecting}
-              onClick={() => onConnect(investor.user_id)}
-              className="px-3 py-1.5 text-xs rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/30"
-            >
-              {isConnecting ? "…" : canConnect ? "Connect" : statusLabel}
-            </button>
+            {canSendRequest && (isReceivedRequest ? (
+              <>
+                <button
+                  type="button"
+                  disabled={isConnecting}
+                  onClick={() => onAccept(investor.connection_id)}
+                  className="h-9 px-3 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-colors"
+                >
+                  {isConnecting ? "…" : "Accept"}
+                </button>
+                <button
+                  type="button"
+                  disabled={isConnecting}
+                  onClick={() => onDecline(investor.connection_id)}
+                  className="h-9 px-3 text-xs rounded-lg border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 font-medium disabled:opacity-40 transition-colors"
+                >
+                  Decline
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                disabled={!canConnect || isConnecting}
+                onClick={() => onConnect(investor.user_id)}
+                className="h-9 px-4 text-xs rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/30"
+              >
+                {isConnecting ? "…" : canConnect ? "Connect" : statusLabel}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -166,8 +193,11 @@ const InvestorCard = ({ investor, onConnect, isConnecting, isListView }) => {
       <div className="p-5 flex flex-col flex-1">
         {/* Header row */}
         <div className="flex items-start gap-3">
-          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg`}>
-            <span className="text-white font-bold text-lg">{avatarInitial}</span>
+          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden`}>
+            {investor.photo_url
+              ? <img src={investor.photo_url} alt={name} className="w-full h-full object-cover" />
+              : <span className="text-white font-bold text-lg">{avatarInitial}</span>
+            }
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-semibold text-white leading-tight truncate">{name}</h3>
@@ -211,14 +241,35 @@ const InvestorCard = ({ investor, onConnect, isConnecting, isListView }) => {
           >
             View Profile
           </Link>
-          <button
-            type="button"
-            disabled={!canConnect || isConnecting}
-            onClick={() => onConnect(investor.user_id)}
-            className="flex-1 px-3 py-2 text-xs rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/40"
-          >
-            {isConnecting ? "Connecting…" : canConnect ? "Connect" : statusLabel}
-          </button>
+          {canSendRequest && (isReceivedRequest ? (
+            <>
+              <button
+                type="button"
+                disabled={isConnecting}
+                onClick={() => onAccept(investor.connection_id)}
+                className="flex-1 px-3 py-2 text-xs rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-colors"
+              >
+                {isConnecting ? "…" : "Accept"}
+              </button>
+              <button
+                type="button"
+                disabled={isConnecting}
+                onClick={() => onDecline(investor.connection_id)}
+                className="flex-1 px-3 py-2 text-xs rounded-xl border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 font-medium disabled:opacity-40 transition-colors"
+              >
+                Decline
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              disabled={!canConnect || isConnecting}
+              onClick={() => onConnect(investor.user_id)}
+              className="flex-1 px-3 py-2 text-xs rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/40"
+            >
+              {isConnecting ? "Connecting…" : canConnect ? "Connect" : statusLabel}
+            </button>
+          ))}
         </div>
       </div>
     </div>
@@ -226,6 +277,7 @@ const InvestorCard = ({ investor, onConnect, isConnecting, isListView }) => {
 };
 
 const InvestorsPage = () => {
+  const { user } = useAuth();
   const [filters, setFilters] = useState(defaultFilters);
   const [investors, setInvestors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -278,6 +330,24 @@ const InvestorsPage = () => {
       setError(response.error || "Failed to send connection request");
       return;
     }
+    await fetchInvestors();
+  };
+
+  const handleAccept = async (connectionId) => {
+    if (!connectionId) return;
+    setConnectingUserId(connectionId);
+    const response = await apiService.respondToConnection(connectionId, "accepted");
+    setConnectingUserId(null);
+    if (!response.success) { setError(response.error || "Failed to accept request"); return; }
+    await fetchInvestors();
+  };
+
+  const handleDecline = async (connectionId) => {
+    if (!connectionId) return;
+    setConnectingUserId(connectionId);
+    const response = await apiService.respondToConnection(connectionId, "declined");
+    setConnectingUserId(null);
+    if (!response.success) { setError(response.error || "Failed to decline request"); return; }
     await fetchInvestors();
   };
 
@@ -420,8 +490,12 @@ const InvestorsPage = () => {
                   key={investor.id}
                   investor={investor}
                   onConnect={handleConnect}
-                  isConnecting={connectingUserId === investor.user_id}
+                  onAccept={handleAccept}
+                  onDecline={handleDecline}
+                  isConnecting={connectingUserId !== null && (connectingUserId === investor.user_id || connectingUserId === investor.connection_id)}
                   isListView={isListView}
+                  currentUserId={user?.id}
+                  canSendRequest={user?.userType === "startup"}
                 />
               ))}
             </div>
