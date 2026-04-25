@@ -15,7 +15,7 @@ const getBearerToken = (req) => {
 const getUserFromToken = async (token) => {
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   const userResult = await pool.query(
-    "SELECT id, email, user_type, full_name, email_verified, account_locked_until FROM users WHERE id = $1",
+    "SELECT id, email, user_type, full_name, email_verified, account_locked_until, created_at FROM users WHERE id = $1",
     [decoded.userId],
   );
 

@@ -1,174 +1,104 @@
 import React from "react";
 
 const INDUSTRIES = [
-  "FinTech",
-  "HealthTech",
-  "SaaS",
-  "EdTech",
-  "AI/ML",
-  "ClimateTech",
-  "Cybersecurity",
-  "E-Commerce",
-  "Logistics",
-  "Other",
+  "FinTech","HealthTech","SaaS","EdTech","AI/ML","ClimateTech",
+  "Cybersecurity","E-Commerce","Logistics","AgriTech","PropTech","Other",
 ];
 
 const GEOGRAPHIES = [
-  "Global",
-  "North America",
-  "Europe",
-  "APAC",
-  "MENA",
-  "LATAM",
-  "Africa",
+  "Global","North America","Europe","APAC","MENA","LATAM","Africa","South Asia",
 ];
 
-const STAGES = ["IDEA", "MVP", "EARLY_REVENUE", "GROWTH", "SCALING"];
+const STAGES = [
+  { value: "IDEA", label: "Idea" },
+  { value: "MVP", label: "MVP" },
+  { value: "EARLY_REVENUE", label: "Early Revenue" },
+  { value: "GROWTH", label: "Growth" },
+  { value: "SCALING", label: "Scaling" },
+];
 
-const toggleArrayItem = (items, value) => {
-  if (items.includes(value)) return items.filter((item) => item !== value);
-  return [...items, value];
-};
+const toggle = (arr, val) =>
+  arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
-const InvestorStep2Classification = ({ formData, updateFormData, errors }) => {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Classification</h2>
-        <p className="text-gray-400">Define your thesis and market focus.</p>
-      </div>
+const PillGroup = ({ items, selected, onToggle, activeColor }) => (
+  <div className="flex flex-wrap gap-2">
+    {items.map((item) => {
+      const val = typeof item === "object" ? item.value : item;
+      const label = typeof item === "object" ? item.label : item;
+      const isSelected = selected.includes(val);
+      return (
+        <button
+          key={val}
+          type="button"
+          onClick={() => onToggle(val)}
+          className={`px-3.5 py-1.5 rounded-full text-sm border transition-all ${
+            isSelected
+              ? `${activeColor} font-medium`
+              : "bg-white/3 border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-300"
+          }`}
+        >
+          {label}
+        </button>
+      );
+    })}
+  </div>
+);
 
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Investment Thesis
-          <span className="text-red-500 ml-1">*</span>
-        </label>
-        <textarea
-          rows={5}
-          placeholder="Describe your thesis and target opportunities."
-          value={formData.investment_thesis}
-          onChange={(e) =>
-            updateFormData({ investment_thesis: e.target.value })
-          }
-          className="w-full px-4 py-3 bg-white/5 border border-gray-600 rounded-xl text-white resize-none"
-        />
-        {errors.investment_thesis && (
-          <p className="text-sm text-red-500 mt-1">
-            {errors.investment_thesis}
-          </p>
-        )}
-      </div>
+const Field = ({ label, required, error, children }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-300 mb-2">
+      {label}
+      {required && <span className="text-red-400 ml-1">*</span>}
+    </label>
+    {children}
+    {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+  </div>
+);
 
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Industries of Interest<span className="text-red-500 ml-1">*</span>
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {INDUSTRIES.map((industry) => {
-            const selected = formData.industries_of_interest.includes(industry);
-            return (
-              <button
-                key={industry}
-                type="button"
-                onClick={() =>
-                  updateFormData({
-                    industries_of_interest: toggleArrayItem(
-                      formData.industries_of_interest,
-                      industry,
-                    ),
-                  })
-                }
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                  selected
-                    ? "bg-purple-600/30 border-purple-500 text-purple-200"
-                    : "bg-white/5 border-gray-600 text-gray-300 hover:border-gray-500"
-                }`}
-              >
-                {industry}
-              </button>
-            );
-          })}
-        </div>
-        {errors.industries_of_interest && (
-          <p className="text-sm text-red-500 mt-1">
-            {errors.industries_of_interest}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Geographic Preference<span className="text-red-500 ml-1">*</span>
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {GEOGRAPHIES.map((geo) => {
-            const selected = formData.geographic_preference.includes(geo);
-            return (
-              <button
-                key={geo}
-                type="button"
-                onClick={() =>
-                  updateFormData({
-                    geographic_preference: toggleArrayItem(
-                      formData.geographic_preference,
-                      geo,
-                    ),
-                  })
-                }
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                  selected
-                    ? "bg-blue-600/30 border-blue-500 text-blue-200"
-                    : "bg-white/5 border-gray-600 text-gray-300 hover:border-gray-500"
-                }`}
-              >
-                {geo}
-              </button>
-            );
-          })}
-        </div>
-        {errors.geographic_preference && (
-          <p className="text-sm text-red-500 mt-1">
-            {errors.geographic_preference}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Stage Preference<span className="text-red-500 ml-1">*</span>
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {STAGES.map((stage) => {
-            const selected = formData.stage_preference.includes(stage);
-            return (
-              <button
-                key={stage}
-                type="button"
-                onClick={() =>
-                  updateFormData({
-                    stage_preference: toggleArrayItem(
-                      formData.stage_preference,
-                      stage,
-                    ),
-                  })
-                }
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                  selected
-                    ? "bg-emerald-600/30 border-emerald-500 text-emerald-200"
-                    : "bg-white/5 border-gray-600 text-gray-300 hover:border-gray-500"
-                }`}
-              >
-                {stage}
-              </button>
-            );
-          })}
-        </div>
-        {errors.stage_preference && (
-          <p className="text-sm text-red-500 mt-1">{errors.stage_preference}</p>
-        )}
-      </div>
+const InvestorStep2Classification = ({ formData, updateFormData, errors }) => (
+  <div className="space-y-6">
+    <div className="pb-2">
+      <h2 className="text-xl font-semibold text-white">Investment Focus</h2>
+      <p className="text-sm text-gray-400 mt-1">Define your thesis and the markets you target.</p>
     </div>
-  );
-};
+
+    <Field label="Investment Thesis" required error={errors.investment_thesis}>
+      <textarea
+        rows={4}
+        placeholder="Describe your core investment thesis and the opportunities you're most excited about."
+        value={formData.investment_thesis}
+        onChange={(e) => updateFormData({ investment_thesis: e.target.value })}
+        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all resize-none"
+      />
+    </Field>
+
+    <Field label="Industries of Interest" required error={errors.industries_of_interest}>
+      <PillGroup
+        items={INDUSTRIES}
+        selected={formData.industries_of_interest}
+        onToggle={(val) => updateFormData({ industries_of_interest: toggle(formData.industries_of_interest, val) })}
+        activeColor="bg-violet-600/25 border-violet-500/50 text-violet-300"
+      />
+    </Field>
+
+    <Field label="Geographic Preference" required error={errors.geographic_preference}>
+      <PillGroup
+        items={GEOGRAPHIES}
+        selected={formData.geographic_preference}
+        onToggle={(val) => updateFormData({ geographic_preference: toggle(formData.geographic_preference, val) })}
+        activeColor="bg-blue-600/25 border-blue-500/50 text-blue-300"
+      />
+    </Field>
+
+    <Field label="Stage Preference" required error={errors.stage_preference}>
+      <PillGroup
+        items={STAGES}
+        selected={formData.stage_preference}
+        onToggle={(val) => updateFormData({ stage_preference: toggle(formData.stage_preference, val) })}
+        activeColor="bg-emerald-600/25 border-emerald-500/50 text-emerald-300"
+      />
+    </Field>
+  </div>
+);
 
 export default InvestorStep2Classification;

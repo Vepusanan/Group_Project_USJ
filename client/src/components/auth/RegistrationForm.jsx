@@ -77,7 +77,7 @@ const RegistrationForm = () => {
         });
 
         if (result.success) {
-          navigate("/verify-email");
+          navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
         } else {
           setErrors({
             general: result.error || "Registration failed. Please try again.",
@@ -108,7 +108,7 @@ const RegistrationForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-3">
       {errors.general && (
         <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
           <p className="text-red-400 text-sm text-center">{errors.general}</p>
@@ -122,15 +122,15 @@ const RegistrationForm = () => {
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-gray-300 mb-1">
           User Type <span className="text-red-500">*</span>
         </label>
         <select
           value={formData.userType}
           onChange={(e) => handleInputChange("userType", e.target.value)}
-          className={`w-full px-4 py-3 bg-white/5 border ${errors.userType ? "border-red-500/50" : "border-gray-600"} rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200`}
+          className={`w-full px-4 py-2 bg-white/5 border ${errors.userType ? "border-red-500/50" : "border-gray-600"} rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200`}
         >
-          <option value="" className="bg-gray-900">
+          <option value="" disabled className="bg-gray-900">
             Select Your Role
           </option>
           <option value="startup" className="bg-gray-900">
@@ -151,6 +151,8 @@ const RegistrationForm = () => {
         value={formData.fullName}
         onChange={(e) => handleInputChange("fullName", e.target.value)}
         error={errors.fullName}
+        compact
+        required
       />
 
       <Input
@@ -159,6 +161,8 @@ const RegistrationForm = () => {
         value={formData.email}
         onChange={(e) => handleInputChange("email", e.target.value)}
         error={errors.email}
+        compact
+        required
       />
 
       <PasswordInput
@@ -167,6 +171,8 @@ const RegistrationForm = () => {
         placeholder=""
         onChange={(e) => handleInputChange("password", e.target.value)}
         error={errors.password}
+        compact
+        required
       />
 
       <PasswordInput
@@ -175,6 +181,8 @@ const RegistrationForm = () => {
         placeholder=""
         onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
         error={errors.confirmPassword}
+        compact
+        required
       />
 
       <Checkbox

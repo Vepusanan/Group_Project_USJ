@@ -143,6 +143,7 @@ function buildCreatePayload(columns, payload) {
     phone_number: getFirstDefined(payload.phone_number, payload.contact_phone),
     social_media: payload.social_media,
     preferred_contact_method: payload.preferred_contact_method,
+    photo_url: payload.photo_url,
   };
 
   const normalized = {};
@@ -302,6 +303,7 @@ export async function updateInvestorProfile(id, userId, updates) {
     "phone_number",
     "social_media",
     "preferred_contact_method",
+    "photo_url",
   ];
 
   const aliasToColumn = {
@@ -469,7 +471,7 @@ export async function getConnectionStatusesForInvestors(
 
   const connectionsResult = await pool.query(
     `
-      SELECT c.investor_id::text AS investor_user_id, c.status
+      SELECT c.id::text AS connection_id, c.investor_id::text AS investor_user_id, c.investor_id::text AS requester_id, c.status
       FROM public.connections c
       WHERE c.startup_id::text = $1
         AND c.investor_id::text = ANY($2::text[])
@@ -479,10 +481,11 @@ export async function getConnectionStatusesForInvestors(
 
   return new Map(
     connectionsResult.rows
-      .map((row) => [
-        row.investor_user_id,
-        normalizeConnectionStatus(row.status),
-      ])
-      .filter(([, status]) => Boolean(status)),
+      .map((row) => {
+        const status = normalizeConnectionStatus(row.status);
+        if (!status) return null;
+        return [row.investor_user_id, { status, connection_id: row.connection_id, requester_id: row.requester_id }];
+      })
+      .filter(Boolean),
   );
 }

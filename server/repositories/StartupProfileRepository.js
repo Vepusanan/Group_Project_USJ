@@ -136,11 +136,12 @@ const getSortClause = (sort) => {
 export async function createStartupProfile(userId, payload) {
   const q = `INSERT INTO startup_profiles
     (user_id, company_name, founder_names, tagline, detailed_description, industry, founded_date,
-     current_stage, team_size, key_team_members, team_photo_url, funding_stage, amount_seeking,
+     current_stage, team_size, key_team_members, logo_url, team_photo_url, funding_stage, amount_seeking,
      previous_funding, use_of_funds, revenue_status, key_metrics, major_achievements,
      customer_testimonials, pitch_deck_url, business_plan_url, product_demo_url,
-     primary_contact_name, contact_email, phone_number, social_media_links)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+     primary_contact_name, contact_email, phone_number, social_media_links,
+     location_country, location_city, website_url)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)
     RETURNING *`;
 
   const values = [
@@ -154,6 +155,7 @@ export async function createStartupProfile(userId, payload) {
     payload.current_stage || null,
     payload.team_size || null,
     payload.key_team_members || null,
+    payload.logo_url || null,
     payload.team_photo_url || null,
     payload.funding_stage || null,
     payload.amount_seeking || null,
@@ -170,6 +172,9 @@ export async function createStartupProfile(userId, payload) {
     payload.contact_email || null,
     payload.phone_number || null,
     safeStringify(payload.social_media_links),
+    payload.location_country || null,
+    payload.location_city || null,
+    payload.website_url || null,
   ];
 
   const result = await pool.query(q, values);
@@ -199,6 +204,7 @@ export async function updateStartupProfile(id, userId, updates) {
     "current_stage",
     "team_size",
     "key_team_members",
+    "logo_url",
     "team_photo_url",
     "funding_stage",
     "amount_seeking",
@@ -215,6 +221,9 @@ export async function updateStartupProfile(id, userId, updates) {
     "contact_email",
     "phone_number",
     "social_media_links",
+    "location_country",
+    "location_city",
+    "website_url",
   ];
 
   const sets = [];

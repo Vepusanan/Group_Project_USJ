@@ -30,7 +30,12 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
-      window.location.href = "/login";
+      localStorage.removeItem("userData");
+      // Notify AuthContext so in-memory state is also cleared before redirect
+      window.dispatchEvent(new Event("auth:force-logout"));
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   },
@@ -432,6 +437,30 @@ export const apiService = {
       return {
         success: false,
         error: error.response?.data?.error || "Failed to delete account",
+      };
+    }
+  },
+
+  getSessions: async () => {
+    try {
+      const response = await api.get("/auth/sessions");
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || "Failed to get sessions",
+      };
+    }
+  },
+
+  logoutAllDevices: async () => {
+    try {
+      const response = await api.post("/auth/logout-all");
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || "Failed to logout all devices",
       };
     }
   },

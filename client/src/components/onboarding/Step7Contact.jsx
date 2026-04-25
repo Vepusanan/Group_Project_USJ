@@ -1,128 +1,119 @@
 import React from "react";
-import {
-  Mail,
-  Phone,
-  UserRound,
-  Linkedin,
-  Twitter,
-  Facebook,
-  Instagram,
-} from "lucide-react";
-import Input from "../common/Input";
+import { Facebook, Instagram, Linkedin, Mail, Phone, Twitter, UserRound } from "lucide-react";
 
-const Step7Contact = ({ formData, updateFormData, errors }) => {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-2">
-          Contact & Social Media
-        </h2>
-        <p className="text-gray-400">How should investors contact you?</p>
+const inputCls =
+  "w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all";
+const iconInputCls =
+  "w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all";
+
+const Field = ({ label, required, error, hint, children }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+      {label}
+      {required && <span className="text-red-400 ml-1">*</span>}
+      {hint && <span className="text-gray-500 font-normal ml-2 text-xs">{hint}</span>}
+    </label>
+    {children}
+    {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+  </div>
+);
+
+const SocialField = ({ label, icon: Icon, value, onChange, placeholder }) => (
+  <div className="relative">
+    <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+    <input
+      type="url"
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      aria-label={label}
+      className={iconInputCls}
+    />
+  </div>
+);
+
+const Step7Contact = ({ formData, updateFormData, errors }) => (
+  <div className="space-y-5">
+    <div className="pb-2">
+      <h2 className="text-xl font-semibold text-white">Contact Details</h2>
+      <p className="text-sm text-gray-400 mt-1">Let investors know how and who to reach.</p>
+    </div>
+
+    <Field label="Primary Contact Name" required error={errors.primary_contact_name}>
+      <div className="relative">
+        <UserRound className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+        <input
+          type="text"
+          placeholder="Full name of main point of contact"
+          value={formData.primary_contact_name}
+          onChange={(e) => updateFormData({ primary_contact_name: e.target.value })}
+          className={iconInputCls}
+        />
       </div>
+    </Field>
 
-      <Input
-        label="Primary Contact Name"
-        type="text"
-        placeholder="Full name"
-        value={formData.primary_contact_name}
-        onChange={(e) =>
-          updateFormData({ primary_contact_name: e.target.value })
-        }
-        error={errors.primary_contact_name}
-        required
-        icon={UserRound}
-      />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Field label="Contact Email" required error={errors.contact_email}>
+        <div className="relative">
+          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <input
+            type="email"
+            placeholder="contact@company.com"
+            value={formData.contact_email}
+            onChange={(e) => updateFormData({ contact_email: e.target.value })}
+            className={iconInputCls}
+          />
+        </div>
+      </Field>
 
-      <Input
-        label="Contact Email"
-        type="email"
-        placeholder="contact@company.com"
-        value={formData.contact_email}
-        onChange={(e) => updateFormData({ contact_email: e.target.value })}
-        error={errors.contact_email}
-        required
-        icon={Mail}
-      />
+      <Field label="Phone Number" hint="optional">
+        <div className="relative">
+          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <input
+            type="tel"
+            placeholder="+1 555 000 0000"
+            value={formData.phone_number}
+            onChange={(e) => updateFormData({ phone_number: e.target.value })}
+            className={iconInputCls}
+          />
+        </div>
+      </Field>
+    </div>
 
-      <Input
-        label="Phone Number"
-        type="tel"
-        placeholder="+1 555 000 0000"
-        value={formData.phone_number}
-        onChange={(e) => updateFormData({ phone_number: e.target.value })}
-        error={errors.phone_number}
-        icon={Phone}
-      />
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Social Media Links</h3>
-
-        <Input
+    <div className="border-t border-white/5 pt-5">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Social Media</p>
+      <div className="space-y-3">
+        <SocialField
           label="LinkedIn"
-          type="url"
-          placeholder="https://linkedin.com/company/..."
-          value={formData.social_media_links.linkedin || ""}
-          onChange={(e) =>
-            updateFormData({
-              social_media_links: {
-                ...formData.social_media_links,
-                linkedin: e.target.value,
-              },
-            })
-          }
           icon={Linkedin}
+          placeholder="https://linkedin.com/company/..."
+          value={formData.social_media_links?.linkedin || ""}
+          onChange={(e) => updateFormData({ social_media_links: { ...formData.social_media_links, linkedin: e.target.value } })}
         />
-
-        <Input
+        <SocialField
           label="Twitter / X"
-          type="url"
-          placeholder="https://x.com/..."
-          value={formData.social_media_links.twitter || ""}
-          onChange={(e) =>
-            updateFormData({
-              social_media_links: {
-                ...formData.social_media_links,
-                twitter: e.target.value,
-              },
-            })
-          }
           icon={Twitter}
+          placeholder="https://x.com/..."
+          value={formData.social_media_links?.twitter || ""}
+          onChange={(e) => updateFormData({ social_media_links: { ...formData.social_media_links, twitter: e.target.value } })}
         />
-
-        <Input
+        <SocialField
           label="Facebook"
-          type="url"
-          placeholder="https://facebook.com/..."
-          value={formData.social_media_links.facebook || ""}
-          onChange={(e) =>
-            updateFormData({
-              social_media_links: {
-                ...formData.social_media_links,
-                facebook: e.target.value,
-              },
-            })
-          }
           icon={Facebook}
+          placeholder="https://facebook.com/..."
+          value={formData.social_media_links?.facebook || ""}
+          onChange={(e) => updateFormData({ social_media_links: { ...formData.social_media_links, facebook: e.target.value } })}
         />
-
-        <Input
+        <SocialField
           label="Instagram"
-          type="url"
-          placeholder="https://instagram.com/..."
-          value={formData.social_media_links.instagram || ""}
-          onChange={(e) =>
-            updateFormData({
-              social_media_links: {
-                ...formData.social_media_links,
-                instagram: e.target.value,
-              },
-            })
-          }
           icon={Instagram}
+          placeholder="https://instagram.com/..."
+          value={formData.social_media_links?.instagram || ""}
+          onChange={(e) => updateFormData({ social_media_links: { ...formData.social_media_links, instagram: e.target.value } })}
         />
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 export default Step7Contact;

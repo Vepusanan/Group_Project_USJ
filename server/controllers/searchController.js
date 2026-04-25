@@ -84,6 +84,7 @@ export const getStartups = async (req, res, next) => {
 
       return {
         ...startup.getPublicFields(),
+        logo_url: row.logo_url || null,
         connection_status: buildConnectionStatus(
           req.user?.id || null,
           startup.user_id,
@@ -158,13 +159,17 @@ export const getInvestors = async (req, res, next) => {
 
     const data = result.rows.map((row) => {
       const investor = new InvestorProfile(row);
+      const userId = req.user?.id || null;
+      const connEntry = connectionStatusMap.get(String(investor.user_id));
+      const connStatus = userId && String(investor.user_id) === String(userId)
+        ? "self"
+        : connEntry?.status || (userId ? "not_connected" : null);
       return {
         ...investor.getPublicFields(),
-        connection_status: buildConnectionStatus(
-          req.user?.id || null,
-          investor.user_id,
-          connectionStatusMap,
-        ),
+        photo_url: row.photo_url || null,
+        connection_status: connStatus,
+        connection_id: connEntry?.connection_id || null,
+        connection_requester_id: connEntry?.requester_id || null,
       };
     });
 

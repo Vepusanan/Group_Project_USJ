@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -31,80 +31,15 @@ import SettingsPage from "./pages/SettingsPage";
 import Header from "./components/common/Header.jsx";
 import Footer from "./components/common/Footer";
 import { useAuth } from "./hooks/useAuth";
-import profileService from "./services/profileService";
-import investorProfileService from "./services/investorProfileService";
-
-const getOnboardingPath = (userType) =>
-  userType === "investor" ? "/investor-onboarding" : "/onboarding";
+import { profileService } from "./services/profileService";
+import { investorProfileService } from "./services/investorProfileService";
 
 const getRoleHomePath = (userType) =>
   userType === "investor" ? "/startups" : "/investors";
 
-const hasProfileId = (data, userType) => {
-  if (!data) return false;
-  if (userType === "investor") {
-    return Boolean(data.investor_profile_id || data.id);
-  }
-  return Boolean(data.startup_profile_id || data.id);
-};
-
 const AuthenticatedRedirect = () => {
   const { user } = useAuth();
-  const [redirectPath, setRedirectPath] = React.useState(null);
-
-  React.useEffect(() => {
-    let isMounted = true;
-
-    const resolveRedirect = async () => {
-      const userType = user?.userType;
-
-      if (!userType) {
-        if (isMounted) setRedirectPath("/");
-        return;
-      }
-
-      try {
-        const service =
-          userType === "investor" ? investorProfileService : profileService;
-        const result = await service.getMyProfile();
-        const data = result?.data?.data || result?.data;
-
-        if (!isMounted) return;
-
-        if (result?.success && hasProfileId(data, userType)) {
-          setRedirectPath(getRoleHomePath(userType));
-          return;
-        }
-
-        if (result?.success && !data) {
-          setRedirectPath(getOnboardingPath(userType));
-          return;
-        }
-
-        setRedirectPath(getRoleHomePath(userType));
-      } catch (error) {
-        if (isMounted) {
-          setRedirectPath(getRoleHomePath(userType));
-        }
-      }
-    };
-
-    resolveRedirect();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user]);
-
-  if (!redirectPath) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-black">
-        <div className="w-16 h-16 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  return <Navigate to={redirectPath} replace />;
+  return <Navigate to={user?.userType ? "/dashboard" : "/"} replace />;
 };
 
 const ProtectedRoute = ({ children }) => {
@@ -119,6 +54,69 @@ const ProtectedRoute = ({ children }) => {
   }
 
   return isAuthenticated && user ? children : <Navigate to="/login" replace />;
+};
+
+// Redirects users without a profile to their onboarding route.
+// Wraps all protected routes except the onboarding pages themselves.
+// Module-level cache: userId -> redirect path (null = has profile, string = needs onboarding)
+export const onboardingCheckCache = new Map();
+export const clearOnboardingCache = () => onboardingCheckCache.clear();
+
+const OnboardingGuard = ({ children }) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  const userId = user?.id ?? null;
+  const cached = userId ? onboardingCheckCache.get(userId) : undefined;
+  // If already cached we know the answer synchronously — no spinner needed.
+  const alreadyChecked = cached !== undefined;
+
+  const [checking, setChecking] = useState(!alreadyChecked);
+  const [onboardingPath, setOnboardingPath] = useState(alreadyChecked ? cached : null);
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || !user) return;
+    if (onboardingCheckCache.has(user.id)) return;
+
+    const check = async () => {
+      let redirect = null;
+      try {
+        if (user.userType === "startup") {
+          const result = await profileService.getMyProfile();
+          const data = result.data?.data || result.data;
+          const hasProfile = Boolean(data?.startup_profile_id || data?.id);
+          if (!hasProfile) redirect = "/onboarding";
+        } else if (user.userType === "investor") {
+          const result = await investorProfileService.getMyProfile();
+          const data = result.data?.data || result.data;
+          const hasProfile = Boolean(data?.investor_profile_id || data?.id);
+          if (!hasProfile) redirect = "/investor-onboarding";
+        }
+      } catch {
+        // network error — allow through rather than blocking the user
+      } finally {
+        onboardingCheckCache.set(user.id, redirect);
+        setOnboardingPath(redirect);
+        setChecking(false);
+      }
+    };
+
+    check();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, isAuthenticated, userId]);
+
+  if (isLoading || checking) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-black">
+        <div className="w-16 h-16 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (onboardingPath) {
+    return <Navigate to={onboardingPath} replace />;
+  }
+
+  return children;
 };
 
 const PublicRoute = ({ children }) => {
@@ -239,7 +237,9 @@ const AppContent = () => {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Navigate to={getRoleHomePath(user?.userType)} replace />
+                <OnboardingGuard>
+                  <Navigate to={getRoleHomePath(user?.userType)} replace />
+                </OnboardingGuard>
               </ProtectedRoute>
             }
           />
@@ -248,7 +248,9 @@ const AppContent = () => {
             path="/startups"
             element={
               <ProtectedRoute>
-                <StartupsPage />
+                <OnboardingGuard>
+                  <StartupsPage />
+                </OnboardingGuard>
               </ProtectedRoute>
             }
           />
@@ -257,7 +259,9 @@ const AppContent = () => {
             path="/startups/:id"
             element={
               <ProtectedRoute>
-                <StartupProfilePage />
+                <OnboardingGuard>
+                  <StartupProfilePage />
+                </OnboardingGuard>
               </ProtectedRoute>
             }
           />
@@ -266,7 +270,9 @@ const AppContent = () => {
             path="/investors"
             element={
               <ProtectedRoute>
-                <InvestorsPage />
+                <OnboardingGuard>
+                  <InvestorsPage />
+                </OnboardingGuard>
               </ProtectedRoute>
             }
           />
@@ -275,7 +281,9 @@ const AppContent = () => {
             path="/investors/:id"
             element={
               <ProtectedRoute>
-                <InvestorProfilePage />
+                <OnboardingGuard>
+                  <InvestorProfilePage />
+                </OnboardingGuard>
               </ProtectedRoute>
             }
           />
@@ -284,7 +292,9 @@ const AppContent = () => {
             path="/connections"
             element={
               <ProtectedRoute>
-                <ConnectionsPage />
+                <OnboardingGuard>
+                  <ConnectionsPage />
+                </OnboardingGuard>
               </ProtectedRoute>
             }
           />
@@ -293,7 +303,9 @@ const AppContent = () => {
             path="/messages"
             element={
               <ProtectedRoute>
-                <MessagesPage />
+                <OnboardingGuard>
+                  <MessagesPage />
+                </OnboardingGuard>
               </ProtectedRoute>
             }
           />
@@ -302,7 +314,9 @@ const AppContent = () => {
             path="/profile"
             element={
               <ProtectedRoute>
-                <MyProfilePage />
+                <OnboardingGuard>
+                  <MyProfilePage />
+                </OnboardingGuard>
               </ProtectedRoute>
             }
           />
@@ -311,7 +325,9 @@ const AppContent = () => {
             path="/profile/edit"
             element={
               <ProtectedRoute>
-                <EditProfilePage />
+                <OnboardingGuard>
+                  <EditProfilePage />
+                </OnboardingGuard>
               </ProtectedRoute>
             }
           />
@@ -320,7 +336,9 @@ const AppContent = () => {
             path="/settings"
             element={
               <ProtectedRoute>
-                <SettingsPage />
+                <OnboardingGuard>
+                  <SettingsPage />
+                </OnboardingGuard>
               </ProtectedRoute>
             }
           />
@@ -361,13 +379,14 @@ const AppShell = () => {
   const isHomePage = location.pathname === "/";
 
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+    <div className={`min-h-screen bg-black text-white relative${!isHomePage ? " overflow-hidden" : ""}`}>
       {!isHomePage && (
         <div className="absolute inset-0 pointer-events-none">
           <img
             src="/images/background/upLight.png"
             alt=""
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-[140vw] max-w-none opacity-90"
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-[140vw] max-w-none block opacity-90"
+            style={{ maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)", WebkitMaskImage: "linear-gradient(to bottom, black 50%, transparent 100%)" }}
           />
           <img
             src="/images/background/footerLight.png"

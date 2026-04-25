@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import authService from "../services/authService";
 import { apiService } from "../services/apiService";
+import { clearOnboardingCache } from "../App";
 
 const initialState = {
   user: null,
@@ -138,6 +139,15 @@ export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
+    const onForceLogout = () => {
+      clearOnboardingCache();
+      dispatch({ type: AUTH_ACTIONS.LOGOUT });
+    };
+    window.addEventListener("auth:force-logout", onForceLogout);
+    return () => window.removeEventListener("auth:force-logout", onForceLogout);
+  }, []);
+
+  useEffect(() => {
     const checkAuthStatus = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
@@ -267,6 +277,7 @@ export const AuthProvider = ({ children }) => {
       console.error("Logout error:", error);
     }
 
+    clearOnboardingCache();
     dispatch({ type: AUTH_ACTIONS.LOGOUT });
   }, []);
 

@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { profileService } from "../../services/profileService";
+import { investorProfileService } from "../../services/investorProfileService";
 import Input from "../common/Input";
 import PasswordInput from "../common/PasswordInput";
 import Checkbox from "../common/Checkbox";
@@ -51,7 +53,33 @@ const LoginForm = () => {
         );
 
         if (result.success) {
-          navigate("/login", { replace: true });
+          const userType = result.user?.userType;
+          let hasProfile = false;
+
+          try {
+            if (userType === "startup") {
+              const profileResult = await profileService.getMyProfile();
+              const data = profileResult.data?.data || profileResult.data;
+              hasProfile = Boolean(data?.startup_profile_id || data?.id);
+            } else if (userType === "investor") {
+              const profileResult = await investorProfileService.getMyProfile();
+              const data = profileResult.data?.data || profileResult.data;
+              hasProfile = Boolean(
+                data?.investor_profile_id || data?.id,
+              );
+            }
+          } catch {
+            // If profile check fails, fall through to dashboard
+          }
+
+          if (!hasProfile) {
+            navigate(
+              userType === "investor" ? "/investor-onboarding" : "/onboarding",
+              { replace: true },
+            );
+          } else {
+            navigate("/dashboard", { replace: true });
+          }
         } else {
           setErrors({
             general: result.error || "Login failed. Please try again.",

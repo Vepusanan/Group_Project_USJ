@@ -89,11 +89,11 @@ const authService = {
         error: response.data.error || "Registration failed",
       };
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "Registration failed";
+      const errorMessage = !error.response
+        ? "Unable to reach the server. Check your internet connection."
+        : error.response.data?.message ||
+          error.response.data?.error ||
+          "Registration failed";
       console.error("Registration error:", errorMessage);
       return {
         success: false,
@@ -134,11 +134,11 @@ const authService = {
         error: response.data.error || "Login failed",
       };
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "Login failed";
+      const errorMessage = !error.response
+        ? "Unable to reach the server. Check your internet connection."
+        : error.response.data?.message ||
+          error.response.data?.error ||
+          "Login failed";
       console.error("Login error:", errorMessage);
       return {
         success: false,

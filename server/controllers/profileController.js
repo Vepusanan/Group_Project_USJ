@@ -1,3 +1,4 @@
+import fs from "fs";
 import {
   createStartupProfile,
   getStartupProfileById,
@@ -17,6 +18,62 @@ import {
   getConnectionBetweenUsers,
   isUsersConnected,
 } from "../repositories/ConnectionRepository.js";
+import {
+  uploadStartupLogo,
+  uploadInvestorPhoto,
+  uploadMultipleDocuments,
+} from "../utils/supabaseStorage.js";
+
+const cleanupFiles = (files) => {
+  for (const file of files) {
+    try { fs.unlinkSync(file.path); } catch {}
+  }
+};
+
+async function processStartupUploads(req) {
+  const uploads = {};
+  const files = req.files || {};
+
+  if (files.logo?.length) {
+    const logoFile = files.logo[0];
+    try {
+      uploads.logo_url = await uploadStartupLogo(logoFile.path, "tmp");
+    } catch (err) {
+      cleanupFiles([logoFile]);
+      throw new Error(`Logo upload failed: ${err.message}`);
+    }
+  }
+
+  if (files.documents?.length) {
+    try {
+      const docs = await uploadMultipleDocuments(files.documents, "tmp");
+      if (docs[0]) uploads.pitch_deck_url = uploads.pitch_deck_url || docs[0].url;
+      if (docs[1]) uploads.business_plan_url = uploads.business_plan_url || docs[1].url;
+    } catch (err) {
+      cleanupFiles(files.documents || []);
+      throw new Error(`Document upload failed: ${err.message}`);
+    }
+  }
+
+  return uploads;
+}
+
+async function processInvestorUploads(req) {
+  const uploads = {};
+  const files = req.files || {};
+
+  if (files.photo?.length) {
+    const photoFile = files.photo[0];
+    try {
+      uploads.photo_url = await uploadInvestorPhoto(photoFile.path, "tmp");
+    } catch (err) {
+      cleanupFiles([photoFile]);
+      throw new Error(`Photo upload failed: ${err.message}`);
+    }
+  }
+
+  return uploads;
+}
 
 const parseJsonValue = (value) => {
   if (!value || typeof value !== "string") return value;
@@ -143,15 +200,19 @@ const canViewProfile = async (profileUserId, requestingUserId) => {
     return { canView: true, isOwner: true, isConnected: false };
   }
 
+  const connected = requestingUserId
+    ? await isUsersConnected(profileUserId, requestingUserId)
+    : false;
+
   const privacySettings = await getPrivacySettingsByUserId(profileUserId);
   if (!privacySettings) {
-    return { canView: true, isOwner: false, isConnected: false };
+    return { canView: true, isOwner: false, isConnected: connected };
   }
 
   const { profile_visibility } = privacySettings;
 
   if (profile_visibility === "public") {
-    return { canView: true, isOwner: false, isConnected: false };
+    return { canView: true, isOwner: false, isConnected: connected };
   }
 
   if (profile_visibility === "connections_only" && !requestingUserId) {
@@ -159,11 +220,10 @@ const canViewProfile = async (profileUserId, requestingUserId) => {
   }
 
   if (profile_visibility === "connections_only") {
-    const connected = await isUsersConnected(profileUserId, requestingUserId);
     return { canView: connected, isOwner: false, isConnected: connected };
   }
 
-  return { canView: true, isOwner: false, isConnected: false };
+  return { canView: true, isOwner: false, isConnected: connected };
 };
 
 export const createProfile = async (req, res, next) => {
@@ -191,6 +251,9 @@ export const createProfile = async (req, res, next) => {
     parseBodyNumericField(req.body, "team_size", Number.parseInt);
     parseBodyNumericField(req.body, "amount_seeking");
     parseBodyNumericField(req.body, "previous_funding");
+
+    const fileUploads = await processStartupUploads(req);
+    Object.assign(req.body, fileUploads);
 
     const profileData = { user_id: req.user.id, ...req.body };
     const startupProfile = new StartupProfile(profileData);
@@ -239,6 +302,9 @@ export const updateProfile = async (req, res, next) => {
         .status(404)
         .json({ error: "Profile not found or not owned by user" });
     }
+
+    const fileUploads = await processStartupUploads(req);
+    Object.assign(req.body, fileUploads);
 
     const updated = await updateStartupProfile(
       profileId,
@@ -298,6 +364,7 @@ export const getProfile = async (req, res, next) => {
       current_stage: profile.current_stage,
       team_size: profile.team_size,
       key_team_members: profile.key_team_members,
+      logo_url: profile.logo_url,
       team_photo_url: profile.team_photo_url,
       funding_stage: profile.funding_stage,
       amount_seeking: profile.amount_seeking,
@@ -317,6 +384,9 @@ export const getProfile = async (req, res, next) => {
       social_media_links: parseJsonValue(profile.social_media_links),
       social_media: parseJsonValue(profile.social_media_links),
       description: profile.detailed_description,
+      location_country: profile.location_country,
+      location_city: profile.location_city,
+      website_url: profile.website_url,
       connection_status: connectionStatus,
       created_at: profile.created_at,
       updated_at: profile.updated_at,
@@ -390,6 +460,9 @@ export const createInvestorProfileController = async (req, res, next) => {
 
     req.body.name_or_firm = canonicalName;
 
+    const fileUploads = await processInvestorUploads(req);
+    Object.assign(req.body, fileUploads);
+
     const profile = await createInvestorProfile(req.user.id, req.body);
     res.status(201).json({ success: true, data: profile });
   } catch (err) {
@@ -432,6 +505,9 @@ export const updateInvestorProfileController = async (req, res, next) => {
         .json({ error: "Profile not found or not owned by user" });
     }
 
+    const fileUploads = await processInvestorUploads(req);
+    Object.assign(req.body, fileUploads);
+
     const updated = await updateInvestorProfile(
       profileId,
       req.user.id,
@@ -470,18 +546,23 @@ export const getInvestorProfileController = async (req, res, next) => {
     }
 
     let connectionStatus = null;
+    let connectionId = null;
+    let connectionRequesterId = null;
     if (requestingUserId && !isOwner) {
       const connection = await getConnectionBetweenUsers(
         profile.user_id,
         requestingUserId,
       );
       connectionStatus = connection?.normalized_status || null;
+      connectionId = connection?.id ? String(connection.id) : null;
+      connectionRequesterId = connection?.investor_id ? String(connection.investor_id) : null;
     }
 
     const publicFields = {
       investor_profile_id: profile.investor_profile_id,
       user_id: profile.user_id,
       name_or_firm: profile.name_or_firm,
+      photo_url: profile.photo_url,
       investor_type: profile.investor_type,
       years_of_experience: profile.years_of_experience,
       professional_background: profile.professional_background,
@@ -503,6 +584,8 @@ export const getInvestorProfileController = async (req, res, next) => {
       value_add: profile.value_add,
       network_resources: profile.network_resources,
       connection_status: connectionStatus,
+      connection_id: connectionId,
+      connection_requester_id: connectionRequesterId,
       created_at: profile.created_at,
       updated_at: profile.updated_at,
     };

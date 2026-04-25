@@ -3,6 +3,8 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Bell, LogOut, Settings } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { apiService } from "../../services/apiService";
+import profileService from "../../services/profileService";
+import investorProfileService from "../../services/investorProfileService";
 
 const Header = () => {
   const location = useLocation();
@@ -11,25 +13,24 @@ const Header = () => {
   const isHomePage = location.pathname === "/";
   const isVerifyEmailPage = location.pathname === "/verify-email";
   const isLoginPage = location.pathname === "/login";
+  const isOnboardingPage =
+    location.pathname === "/onboarding" ||
+    location.pathname === "/investor-onboarding";
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState(null);
   const dropdownRef = useRef(null);
 
   const isInvestor = user?.userType === "investor";
   const userInitial = (user?.firstName || user?.name || user?.email || "U")
     .charAt(0)
     .toUpperCase();
-  const navItems = isInvestor
-    ? [
-        { to: "/startups", label: "Startups" },
-        { to: "/connections", label: "My Connections" },
-        { to: "/messages", label: "Messages" },
-      ]
-    : [
-        { to: "/investors", label: "Investors" },
-        { to: "/connections", label: "My Connections" },
-        { to: "/messages", label: "Messages" },
-      ];
+  const navItems = [
+    { to: "/startups", label: "Startups" },
+    { to: "/investors", label: "Investors" },
+    { to: "/connections", label: "My Connections" },
+    { to: "/messages", label: "Messages" },
+  ];
 
   const handleLogout = async () => {
     try {
@@ -47,9 +48,13 @@ const Header = () => {
 
     let isMounted = true;
     const loadNotifications = async () => {
-      const result = await apiService.getNotifications();
-      if (!isMounted || !result.success) return;
-      setNotifications(result.data?.data || []);
+      try {
+        const result = await apiService.getNotifications();
+        if (!isMounted || !result.success) return;
+        setNotifications(result.data?.data || []);
+      } catch {
+        // silent — notifications are non-critical
+      }
     };
 
     loadNotifications();
@@ -60,6 +65,26 @@ const Header = () => {
       clearInterval(interval);
     };
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    let isMounted = true;
+    const loadProfileImage = async () => {
+      try {
+        const result = isInvestor
+          ? await investorProfileService.getMyProfile()
+          : await profileService.getMyProfile();
+        if (!isMounted || !result.success) return;
+        const p = result.data?.data || result.data;
+        const url = isInvestor ? p?.photo_url : p?.logo_url;
+        if (url) setProfileImageUrl(url);
+      } catch {
+        // silent — avatar falls back to initials
+      }
+    };
+    loadProfileImage();
+    return () => { isMounted = false; };
+  }, [isAuthenticated, user?.id, isInvestor]);
 
   useEffect(() => {
     if (!showNotifications) return;
@@ -109,6 +134,17 @@ const Header = () => {
         <div className="flex items-center space-x-3">
           {isAuthenticated && user ? (
             <>
+              {isOnboardingPage ? (
+                // During onboarding: only show logout so the flow cannot be skipped
+                <button
+                  onClick={handleLogout}
+                  aria-label="Log out"
+                  className="w-11 h-11 rounded-full border border-white/25 bg-black/20 text-white flex items-center justify-center hover:bg-red-500/25 hover:border-red-300/50 transition-all duration-300"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              ) : (
+                <>
               <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-2">
                 <nav className="flex items-center gap-2">
                   {navItems.map((item) => (
@@ -127,23 +163,9 @@ const Header = () => {
                     </NavLink>
                   ))}
                 </nav>
-
-                <Link
-                  to={isInvestor ? "/startups" : "/investors"}
-                  className="px-4 py-2 bg-blue-500/20 rounded-full text-sm font-medium border border-blue-400/40 hover:bg-blue-500/50 hover:border-blue-400/60 transition-all duration-300"
-                >
-                  <span className="text-white">Explore</span>
-                </Link>
               </div>
 
               <div className="flex items-center gap-2 ml-auto">
-                <Link
-                  to={isInvestor ? "/startups" : "/investors"}
-                  className="lg:hidden px-4 py-2 bg-blue-500/20 rounded-full text-sm font-medium border border-blue-400/40 hover:bg-blue-500/50 hover:border-blue-400/60 transition-all duration-300"
-                >
-                  <span className="text-white">Explore</span>
-                </Link>
-
                 <div className="relative" ref={dropdownRef}>
                   <button
                     type="button"
@@ -217,9 +239,10 @@ const Header = () => {
                       : "border-white/30 hover:border-purple-300/60"
                   }`}
                 >
-                  <div className="w-full h-full bg-gradient-to-r from-amber-300 to-purple-400 flex items-center justify-center text-black font-semibold text-sm">
-                    {userInitial}
-                  </div>
+                  {profileImageUrl
+                    ? <img src={profileImageUrl} alt="Profile" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full bg-gradient-to-r from-amber-300 to-purple-400 flex items-center justify-center text-black font-semibold text-sm">{userInitial}</div>
+                  }
                 </Link>
 
                 <button
@@ -230,6 +253,8 @@ const Header = () => {
                   <LogOut className="w-5 h-5" />
                 </button>
               </div>
+                </>
+              )}
             </>
           ) : (
             <>

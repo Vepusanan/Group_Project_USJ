@@ -8,6 +8,7 @@ export class InvestorProfile {
     this.user_id = data.user_id;
 
     this.name_or_firm = data.name_or_firm || data.name || data.firm_name;
+    this.photo_url = data.photo_url || null;
     this.investor_type = data.investor_type;
     this.years_of_experience = data.years_of_experience;
     this.professional_background =
@@ -55,6 +56,7 @@ export class InvestorProfile {
       name_or_firm: this.name_or_firm,
       name: this.name_or_firm,
       firm_name: this.name_or_firm,
+      photo_url: this.photo_url,
       investor_type: this.investor_type,
       years_of_experience: this.years_of_experience,
       professional_background: this.professional_background,
