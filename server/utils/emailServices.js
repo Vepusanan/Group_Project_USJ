@@ -6,6 +6,12 @@ const getFrontendBaseUrl = () => {
   return url.replace(/\/+$/, "");
 };
 
+const getBackendBaseUrl = () => {
+  const url =
+    process.env.BASE_URL || process.env.FRONTEND_URL || "http://localhost:5000";
+  return url.replace(/\/+$/, "");
+};
+
 // Use environment variables for secure configuration
 const transporter = nodemailer.createTransport({
   service: "gmail", // You can use any service (e.g., 'outlook', 'sendgrid')
@@ -16,7 +22,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendVerificationEmail = async (email, token) => {
-  const verificationLink = `${getFrontendBaseUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+  const verificationLink = `${getBackendBaseUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
 
   const mailOptions = {
     from: `"Startup Connect" <${process.env.EMAIL_USER}>`,
