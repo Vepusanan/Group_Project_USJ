@@ -1,6 +1,17 @@
 import React from "react";
 import { BadgeCheck, Building2, CalendarClock, Globe, Linkedin, MapPin } from "lucide-react";
 
+const MAX_BIO_WORDS = 500;
+
+const countWords = (text) =>
+  (text || "").trim().split(/\s+/).filter(Boolean).length;
+
+const truncateToWords = (text, limit) => {
+  const words = (text || "").split(/\s+/);
+  if (words.length <= limit) return text;
+  return words.slice(0, limit).join(" ");
+};
+
 const INVESTOR_TYPES = [
   { value: "ANGEL", label: "Angel Investor" },
   { value: "VC", label: "Venture Capital" },
@@ -153,9 +164,29 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
         rows={4}
         placeholder="Share your investing or operator background, areas of focus, and what drives your investment approach."
         value={formData.professional_background}
-        onChange={(e) => updateFormData({ professional_background: e.target.value })}
+        onChange={(e) => {
+          const next = e.target.value;
+          if (countWords(next) > MAX_BIO_WORDS) {
+            updateFormData({
+              professional_background: truncateToWords(next, MAX_BIO_WORDS),
+            });
+            return;
+          }
+          updateFormData({ professional_background: next });
+        }}
         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all resize-none"
       />
+      <div className="mt-1.5 flex justify-end">
+        <span
+          className={`text-xs ${
+            countWords(formData.professional_background) >= MAX_BIO_WORDS
+              ? "text-red-400"
+              : "text-gray-500"
+          }`}
+        >
+          {countWords(formData.professional_background)} / {MAX_BIO_WORDS} words
+        </span>
+      </div>
     </Field>
   </div>
 );

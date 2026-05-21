@@ -1,5 +1,10 @@
 import * as MessageRepository from "../repositories/messageRepository.js";
-import { isUsersConnected } from "../repositories/ConnectionRepository.js";
+import {
+  getUserById,
+  isUsersConnected,
+} from "../repositories/ConnectionRepository.js";
+import { sendNewMessageEmail } from "../utils/emailServices.js";
+import { isUserOnline } from "../socketHandler.js";
 
 // Send a new message
 export const sendMessage = async (req, res) => {
@@ -36,6 +41,33 @@ export const sendMessage = async (req, res) => {
       text: (text || "").trim(),
       attachmentUrl,
     });
+
+    // Fire-and-forget: email the recipient only when they aren't actively
+    // connected via socket. Keeps real-time conversations email-quiet while
+    // ensuring offline users still get notified.
+    if (!isUserOnline(receiverId)) {
+      (async () => {
+        try {
+          const [sender, receiver] = await Promise.all([
+            getUserById(senderId),
+            getUserById(receiverId),
+          ]);
+          if (receiver?.email) {
+            await sendNewMessageEmail(
+              receiver.email,
+              receiver.full_name,
+              sender?.full_name || "A connection",
+              messageData.text,
+            );
+          }
+        } catch (emailError) {
+          console.error(
+            "Failed to send new-message email:",
+            emailError.message,
+          );
+        }
+      })();
+    }
 
     res.status(201).json({
       success: true,

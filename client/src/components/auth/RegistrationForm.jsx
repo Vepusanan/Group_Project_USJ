@@ -43,8 +43,17 @@ const RegistrationForm = () => {
 
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 10) {
-      newErrors.password = "Password must be at least 10 characters";
+    } else {
+      const pw = formData.password;
+      const unmet = [];
+      if (pw.length < 10) unmet.push("at least 10 characters");
+      if (!/[A-Z]/.test(pw)) unmet.push("one uppercase letter");
+      if (!/[a-z]/.test(pw)) unmet.push("one lowercase letter");
+      if (!/\d/.test(pw)) unmet.push("one number");
+      if (!/[^A-Za-z0-9]/.test(pw)) unmet.push("one special character");
+      if (unmet.length > 0) {
+        newErrors.password = `Password must include: ${unmet.join(" • ")}`;
+      }
     }
 
     if (!formData.confirmPassword) {

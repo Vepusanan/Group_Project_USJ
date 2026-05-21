@@ -1,0 +1,207 @@
+- generic [ref=e5]:
+  - generic [ref=e7]:
+    - link "StartHub Capital Logo StartHubCapital" [ref=e8] [cursor=pointer]:
+      - /url: /
+      - img "StartHub Capital Logo" [ref=e10]
+      - generic [ref=e11]: StartHubCapital
+    - button "Log out" [ref=e142] [cursor=pointer]:
+      - img [ref=e143]
+  - generic [ref=e14]:
+    - generic [ref=e147]:
+      - generic [ref=e148]:
+        - generic [ref=e149]: Startup Profile Setup
+        - heading "Complete Your Profile" [level=1] [ref=e150]
+        - paragraph [ref=e151]: Step 1 of 5 — Who you are
+      - generic [ref=e152]:
+        - button "1 Identity" [disabled] [ref=e153]:
+          - generic [ref=e154]: "1"
+          - generic [ref=e155]: Identity
+        - button "2 Business" [disabled] [ref=e157]:
+          - generic [ref=e158]: "2"
+          - generic [ref=e159]: Business
+        - button "3 Team" [disabled] [ref=e161]:
+          - generic [ref=e162]: "3"
+          - generic [ref=e163]: Team
+        - button "4 Funding" [disabled] [ref=e165]:
+          - generic [ref=e166]: "4"
+          - generic [ref=e167]: Funding
+        - button "5 Contact" [disabled] [ref=e169]:
+          - generic [ref=e170]: "5"
+          - generic [ref=e171]: Contact
+      - generic [ref=e174]:
+        - generic [ref=e175]:
+          - generic [ref=e176]:
+            - heading "Company Identity" [level=2] [ref=e177]
+            - paragraph [ref=e178]: Start with the essentials — your company and founders.
+          - generic [ref=e179]:
+            - generic [ref=e180]: Company Logo
+            - generic [ref=e181]:
+              - img [ref=e183]
+              - generic [ref=e186]:
+                - generic [ref=e187] [cursor=pointer]:
+                  - img [ref=e188]
+                  - text: Upload Logo
+                - paragraph [ref=e191]: PNG, JPG or SVG — max 2 MB
+          - generic [ref=e192]:
+            - generic [ref=e193]: Company Name*
+            - generic [ref=e194]:
+              - img [ref=e195]
+              - textbox "e.g., Acme Technologies" [ref=e199]
+          - generic [ref=e200]:
+            - generic [ref=e201]: Founders*
+            - generic [ref=e202]:
+              - generic [ref=e204]:
+                - img [ref=e205]
+                - textbox "Founder 1 full name" [ref=e208]
+              - button "Add another founder" [ref=e209] [cursor=pointer]:
+                - img [ref=e210]
+                - text: Add another founder
+          - generic [ref=e211]:
+            - generic [ref=e212]:
+              - generic [ref=e213]: Country*
+              - generic [ref=e214]:
+                - img
+                - combobox [ref=e215]:
+                  - option "Select country" [selected]
+                  - option "Afghanistan"
+                  - option "Albania"
+                  - option "Algeria"
+                  - option "Argentina"
+                  - option "Australia"
+                  - option "Austria"
+                  - option "Bangladesh"
+                  - option "Belgium"
+                  - option "Brazil"
+                  - option "Canada"
+                  - option "Chile"
+                  - option "China"
+                  - option "Colombia"
+                  - option "Czech Republic"
+                  - option "Denmark"
+                  - option "Egypt"
+                  - option "Ethiopia"
+                  - option "Finland"
+                  - option "France"
+                  - option "Germany"
+                  - option "Ghana"
+                  - option "Greece"
+                  - option "Hungary"
+                  - option "India"
+                  - option "Indonesia"
+                  - option "Iran"
+                  - option "Iraq"
+                  - option "Ireland"
+                  - option "Israel"
+                  - option "Italy"
+                  - option "Japan"
+                  - option "Jordan"
+                  - option "Kenya"
+                  - option "Malaysia"
+                  - option "Mexico"
+                  - option "Morocco"
+                  - option "Netherlands"
+                  - option "New Zealand"
+                  - option "Nigeria"
+                  - option "Norway"
+                  - option "Pakistan"
+                  - option "Peru"
+                  - option "Philippines"
+                  - option "Poland"
+                  - option "Portugal"
+                  - option "Romania"
+                  - option "Russia"
+                  - option "Saudi Arabia"
+                  - option "Singapore"
+                  - option "South Africa"
+                  - option "South Korea"
+                  - option "Spain"
+                  - option "Sri Lanka"
+                  - option "Sweden"
+                  - option "Switzerland"
+                  - option "Tanzania"
+                  - option "Thailand"
+                  - option "Turkey"
+                  - option "Uganda"
+                  - option "Ukraine"
+                  - option "United Arab Emirates"
+                  - option "United Kingdom"
+                  - option "United States"
+                  - option "Vietnam"
+                  - option "Zimbabwe"
+            - generic [ref=e216]:
+              - generic [ref=e217]: City*
+              - generic [ref=e218]:
+                - img [ref=e219]
+                - textbox "e.g., San Francisco" [ref=e222]
+          - generic [ref=e223]:
+            - generic [ref=e224]: Website URL
+            - generic [ref=e225]:
+              - img [ref=e226]
+              - textbox "https://yourcompany.com" [ref=e229]
+          - generic [ref=e230]:
+            - generic [ref=e231]: LinkedIn Profile
+            - generic [ref=e232]:
+              - img [ref=e233]
+              - textbox "https://linkedin.com/company/your-company" [ref=e237]
+        - generic [ref=e238]:
+          - button "Back" [disabled] [ref=e239]
+          - button "Continue" [ref=e241] [cursor=pointer]:
+            - text: Continue
+            - img [ref=e242]
+      - paragraph [ref=e244]: You can edit your profile any time from Settings.
+    - contentinfo [ref=e56]:
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - img "StartHub Capital Logo" [ref=e62]
+              - generic [ref=e63]: StartHub Capital
+            - paragraph [ref=e64]:
+              - text: Connect Startups with the Right
+              - text: Investors.
+          - generic [ref=e65]:
+            - heading "QuickLinks" [level=4] [ref=e66]
+            - list [ref=e67]:
+              - listitem [ref=e68]:
+                - link "About Us" [ref=e69] [cursor=pointer]:
+                  - /url: /about
+              - listitem [ref=e70]:
+                - link "Our Services" [ref=e71] [cursor=pointer]:
+                  - /url: /services
+              - listitem [ref=e72]:
+                - link "Community" [ref=e73] [cursor=pointer]:
+                  - /url: /community
+              - listitem [ref=e74]:
+                - link "FAQ" [ref=e75] [cursor=pointer]:
+                  - /url: /faq
+          - generic [ref=e76]:
+            - heading "Company" [level=4] [ref=e77]
+            - list [ref=e78]:
+              - listitem [ref=e79]:
+                - link "About Us" [ref=e80] [cursor=pointer]:
+                  - /url: /about
+              - listitem [ref=e81]:
+                - link "Contact Us" [ref=e82] [cursor=pointer]:
+                  - /url: /contact
+              - listitem [ref=e83]:
+                - link "Career Tips" [ref=e84] [cursor=pointer]:
+                  - /url: /career-tips
+              - listitem [ref=e85]:
+                - link "Career" [ref=e86] [cursor=pointer]:
+                  - /url: /careers
+          - generic [ref=e87]:
+            - heading "Join the StartupHub Capital Community" [level=4] [ref=e88]
+            - generic [ref=e89]:
+              - textbox "Enter Your Gmail" [ref=e90]
+              - button "Join Us" [ref=e91] [cursor=pointer]
+        - generic [ref=e92]:
+          - paragraph [ref=e93]: © 2026 StartHub Capital. All rights reserved.
+          - generic [ref=e94]:
+            - link "Twitter" [ref=e95] [cursor=pointer]:
+              - /url: "#"
+            - link "LinkedIn" [ref=e96] [cursor=pointer]:
+              - /url: "#"
+            - link "Instagram" [ref=e97] [cursor=pointer]:
+              - /url: "#"
+            - link "Facebook" [ref=e98] [cursor=pointer]:
+              - /url: "#"

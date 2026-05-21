@@ -4,9 +4,11 @@ import {
   getPendingReceivedRequestsForUser,
   getPendingSentRequestsForUser,
   getPendingRequestsForStartup,
+  getUserById,
   removeConnectionById,
   updateConnectionStatus,
 } from "../repositories/ConnectionRepository.js";
+import { sendConnectionRequestEmail } from "../utils/emailServices.js";
 
 export const createConnection = async (req, res) => {
   try {
@@ -24,6 +26,28 @@ export const createConnection = async (req, res) => {
       requesterId,
       targetUserId,
     });
+
+    // Fire-and-forget: email the recipient so they know about the pending request.
+    (async () => {
+      try {
+        const [requester, target] = await Promise.all([
+          getUserById(requesterId),
+          getUserById(targetUserId),
+        ]);
+        if (target?.email) {
+          await sendConnectionRequestEmail(
+            target.email,
+            target.full_name,
+            requester?.full_name || "A user",
+          );
+        }
+      } catch (emailError) {
+        console.error(
+          "Failed to send connection request email:",
+          emailError.message,
+        );
+      }
+    })();
 
     return res.status(201).json({
       success: true,

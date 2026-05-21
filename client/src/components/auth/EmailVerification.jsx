@@ -1,13 +1,48 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import Button from "../common/Button";
 
 const EmailVerification = () => {
   const [searchParams] = useSearchParams();
-  const { error: authError } = useAuth();
+  const { error: authError, resendVerification } = useAuth();
 
-  const email = searchParams.get("email") || "yourmail@gmail.com";
+  const emailParam = searchParams.get("email");
+  const hasRealEmail = Boolean(emailParam);
+  const email = emailParam || "yourmail@gmail.com";
+
+  const [cooldown, setCooldown] = useState(0);
+  const [status, setStatus] = useState("idle");
+  const [feedback, setFeedback] = useState("");
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown((s) => s - 1), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
+
+  const handleResend = async () => {
+    if (cooldown > 0 || status === "sending" || !hasRealEmail) return;
+    setStatus("sending");
+    setFeedback("");
+    const result = await resendVerification(email);
+    if (result?.success === false) {
+      setStatus("error");
+      setFeedback(result.error || "Failed to resend verification email.");
+      return;
+    }
+    setStatus("success");
+    setFeedback(result?.message || "A new verification link has been sent.");
+    setCooldown(60);
+  };
+
+  const resendLabel = !hasRealEmail
+    ? "Resend verification email"
+    : cooldown > 0
+      ? `Resend in ${cooldown}s`
+      : status === "sending"
+        ? "Sending…"
+        : "Resend verification email";
 
   return (
     <div className="text-center">
@@ -46,7 +81,37 @@ const EmailVerification = () => {
         </p>
       </div>
 
-      <div className="w-full max-w-md mx-auto">
+      <div className="w-full max-w-md mx-auto space-y-3">
+        <Button
+          variant="white-border"
+          size="lg"
+          fullWidth
+          className="h-12"
+          disabled={cooldown > 0 || status === "sending" || !hasRealEmail}
+          onClick={handleResend}
+        >
+          {resendLabel}
+        </Button>
+
+        {!hasRealEmail && (
+          <p className="text-gray-500 text-xs text-center">
+            Email address not available — open this page from your signup
+            confirmation link.
+          </p>
+        )}
+
+        {hasRealEmail && status === "success" && feedback && (
+          <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+            <p className="text-green-300 text-sm text-center">{feedback}</p>
+          </div>
+        )}
+
+        {hasRealEmail && status === "error" && feedback && (
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <p className="text-red-400 text-sm text-center">{feedback}</p>
+          </div>
+        )}
+
         <Link to="/login">
           <Button
             variant="gradient-border"

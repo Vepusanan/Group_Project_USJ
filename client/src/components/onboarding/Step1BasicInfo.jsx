@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { Building2, Globe, Linkedin, MapPin, Plus, Trash2, Upload, User } from "lucide-react";
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
 const COUNTRIES = [
   "Afghanistan","Albania","Algeria","Argentina","Australia","Austria","Bangladesh",
@@ -30,6 +32,8 @@ const Field = ({ label, required, error, children }) => (
 );
 
 const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
+  const [logoError, setLogoError] = useState(null);
+
   const founders = Array.isArray(formData.founder_names)
     ? formData.founder_names
     : formData.founder_names
@@ -56,6 +60,13 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
   const handleLogoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_LOGO_BYTES) {
+      setLogoError("File size exceeds 2MB limit.");
+      e.target.value = "";
+      updateFormData({ logo_file: null, logo_preview: null });
+      return;
+    }
+    setLogoError(null);
     updateFormData({ logo_file: file, logo_preview: URL.createObjectURL(file) });
   };
 
@@ -67,7 +78,7 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
       </div>
 
       {/* Logo upload */}
-      <Field label="Company Logo" error={errors.logo_file}>
+      <Field label="Company Logo" error={errors.logo_file || logoError}>
         <div className="flex items-center gap-4">
           <div className="w-20 h-20 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center overflow-hidden bg-white/5 shrink-0">
             {formData.logo_preview ? (

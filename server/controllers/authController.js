@@ -1,7 +1,10 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import pool from "../config/database.js";
-import { lockAccountIfNecessary } from "../utils/loginSecurity.js";
+import {
+  lockAccountIfNecessary,
+  logFailedLoginAttempt,
+} from "../utils/loginSecurity.js";
 import crypto from "crypto";
 import {
   sendVerificationEmail,
@@ -249,12 +252,25 @@ export const login = async (req, res) => {
       });
     }
 
+    // Capture request metadata up-front so it's available for every audit-log
+    // path below (unknown-user, wrong-password, lockout).
+    const clientIp = req.ip || req.connection?.remoteAddress || null;
+    const userAgent = req.headers["user-agent"] || null;
+
     const result = await pool.query(
       "SELECT id, email, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until, created_at FROM users WHERE email = $1",
       [email.toLowerCase()],
     );
 
     if (result.rows.length === 0) {
+      // Log the attempt with userId=null so the audit trail still captures the
+      // IP and the email that was tried, even if no account exists.
+      logFailedLoginAttempt({
+        userId: null,
+        email: email.toLowerCase(),
+        clientIp,
+        userAgent,
+      });
       return res.status(401).json({
         success: false,
         error: "Invalid email or password",
@@ -278,11 +294,19 @@ export const login = async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
-      // Handle Failed Login
+      // Audit log (TC-SEC-004) — every failed attempt gets an IP-stamped row.
+      logFailedLoginAttempt({
+        userId: user.id,
+        email: user.email,
+        clientIp,
+        userAgent,
+      });
+
       const failedResult = await lockAccountIfNecessary(
         user.id,
         user.failed_login_attempts,
         user.email,
+        { clientIp, fullName: user.full_name },
       );
       if (failedResult.locked) {
         return res.status(403).json({
@@ -323,19 +347,16 @@ export const login = async (req, res) => {
       : 24 * 60 * 60 * 1000;
 
     const expiresAt = new Date(Date.now() + sessionDuration);
-    const clientIp = req.ip || req.connection.remoteAddress; // --- DEVICE INFO PARSING (NEW LOGIC) ---
 
-    const userAgentString = req.headers["user-agent"] || "";
     let deviceInfo = "Unknown Device/Browser";
-
-    if (userAgentString) {
-      const parser = new UAParser(userAgentString);
+    if (userAgent) {
+      const parser = new UAParser(userAgent);
       const browser = parser.getBrowser();
       const os = parser.getOS();
       deviceInfo = `${browser.name || "Unknown Browser"} on ${
         os.name || "Unknown OS"
       } ${os.version || ""}`.trim();
-    } // --- END DEVICE INFO PARSING --- // FIX: Re-write SQL string completely to eliminate hidden syntax error
+    }
     await pool.query(
       `INSERT INTO sessions (user_id, refresh_token, is_remembered, expires_at, client_ip, device_info) VALUES ($1, $2, $3, $4, $5, $6)`,
       [user.id, refreshToken, isRemembered, expiresAt, clientIp, deviceInfo],
@@ -508,10 +529,31 @@ export const resetPassword = async (req, res) => {
 
     const userId = resetRecord.user_id;
 
-    // 2. Hash the new password
+    // 2. Reject reuse of the current password
+    const currentResult = await pool.query(
+      "SELECT password_hash FROM users WHERE id = $1",
+      [userId],
+    );
+
+    if (currentResult.rows.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, error: "User account not found." });
+    }
+
+    const currentHash = currentResult.rows[0].password_hash;
+    const sameAsOld = await bcrypt.compare(newPassword, currentHash);
+    if (sameAsOld) {
+      return res.status(400).json({
+        success: false,
+        error: "Cannot reuse your previous password. Choose a different one.",
+      });
+    }
+
+    // 3. Hash the new password
     const newHashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // 3. Update the user's password hash and get the user's email
+    // 4. Update the user's password hash and get the user's email
     const updateResult = await pool.query(
       "UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING email",
       [newHashedPassword, userId],
@@ -519,16 +561,16 @@ export const resetPassword = async (req, res) => {
 
     const userEmail = updateResult.rows[0].email;
 
-    // 4. Invalidate the token (one-time use)
+    // 5. Invalidate the token (one-time use)
     await pool.query(
       "UPDATE password_reset_tokens SET used_at = NOW() WHERE token = $1",
       [token],
     );
 
-    // 5. Terminate all active sessions (security measure)
+    // 6. Terminate all active sessions (security measure)
     await pool.query("DELETE FROM sessions WHERE user_id = $1", [userId]);
 
-    // 6. Send confirmation email
+    // 7. Send confirmation email
     await sendPasswordChangeConfirmationEmail(userEmail);
 
     res.status(200).json({

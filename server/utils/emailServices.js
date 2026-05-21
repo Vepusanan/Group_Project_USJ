@@ -136,6 +136,96 @@ export const sendEmailChangeNotificationToOldEmail = async (
   }
 };
 
+export const sendConnectionRequestEmail = async (
+  recipientEmail,
+  recipientName,
+  requesterName,
+) => {
+  const link = `${getFrontendBaseUrl()}/connections`;
+  const mailOptions = {
+    from: `"Startup Connect" <${process.env.EMAIL_USER}>`,
+    to: recipientEmail,
+    subject: `New connection request from ${requesterName}`,
+    html: `
+      <h2>Hi ${recipientName || "there"},</h2>
+      <p>You have a new connection request from <strong>${requesterName}</strong>.</p>
+      <p><a href="${link}">View pending requests</a></p>
+      <p>If you do not recognize this user, you can decline the request safely from your dashboard.</p>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Connection request email sent to ${recipientEmail}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending connection request email:", error);
+    return false;
+  }
+};
+
+export const sendNewMessageEmail = async (
+  recipientEmail,
+  recipientName,
+  senderName,
+  preview,
+) => {
+  const link = `${getFrontendBaseUrl()}/messages`;
+  const safePreview = (preview || "").slice(0, 200);
+  const mailOptions = {
+    from: `"Startup Connect" <${process.env.EMAIL_USER}>`,
+    to: recipientEmail,
+    subject: `New message from ${senderName}`,
+    html: `
+      <h2>Hi ${recipientName || "there"},</h2>
+      <p><strong>${senderName}</strong> sent you a new message:</p>
+      ${safePreview ? `<blockquote style="border-left:3px solid #6366f1;padding-left:12px;color:#555;">${safePreview}</blockquote>` : ""}
+      <p><a href="${link}">Open your inbox</a></p>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`New-message email sent to ${recipientEmail}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending new-message email:", error);
+    return false;
+  }
+};
+
+export const sendFailedLoginAttemptEmail = async (
+  email,
+  fullName,
+  attempts,
+  clientIp,
+) => {
+  const mailOptions = {
+    from: `"Startup Connect" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: "Unusual sign-in activity on your account",
+    html: `
+      <h2>Hi ${fullName || "there"},</h2>
+      <p>We noticed <strong>${attempts}</strong> recent failed sign-in attempts on your account from IP address <code>${clientIp || "unknown"}</code>.</p>
+      <p>If this was you, you can ignore this notice. If it wasn't, we strongly recommend:</p>
+      <ul>
+        <li>Resetting your password from the forgot-password page.</li>
+        <li>Reviewing your active sessions in Settings.</li>
+      </ul>
+      <p>For your security, your account will be temporarily locked after 5 consecutive failed attempts.</p>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Failed-login email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending failed-login email:", error);
+    return false;
+  }
+};
+
 export const sendAccountDeletionConfirmationEmail = async (
   email,
   deletionDate,

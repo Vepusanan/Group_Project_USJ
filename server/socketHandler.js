@@ -37,6 +37,13 @@ const socketAuthMiddleware = (socket, next) => {
 let _io = null;
 
 /**
+ * Returns true if the given userId currently has an active socket connection.
+ * Used by the REST layer to decide whether to send an email notification on
+ * new activity (skip email when the recipient is live in the app).
+ */
+export const isUserOnline = (userId) => onlineUsers.has(userId);
+
+/**
  * Initializes the Socket.io server and registers all event handlers.
  * @param {Server} io - The Socket.io Server instance
  */
