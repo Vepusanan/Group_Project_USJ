@@ -38,6 +38,10 @@ export class StartupProfile {
     this.phone_number = data.phone_number || data.contact_phone;
     this.social_media_links = data.social_media_links || data.social_media;
 
+    this.location_country = data.location_country || null;
+    this.location_city = data.location_city || null;
+    this.website_url = data.website_url || null;
+
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
   }
@@ -122,6 +126,9 @@ export class StartupProfile {
       logo_url: this.logo_url,
       social_media_links: this.social_media_links,
       social_media: this.social_media_links,
+      location_country: this.location_country,
+      location_city: this.location_city,
+      website_url: this.website_url,
       created_at: this.created_at,
       updated_at: this.updated_at,
     };

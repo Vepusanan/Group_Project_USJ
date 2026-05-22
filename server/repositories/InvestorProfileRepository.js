@@ -144,6 +144,8 @@ function buildCreatePayload(columns, payload) {
     social_media: payload.social_media,
     preferred_contact_method: payload.preferred_contact_method,
     photo_url: payload.photo_url,
+    location_country: payload.location_country,
+    location_city: payload.location_city,
   };
 
   const normalized = {};
@@ -192,8 +194,13 @@ const buildListInvestorsQuery = ({
 
   if (location) {
     const ref = addValue(`%${location.trim().toLowerCase()}%`);
+    // Match either the physical location (country/city) OR the geographic
+    // preference jsonb (regions the investor targets). The user typing
+    // "Sri Lanka" likely means "show investors who are in OR target Sri Lanka".
     clauses.push(
-      `LOWER(COALESCE(ip.geographic_preference::text, '')) LIKE ${ref}`,
+      `(LOWER(COALESCE(ip.location_country, '')) LIKE ${ref}
+        OR LOWER(COALESCE(ip.location_city, '')) LIKE ${ref}
+        OR LOWER(COALESCE(ip.geographic_preference::text, '')) LIKE ${ref})`,
     );
   }
 
@@ -206,6 +213,8 @@ const buildListInvestorsQuery = ({
   }
 
   if (investmentStage) {
+    // stage_preference values are stored uppercase (e.g. "SEED", "SERIES_A").
+    // Compare case-insensitively so the lowercased query input still matches.
     const ref = addValue(investmentStage.trim().toLowerCase());
     clauses.push(
       `EXISTS (SELECT 1 FROM jsonb_array_elements_text(ip.stage_preference) AS stage WHERE LOWER(stage) = ${ref})`,
@@ -471,7 +480,7 @@ export async function getConnectionStatusesForInvestors(
 
   const connectionsResult = await pool.query(
     `
-      SELECT c.id::text AS connection_id, c.investor_id::text AS investor_user_id, c.investor_id::text AS requester_id, c.status
+      SELECT c.id::text AS connection_id, c.investor_id::text AS investor_user_id, c.requester_id::text AS requester_id, c.status
       FROM public.connections c
       WHERE c.startup_id::text = $1
         AND c.investor_id::text = ANY($2::text[])

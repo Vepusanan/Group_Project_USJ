@@ -68,6 +68,7 @@ export const getStartups = async (req, res, next) => {
       current_stage: req.query.current_stage,
       funding_stage: req.query.funding_stage,
       revenue_status: req.query.revenue_status,
+      location_country: req.query.location_country,
       sort,
       requesterUserId: req.user?.id || null,
     });
@@ -82,14 +83,18 @@ export const getStartups = async (req, res, next) => {
       const startup = new StartupProfile(row);
       startup.parseJsonFields(["social_media_links"]);
 
+      const userId = req.user?.id || null;
+      const connEntry = connectionStatusMap.get(String(startup.user_id));
+      const connStatus = userId && String(startup.user_id) === String(userId)
+        ? "self"
+        : connEntry?.status || (userId ? "not_connected" : null);
+
       return {
         ...startup.getPublicFields(),
         logo_url: row.logo_url || null,
-        connection_status: buildConnectionStatus(
-          req.user?.id || null,
-          startup.user_id,
-          connectionStatusMap,
-        ),
+        connection_status: connStatus,
+        connection_id: connEntry?.connection_id || null,
+        connection_requester_id: connEntry?.requester_id || null,
       };
     });
 

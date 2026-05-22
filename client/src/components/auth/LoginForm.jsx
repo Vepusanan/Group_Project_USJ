@@ -1,8 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { profileService } from "../../services/profileService";
-import { investorProfileService } from "../../services/investorProfileService";
+import { checkProfileExistence } from "../../hooks/useProfileCache";
 import Input from "../common/Input";
 import PasswordInput from "../common/PasswordInput";
 import Checkbox from "../common/Checkbox";
@@ -53,30 +52,14 @@ const LoginForm = () => {
         );
 
         if (result.success) {
-          const userType = result.user?.userType;
-          let hasProfile = false;
+          // Fetches once and caches; OnboardingGuard reads from the same cache
+          // so the next route transition does not re-fetch.
+          const { hasProfile, onboardingPath } = await checkProfileExistence(
+            result.user,
+          ).catch(() => ({ hasProfile: false, onboardingPath: null }));
 
-          try {
-            if (userType === "startup") {
-              const profileResult = await profileService.getMyProfile();
-              const data = profileResult.data?.data || profileResult.data;
-              hasProfile = Boolean(data?.startup_profile_id || data?.id);
-            } else if (userType === "investor") {
-              const profileResult = await investorProfileService.getMyProfile();
-              const data = profileResult.data?.data || profileResult.data;
-              hasProfile = Boolean(
-                data?.investor_profile_id || data?.id,
-              );
-            }
-          } catch {
-            // If profile check fails, fall through to dashboard
-          }
-
-          if (!hasProfile) {
-            navigate(
-              userType === "investor" ? "/investor-onboarding" : "/onboarding",
-              { replace: true },
-            );
+          if (!hasProfile && onboardingPath) {
+            navigate(onboardingPath, { replace: true });
           } else {
             navigate("/dashboard", { replace: true });
           }

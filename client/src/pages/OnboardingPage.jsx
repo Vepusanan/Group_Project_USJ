@@ -1,29 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import OnboardingWizard from "../components/onboarding/OnboardingWizard";
-import profileService from "../services/profileService";
+import { useProfileExistence } from "../hooks/useProfileCache";
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const { isReady, hasProfile } = useProfileExistence();
 
   useEffect(() => {
-    const checkExistingProfile = async () => {
-      const result = await profileService.getMyProfile();
-      const data = result.data?.data || result.data;
-      const hasProfile = Boolean(data?.startup_profile_id || data?.id);
+    if (isReady && hasProfile) {
+      navigate("/investors", { replace: true });
+    }
+  }, [isReady, hasProfile, navigate]);
 
-      if (result.success && hasProfile) {
-        navigate("/investors", { replace: true });
-        return;
-      }
-      setLoading(false);
-    };
-
-    checkExistingProfile();
-  }, [navigate]);
-
-  if (loading) {
+  if (!isReady) {
     return (
       <div className="min-h-screen px-6 py-10 text-gray-300">
         Checking profile status...

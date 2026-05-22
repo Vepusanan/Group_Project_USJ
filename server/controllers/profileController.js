@@ -344,12 +344,16 @@ export const getProfile = async (req, res, next) => {
     }
 
     let connectionStatus = null;
+    let connectionId = null;
+    let connectionRequesterId = null;
     if (requestingUserId && !isOwner) {
       const connection = await getConnectionBetweenUsers(
         profile.user_id,
         requestingUserId,
       );
       connectionStatus = connection?.normalized_status || null;
+      connectionId = connection?.id || null;
+      connectionRequesterId = connection?.requester_id || null;
     }
 
     const publicFields = {
@@ -388,6 +392,8 @@ export const getProfile = async (req, res, next) => {
       location_city: profile.location_city,
       website_url: profile.website_url,
       connection_status: connectionStatus,
+      connection_id: connectionId,
+      connection_requester_id: connectionRequesterId,
       created_at: profile.created_at,
       updated_at: profile.updated_at,
     };
@@ -555,7 +561,7 @@ export const getInvestorProfileController = async (req, res, next) => {
       );
       connectionStatus = connection?.normalized_status || null;
       connectionId = connection?.id ? String(connection.id) : null;
-      connectionRequesterId = connection?.investor_id ? String(connection.investor_id) : null;
+      connectionRequesterId = connection?.requester_id ? String(connection.requester_id) : null;
     }
 
     const publicFields = {

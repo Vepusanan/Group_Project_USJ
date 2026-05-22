@@ -45,6 +45,9 @@ export class InvestorProfile {
     this.social_media = data.social_media;
     this.preferred_contact_method = data.preferred_contact_method;
 
+    this.location_country = data.location_country || null;
+    this.location_city = data.location_city || null;
+
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
   }
@@ -87,6 +90,8 @@ export class InvestorProfile {
       phone_number: this.phone_number,
       contact_phone: this.phone_number,
       preferred_contact_method: this.preferred_contact_method,
+      location_country: this.location_country,
+      location_city: this.location_city,
       created_at: this.created_at,
       updated_at: this.updated_at,
     };

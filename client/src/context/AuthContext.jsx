@@ -7,15 +7,13 @@ import React, {
 } from "react";
 import authService from "../services/authService";
 import { apiService } from "../services/apiService";
-import { clearOnboardingCache } from "../App";
+import { clearProfileCaches } from "../hooks/useProfileCache";
 
 const initialState = {
   user: null,
   isAuthenticated: false,
   isLoading: true,
   error: null,
-  accessToken: null,
-  refreshToken: null,
 };
 
 const AUTH_ACTIONS = {
@@ -38,7 +36,6 @@ const AUTH_ACTIONS = {
   CLEAR_ERROR: "CLEAR_ERROR",
   SET_LOADING: "SET_LOADING",
   SET_USER: "SET_USER",
-  REFRESH_TOKEN_SUCCESS: "REFRESH_TOKEN_SUCCESS",
 };
 
 const authReducer = (state, action) => {
@@ -61,13 +58,12 @@ const authReducer = (state, action) => {
 
     case AUTH_ACTIONS.LOGIN_SUCCESS:
     case AUTH_ACTIONS.REGISTER_SUCCESS:
+      // Tokens are in HttpOnly cookies, not state. Auth status is derived
+      // from whether we successfully got a user back.
       return {
         ...state,
         user: action.payload?.user || null,
-        accessToken: action.payload?.accessToken || null,
-        refreshToken: action.payload?.refreshToken || null,
-        isAuthenticated:
-          !!action.payload?.accessToken && !!action.payload?.user,
+        isAuthenticated: !!action.payload?.user,
         isLoading: false,
         error: null,
       };
@@ -96,8 +92,6 @@ const authReducer = (state, action) => {
       return {
         ...state,
         user: null,
-        accessToken: null,
-        refreshToken: null,
         isAuthenticated: false,
         isLoading: false,
         error: null,
@@ -122,12 +116,6 @@ const authReducer = (state, action) => {
         isAuthenticated: !!action.payload,
       };
 
-    case AUTH_ACTIONS.REFRESH_TOKEN_SUCCESS:
-      return {
-        ...state,
-        accessToken: action.payload?.accessToken || null,
-      };
-
     default:
       return state;
   }
@@ -140,7 +128,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const onForceLogout = () => {
-      clearOnboardingCache();
+      clearProfileCaches();
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
     };
     window.addEventListener("auth:force-logout", onForceLogout);
@@ -148,58 +136,53 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    // Cookie-based auth: we can't read the access_token from JS, so the
+    // only signal that the user is logged in is whether `/auth/me`
+    // succeeds. userData is cached so the UI can render an optimistic
+    // logged-in skeleton while the network call resolves; on 401 we
+    // clear it and stay logged out.
     const checkAuthStatus = async () => {
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        const refreshToken = localStorage.getItem("refreshToken");
-        const userDataStr = localStorage.getItem("userData");
+      const userDataStr = localStorage.getItem("userData");
+      let optimisticallyHydrated = false;
 
-        if (accessToken && refreshToken) {
-          let hydratedFromStorage = false;
-
-          if (userDataStr) {
-            try {
-              const cachedUser = JSON.parse(userDataStr);
-              dispatch({ type: AUTH_ACTIONS.SET_USER, payload: cachedUser });
-              hydratedFromStorage = true;
-            } catch (parseError) {
-              console.error("Failed to parse user data:", parseError);
-              localStorage.removeItem("userData");
-            }
-          }
-
-          try {
-            const userData = await apiService.getCurrentUser();
-            if (userData.success && userData.data) {
-              localStorage.setItem("userData", JSON.stringify(userData.data));
-              dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData.data });
-            } else if (!hydratedFromStorage) {
-              localStorage.removeItem("accessToken");
-              localStorage.removeItem("refreshToken");
-              localStorage.removeItem("userData");
-            }
-          } catch (error) {
-            console.error("Failed to fetch user data:", error);
-            if (!hydratedFromStorage) {
-              localStorage.removeItem("accessToken");
-              localStorage.removeItem("refreshToken");
-              localStorage.removeItem("userData");
-            }
-          } finally {
-            dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
-          }
-        } else {
-          localStorage.removeItem("accessToken");
-          localStorage.removeItem("refreshToken");
+      if (userDataStr) {
+        try {
+          const cachedUser = JSON.parse(userDataStr);
+          dispatch({ type: AUTH_ACTIONS.SET_USER, payload: cachedUser });
+          optimisticallyHydrated = true;
+        } catch (parseError) {
+          console.error("Failed to parse user data:", parseError);
           localStorage.removeItem("userData");
-          dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+        }
+      }
+
+      // Only call /auth/me when we have a cached user to confirm. Anonymous
+      // visitors should not trigger a 401 cascade (the apiClient interceptor
+      // would otherwise treat the bootstrap 401 as a session expiry and
+      // redirect them away from public pages like the home screen).
+      if (!optimisticallyHydrated) {
+        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+        return;
+      }
+
+      try {
+        const userData = await apiService.getCurrentUser();
+        if (userData.success && userData.data) {
+          localStorage.setItem("userData", JSON.stringify(userData.data));
+          dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData.data });
+        } else {
+          // /auth/me failed but we'd already rendered the user — roll back.
+          localStorage.removeItem("userData");
+          dispatch({ type: AUTH_ACTIONS.LOGOUT });
         }
       } catch (error) {
-        console.error("Auth status check failed:", error);
-        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
+        // Either the network call failed or the cookie has expired and
+        // even the refresh-retry could not save it. Treat as logged out.
+        console.error("Failed to fetch user data:", error);
         localStorage.removeItem("userData");
+        dispatch({ type: AUTH_ACTIONS.LOGOUT });
+      } finally {
+        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
       }
     };
 
@@ -221,11 +204,7 @@ export const AuthProvider = ({ children }) => {
 
       dispatch({
         type: AUTH_ACTIONS.LOGIN_SUCCESS,
-        payload: {
-          user: response.user,
-          accessToken: response.accessToken,
-          refreshToken: response.refreshToken,
-        },
+        payload: { user: response.user },
       });
       return { success: true, user: response.user };
     } catch (error) {
@@ -253,11 +232,7 @@ export const AuthProvider = ({ children }) => {
 
       dispatch({
         type: AUTH_ACTIONS.REGISTER_SUCCESS,
-        payload: {
-          user: response.user,
-          accessToken: response.accessToken,
-          refreshToken: response.refreshToken,
-        },
+        payload: { user: response.user },
       });
       return { success: true };
     } catch (error) {
@@ -277,7 +252,7 @@ export const AuthProvider = ({ children }) => {
       console.error("Logout error:", error);
     }
 
-    clearOnboardingCache();
+    clearProfileCaches();
     dispatch({ type: AUTH_ACTIONS.LOGOUT });
   }, []);
 
@@ -390,22 +365,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const refreshAccessToken = useCallback(async () => {
-    const refreshToken = localStorage.getItem("refreshToken");
-    if (!refreshToken) return { success: false };
-
+    // Refresh cookie is sent automatically; nothing to read from JS.
     try {
-      const response = await authService.refreshAccessToken(refreshToken);
-      if (response.success) {
-        dispatch({
-          type: AUTH_ACTIONS.REFRESH_TOKEN_SUCCESS,
-          payload: { accessToken: response.accessToken },
-        });
-        return { success: true };
-      }
+      const response = await authService.refreshAccessToken();
+      if (response.success) return { success: true };
       return { success: false };
     } catch (error) {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
       localStorage.removeItem("userData");
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
       return { success: false };

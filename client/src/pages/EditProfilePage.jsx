@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Upload, User } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useProfileData } from "../hooks/useProfileCache";
 import profileService from "../services/profileService";
 import investorProfileService from "../services/investorProfileService";
 
@@ -129,21 +130,37 @@ const EditProfilePage = () => {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState(null);
 
+  const {
+    profile: cachedProfile,
+    isReady,
+    error: profileError,
+    invalidate: invalidateProfileData,
+  } = useProfileData();
+
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      const result = isInvestor
-        ? await investorProfileService.getMyProfile()
-        : await profileService.getMyProfile();
+    if (!isReady) return;
+    if (profileError) {
+      setError(profileError);
+      setLoading(false);
+      return;
+    }
+    const p = cachedProfile;
+    if (!p) {
+      setError("Profile not found.");
+      setLoading(false);
+      return;
+    }
 
-      if (!result.success) { setError(result.error || "Failed to load profile"); setLoading(false); return; }
-
-      const p = result.data?.data || result.data;
-      if (!p) { setError("Profile not found."); setLoading(false); return; }
-
-      const id = p.investor_profile_id || p.startup_profile_id || p.id;
-      if (!id) { setError("Profile ID not found."); setLoading(false); return; }
-      setProfileId(id);
+    const id = p.investor_profile_id || p.startup_profile_id || p.id;
+    if (!id) {
+      setError("Profile ID not found.");
+      setLoading(false);
+      return;
+    }
+    setProfileId(id);
+    // The remainder of this effect populates the local form state from `p`.
+    // It runs once per (isReady, isInvestor) transition; the cache itself is
+    // stable so this is not a re-render loop.
 
       if (isInvestor) {
         const social = parseJson(p.social_media, {});
@@ -216,9 +233,7 @@ const EditProfilePage = () => {
         });
       }
       setLoading(false);
-    };
-    load();
-  }, [isInvestor]);
+  }, [isReady, isInvestor, cachedProfile, profileError]);
 
   const handleLogoChange = (file) => {
     setLogoFile(file);
@@ -276,6 +291,7 @@ const EditProfilePage = () => {
 
         const result = await investorProfileService.updateProfile(profileId, fd);
         if (!result.success) { setError(result.error || "Failed to update"); setSaving(false); return; }
+        invalidateProfileData();
       } else {
         if (!sf.company_name.trim()) { setError("Company name is required"); setSaving(false); return; }
         if (logoFile) fd.append("logo", logoFile);
@@ -313,6 +329,7 @@ const EditProfilePage = () => {
 
         const result = await profileService.updateProfile(profileId, fd);
         if (!result.success) { setError(result.error || "Failed to update"); setSaving(false); return; }
+        invalidateProfileData();
       }
 
       setSuccess("Profile updated successfully.");

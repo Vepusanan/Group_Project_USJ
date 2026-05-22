@@ -2,6 +2,11 @@ import jwt from "jsonwebtoken";
 import pool from "../config/database.js";
 
 const getBearerToken = (req) => {
+  // Cookie is the canonical transport for the SPA after the TC-SEC-006
+  // migration. The Authorization header fallback keeps curl / Postman
+  // workflows working during the transition.
+  if (req.cookies?.access_token) return req.cookies.access_token;
+
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")

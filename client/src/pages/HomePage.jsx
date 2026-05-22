@@ -13,8 +13,6 @@ const HomePage = () => {
     try {
       await logout();
     } catch (error) {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
       localStorage.removeItem("userData");
     }
     navigate("/login");
@@ -23,7 +21,7 @@ const HomePage = () => {
   return (
     <div className="relative">
       {/* ── HERO SECTION — full viewport height ── */}
-      <div className="h-screen bg-black bg-[url('../../public/images/hero-background/hero-background.png')] bg-cover bg-center relative z-10 flex flex-col overflow-hidden">
+      <div className="h-screen bg-black bg-[url('/images/hero-background/hero-background.png')] bg-cover bg-center relative z-10 flex flex-col overflow-hidden">
         {/* Header Section */}
         <div className="relative w-full max-w-full flex justify-between items-center px-6 py-4 md:px-8 lg:px-12 xl:px-16 mb-4">
         {/* Logo Section */}

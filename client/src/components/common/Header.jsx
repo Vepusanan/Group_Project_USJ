@@ -3,8 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Bell, LogOut, Settings } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { apiService } from "../../services/apiService";
-import profileService from "../../services/profileService";
-import investorProfileService from "../../services/investorProfileService";
+import { useProfileData } from "../../hooks/useProfileCache";
 
 const Header = () => {
   const location = useLocation();
@@ -18,10 +17,11 @@ const Header = () => {
     location.pathname === "/investor-onboarding";
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [profileImageUrl, setProfileImageUrl] = useState(null);
   const dropdownRef = useRef(null);
+  const { profile } = useProfileData();
 
   const isInvestor = user?.userType === "investor";
+  const profileImageUrl = isInvestor ? profile?.photo_url : profile?.logo_url;
   const userInitial = (user?.firstName || user?.name || user?.email || "U")
     .charAt(0)
     .toUpperCase();
@@ -36,8 +36,9 @@ const Header = () => {
     try {
       await logout();
     } catch (error) {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
+      // Cookies are HttpOnly and cleared by the backend. Locally we only
+      // need to drop the user cache so AuthContext's hydrate effect won't
+      // re-render a logged-in skeleton on next page load.
       localStorage.removeItem("userData");
     }
     navigate("/login");
@@ -65,26 +66,6 @@ const Header = () => {
       clearInterval(interval);
     };
   }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !user) return;
-    let isMounted = true;
-    const loadProfileImage = async () => {
-      try {
-        const result = isInvestor
-          ? await investorProfileService.getMyProfile()
-          : await profileService.getMyProfile();
-        if (!isMounted || !result.success) return;
-        const p = result.data?.data || result.data;
-        const url = isInvestor ? p?.photo_url : p?.logo_url;
-        if (url) setProfileImageUrl(url);
-      } catch {
-        // silent — avatar falls back to initials
-      }
-    };
-    loadProfileImage();
-    return () => { isMounted = false; };
-  }, [isAuthenticated, user?.id, isInvestor]);
 
   useEffect(() => {
     if (!showNotifications) return;
@@ -174,7 +155,7 @@ const Header = () => {
                     className="w-11 h-11 rounded-full border border-white/25 bg-black/20 text-white flex items-center justify-center hover:bg-white/10 transition-all duration-300 relative"
                   >
                     <Bell className="w-5 h-5" />
-                    {notifications.length > 0 && (
+                    {!showNotifications && notifications.length > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-semibold flex items-center justify-center">
                         {notifications.length > 9 ? "9+" : notifications.length}
                       </span>

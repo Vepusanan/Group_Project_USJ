@@ -121,7 +121,10 @@ body {
   font-family: var(--font-family-inter);
   font-size: var(--font-size-base);
   line-height: 1.6;
-  background-color: var(--color-bg-dark);
+  /* Deep-purple base so scrollable pages don't expose a flat-black gap
+     below the viewport-anchored background images. AppShell paints
+     bg-black on the home route to keep the original home look. */
+  background-color: #080318;
   color: var(--color-text-light);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

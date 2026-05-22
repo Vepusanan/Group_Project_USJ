@@ -167,6 +167,8 @@ const InvestorProfilePage = () => {
   const [shareToast, setShareToast]         = useState(false);
 
   useEffect(() => {
+    // Scroll to top when navigating between profiles.
+    window.scrollTo({ top: 0, behavior: "auto" });
     (async () => {
       setLoading(true);
       setError("");
@@ -179,17 +181,19 @@ const InvestorProfilePage = () => {
       setConnectionId(data.connection_id || null);
       setConnectionRequesterId(data.connection_requester_id || null);
       setLoading(false);
+      // Ensure we're at the top after the new content paints.
+      window.scrollTo({ top: 0, behavior: "auto" });
     })();
   }, [id]);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#080318]">
       <div className="w-10 h-10 border-4 border-purple-600/30 border-t-purple-600 rounded-full animate-spin" />
     </div>
   );
 
   if (error || !profile) return (
-    <div className="min-h-screen px-6 py-10">
+    <div className="px-6 py-10">
       <div className="max-w-4xl mx-auto rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-rose-100">
         {error || "Profile not found"}
       </div>
@@ -200,8 +204,9 @@ const InvestorProfilePage = () => {
   const isConnected        = connectionStatus === "accepted";
   const isPending          = connectionStatus === "pending";
   const canSendRequest     = user?.userType === "startup";
-  // Investors always send requests; if there's a pending connection on this investor's profile,
-  // the investor is always the requester — so the current (startup) user is always the receiver.
+  // Either side can initiate now. A startup viewing an investor profile may
+  // send the first request OR respond to one the investor sent first.
+  const canInitiateRequest = canSendRequest;
   const isReceivedRequest  = isPending && !isOwn && (
     connectionRequesterId
       ? String(connectionRequesterId) !== String(user?.id)
@@ -348,12 +353,12 @@ const InvestorProfilePage = () => {
                       <Clock className="w-4 h-4" />
                       {actionLoading ? "Cancelling…" : "Pending · Cancel"}
                     </button>
-                  ) : (
+                  ) : canInitiateRequest ? (
                     <button type="button" onClick={() => setShowModal(true)}
                       className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white text-sm font-medium transition-opacity shadow-lg shadow-purple-900/40">
                       Connect
                     </button>
-                  )}
+                  ) : null}
                 </div>
               )}
             </div>
@@ -604,7 +609,7 @@ const InvestorProfilePage = () => {
       </div>
 
       {/* ── CONNECT MODAL ─────────────────────────────────────────────────── */}
-      {showModal && canSendRequest && (
+      {showModal && canInitiateRequest && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0f0d1a] shadow-2xl p-6">
             <div className="flex items-center gap-3 mb-4">

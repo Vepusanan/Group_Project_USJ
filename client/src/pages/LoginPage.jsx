@@ -5,8 +5,8 @@ import Button from '../components/common/Button';
 
 const LoginPage = () => {
   return (
-    <div className="w-full max-w-md mx-auto ">
-      <div className="bg-white/4 backdrop-blur-lg rounded-2xl p-8 md:p-10 border border-gray-700/50 shadow-2xl mt-10">
+    <div className="w-full max-w-md mx-auto self-start mt-4 md:mt-8">
+      <div className="bg-white/4 backdrop-blur-lg rounded-2xl p-8 md:p-10 border border-gray-700/50 shadow-2xl">
         <h1 className="text-3xl font-bold text-white text-center mb-8">
           Sign in
         </h1>
@@ -23,17 +23,12 @@ const LoginPage = () => {
       </div>
 
       {/* Horizontal line with "New to our community?" centered */}
-      <div className="mt-8">
-        <div className="relative flex items-center justify-center">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-600"></div>
-          </div>
-          <div className="relative px-4 bg-black">
-            <p className="text-gray-400 text-sm whitespace-nowrap">
-              New to our community?
-            </p>
-          </div>
-        </div>
+      <div className="mt-8 flex items-center gap-4">
+        <div className="flex-1 border-t border-gray-600"></div>
+        <p className="text-gray-400 text-sm whitespace-nowrap">
+          New to our community?
+        </p>
+        <div className="flex-1 border-t border-gray-600"></div>
       </div>
 
       {/* Create an account button */}

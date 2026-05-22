@@ -35,6 +35,44 @@ const getFrontendBaseUrl = () => {
   return frontendUrl.replace(/\/+$/, "");
 };
 
+// Cookie attributes shared by every auth-related response. HttpOnly so JS
+// in the SPA can't read the token (TC-SEC-006); SameSite=strict so the
+// cookie isn't sent on cross-site requests (CSRF defence); Path=/ so it
+// covers every API route. `secure` is on in production only — Chrome
+// allows non-secure cookies on localhost during dev.
+const cookieBase = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict",
+  path: "/",
+});
+
+const ACCESS_TOKEN_MAX_AGE_MS = 15 * 60 * 1000;
+const SHORT_REFRESH_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const LONG_REFRESH_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+const setAuthCookies = (res, { accessToken, refreshToken, isRemembered }) => {
+  res.cookie("access_token", accessToken, {
+    ...cookieBase(),
+    maxAge: ACCESS_TOKEN_MAX_AGE_MS,
+  });
+  if (refreshToken) {
+    res.cookie("refresh_token", refreshToken, {
+      ...cookieBase(),
+      maxAge: isRemembered
+        ? LONG_REFRESH_MAX_AGE_MS
+        : SHORT_REFRESH_MAX_AGE_MS,
+    });
+  }
+};
+
+const clearAuthCookies = (res) => {
+  // clearCookie must use matching attrs (path/sameSite/secure) for the
+  // browser to actually delete the cookie.
+  res.clearCookie("access_token", { ...cookieBase() });
+  res.clearCookie("refresh_token", { ...cookieBase() });
+};
+
 // Register new user
 export const register = async (req, res) => {
   try {
@@ -361,11 +399,10 @@ export const login = async (req, res) => {
       `INSERT INTO sessions (user_id, refresh_token, is_remembered, expires_at, client_ip, device_info) VALUES ($1, $2, $3, $4, $5, $6)`,
       [user.id, refreshToken, isRemembered, expiresAt, clientIp, deviceInfo],
     );
+    setAuthCookies(res, { accessToken, refreshToken, isRemembered });
     res.json({
       success: true,
       message: "Login successful",
-      accessToken,
-      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -388,22 +425,31 @@ export const login = async (req, res) => {
 // ... (refreshToken function is already correct below) ...
 
 export const refreshToken = async (req, res) => {
-  const { refreshToken } = req.body;
+  // Cookie is the canonical transport; body fallback supports curl/Postman.
+  const incomingRefresh =
+    req.cookies?.refresh_token || req.body?.refreshToken;
 
-  if (!refreshToken) {
+  if (!incomingRefresh) {
     return res
       .status(401)
       .json({ success: false, error: "Refresh token missing." });
   }
 
   try {
-    // 1. Find the session and ensure it's not expired
+    // 1. Find the session and ensure it's not expired.
+    // Select user_id AS id so the row matches the shape expected by
+    // generateAccessToken(user) — which reads user.id, not user.user_id.
+    // Without the alias, every refreshed access token contained
+    // userId: undefined and the protect middleware would 401 the very next
+    // request, producing a refresh-loop that the consolidated apiClient
+    // surfaced (each retry hit /auth/token again).
     const sessionResult = await pool.query(
-      `SELECT s.user_id, s.expires_at, u.email, u.user_type, u.full_name
- FROM sessions s
- JOIN users u ON s.user_id = u.id
- WHERE s.refresh_token = $1 AND s.expires_at > NOW()`,
-      [refreshToken],
+      `SELECT s.user_id AS id, s.expires_at, s.is_remembered,
+              u.email, u.user_type, u.full_name
+       FROM sessions s
+       JOIN users u ON s.user_id = u.id
+       WHERE s.refresh_token = $1 AND s.expires_at > NOW()`,
+      [incomingRefresh],
     );
 
     if (sessionResult.rows.length === 0) {
@@ -412,15 +458,19 @@ export const refreshToken = async (req, res) => {
         .json({ success: false, error: "Invalid or expired session." });
     }
 
-    const user = sessionResult.rows[0]; // Renamed 'session' to 'user' for clarity on token generation // 2. Generate a new access token
+    const user = sessionResult.rows[0];
 
+    // 2. Generate a new access token
     const newAccessToken = generateAccessToken(user);
 
-    res.json({
-      success: true,
+    // 3. Set the new access cookie. Don't reissue the refresh cookie —
+    // we're not rotating it, the session row's expiry is unchanged.
+    setAuthCookies(res, {
       accessToken: newAccessToken,
-      // Optionally return the session expiry, but it wasn't refreshed, so it remains the same
+      isRemembered: !!user.is_remembered,
     });
+
+    res.json({ success: true });
   } catch (error) {
     console.error("Refresh token error:", error);
     res
@@ -587,34 +637,23 @@ export const resetPassword = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-  // The user is authenticated via the Access Token and req.user is set.
-  // The client sends the Refresh Token in the body to identify the session to delete.
-  const { refreshToken } = req.body;
-  const userId = req.user.id; // User ID obtained from the Access Token
-
-  if (!refreshToken) {
-    return res.status(400).json({
-      success: false,
-      error: "Refresh token is required to log out this session.",
-    });
-  }
+  // Refresh token comes from the cookie now; body fallback for curl/Postman.
+  const incomingRefresh =
+    req.cookies?.refresh_token || req.body?.refreshToken;
+  const userId = req.user.id;
 
   try {
-    // Delete the specific session matching the user and the provided refresh token.
-    const result = await pool.query(
-      "DELETE FROM sessions WHERE user_id = $1 AND refresh_token = $2 RETURNING id",
-      [userId, refreshToken],
-    );
+    // Always clear the cookies — even if there's no matching session, we
+    // still want the client's stale cookies gone.
+    clearAuthCookies(res);
 
-    if (result.rowCount === 0) {
-      // The session might already be deleted or the token was invalid/expired.
-      return res.status(404).json({
-        success: false,
-        error: "Active session not found or already logged out.",
-      });
+    if (incomingRefresh) {
+      await pool.query(
+        "DELETE FROM sessions WHERE user_id = $1 AND refresh_token = $2",
+        [userId, incomingRefresh],
+      );
     }
 
-    // Note: The client must also delete the stored Access Token and Refresh Token locally.
     res.status(200).json({
       success: true,
       message: "Logged out successfully from current device.",
@@ -632,13 +671,14 @@ export const logoutAll = async (req, res) => {
   const userId = req.user.id;
 
   try {
+    clearAuthCookies(res);
+
     // Delete ALL refresh tokens associated with the user ID.
     const result = await pool.query(
       "DELETE FROM sessions WHERE user_id = $1 RETURNING id",
       [userId],
     );
 
-    // All subsequent refresh token usage will fail immediately.
     res.status(200).json({
       success: true,
       message: `Successfully logged out from ${result.rowCount} active sessions.`,

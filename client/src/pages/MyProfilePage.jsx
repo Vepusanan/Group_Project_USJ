@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import {
   Building2, Calendar, DollarSign, Edit3, ExternalLink,
@@ -6,8 +6,7 @@ import {
   Phone, Twitter, User, Users,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import profileService from "../services/profileService";
-import investorProfileService from "../services/investorProfileService";
+import { useProfileData } from "../hooks/useProfileCache";
 
 const parseJson = (value, fallback = null) => {
   if (value == null) return fallback;
@@ -105,31 +104,9 @@ const SocialLinks = ({ links, platform }) => {
 
 const MyProfilePage = () => {
   const { user } = useAuth();
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [retryCount, setRetryCount] = useState(0);
+  const { profile, isReady, error, invalidate } = useProfileData();
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const result = user?.userType === "investor"
-          ? await investorProfileService.getMyProfile()
-          : await profileService.getMyProfile();
-
-        if (!result.success) { setError(result.error || "Failed to load profile"); setLoading(false); return; }
-        setProfile(result.data?.data || result.data || null);
-      } catch {
-        setError("Network error — check your connection and try again.");
-      }
-      setLoading(false);
-    };
-    load();
-  }, [user?.userType, retryCount]);
-
-  if (loading) return (
+  if (!isReady && !error) return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="w-10 h-10 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
     </div>
@@ -140,7 +117,7 @@ const MyProfilePage = () => {
       <div className="max-w-3xl mx-auto rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-100 flex items-center justify-between gap-4">
         <span>{error}</span>
         <button
-          onClick={() => setRetryCount((c) => c + 1)}
+          onClick={() => invalidate()}
           className="shrink-0 px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-200 text-sm hover:bg-rose-500/30 transition-colors"
         >
           Retry
@@ -174,17 +151,20 @@ const MyProfilePage = () => {
         <div className="max-w-3xl mx-auto space-y-4">
           {/* Header card */}
           <div className="rounded-xl border border-white/15 bg-black/45 p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-              <div className="w-20 h-20 rounded-2xl border border-white/15 bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+              <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl border border-white/15 bg-white/5 overflow-hidden flex items-center justify-center shrink-0 shadow-xl">
                 {profile.photo_url
                   ? <img src={profile.photo_url} alt="Profile" className="w-full h-full object-cover" />
-                  : <User className="w-8 h-8 text-gray-500" />}
+                  : <User className="w-12 h-12 text-gray-500" />}
               </div>
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold text-white">{profile.name_or_firm || "—"}</h1>
-                <p className="text-gray-400 text-sm mt-0.5">{profile.investor_type?.replace(/_/g, " ")} · {profile.years_of_experience} yrs experience</p>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-3xl font-bold text-white leading-tight truncate">{profile.name_or_firm || "—"}</h1>
+                <p className="text-gray-300 text-sm mt-1.5">
+                  {profile.investor_type?.replace(/_/g, " ")}
+                  {profile.years_of_experience ? ` · ${profile.years_of_experience} yrs experience` : ""}
+                </p>
               </div>
-              <Link to="/profile/edit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity shrink-0">
+              <Link to="/profile/edit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity shrink-0 self-start sm:self-center">
                 <Edit3 className="w-4 h-4" /> Edit Profile
               </Link>
             </div>
@@ -250,25 +230,25 @@ const MyProfilePage = () => {
       <div className="max-w-3xl mx-auto space-y-4">
         {/* Header card */}
         <div className="rounded-xl border border-white/15 bg-black/45 p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-            <div className="w-20 h-20 rounded-2xl border border-white/15 bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+            <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl border border-white/15 bg-white/5 overflow-hidden flex items-center justify-center shrink-0 shadow-xl">
               {profile.logo_url
                 ? <img src={profile.logo_url} alt="Logo" className="w-full h-full object-cover" />
-                : <Building2 className="w-8 h-8 text-gray-500" />}
+                : <Building2 className="w-12 h-12 text-gray-500" />}
             </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-white">{profile.company_name || "—"}</h1>
-              {profile.tagline && <p className="text-gray-400 text-sm mt-0.5">{profile.tagline}</p>}
-              <div className="flex flex-wrap items-center gap-3 mt-2">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl font-bold text-white leading-tight truncate">{profile.company_name || "—"}</h1>
+              {profile.tagline && <p className="text-gray-300 text-sm mt-1.5 line-clamp-2">{profile.tagline}</p>}
+              <div className="flex flex-wrap items-center gap-2 mt-3">
                 {profile.industry && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-400/20 text-xs text-blue-300">{profile.industry}</span>
+                  <span className="px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-400/20 text-xs text-blue-300">{profile.industry}</span>
                 )}
                 {profile.current_stage && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/20 text-xs text-emerald-300">{profile.current_stage.replace(/_/g, " ")}</span>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/20 text-xs text-emerald-300">{profile.current_stage.replace(/_/g, " ")}</span>
                 )}
               </div>
             </div>
-            <Link to="/profile/edit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity shrink-0">
+            <Link to="/profile/edit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity shrink-0 self-start sm:self-center">
               <Edit3 className="w-4 h-4" /> Edit Profile
             </Link>
           </div>

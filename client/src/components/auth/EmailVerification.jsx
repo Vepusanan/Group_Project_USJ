@@ -112,7 +112,7 @@ const EmailVerification = () => {
           </div>
         )}
 
-        <Link to="/login">
+        <Link to="/login" className="block">
           <Button
             variant="gradient-border"
             size="lg"
@@ -122,6 +122,15 @@ const EmailVerification = () => {
             Login
           </Button>
         </Link>
+
+        <div className="pt-2 text-center">
+          <Link
+            to="/signup"
+            className="text-sm text-gray-400 hover:text-purple-400 transition-colors"
+          >
+            ← Wrong email? Change it
+          </Link>
+        </div>
       </div>
     </div>
   );

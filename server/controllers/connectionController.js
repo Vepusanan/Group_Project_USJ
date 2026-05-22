@@ -59,6 +59,7 @@ export const createConnection = async (req, res) => {
       USER_NOT_FOUND: 404,
       SELF_CONNECTION: 400,
       INVALID_USER_TYPES: 400,
+      INVALID_INITIATOR: 403,
       ALREADY_CONNECTED: 409,
       REQUEST_PENDING: 409,
     };

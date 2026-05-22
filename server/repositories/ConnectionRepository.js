@@ -95,6 +95,8 @@ export const createConnectionRequest = async ({
     throw error;
   }
 
+  // Either side can initiate. We record who initiated in `requester_id` so
+  // updateConnectionStatus can verify that only the OTHER party accepts.
   const existing = await getConnectionBetweenUsers(
     ordered.investorId,
     ordered.startupId,
@@ -112,14 +114,16 @@ export const createConnectionRequest = async ({
   }
 
   if (existing) {
+    // Re-opening a previously-declined request: update the requester to the
+    // current user so the OTHER party becomes the responder.
     const updated = await pool.query(
       `
         UPDATE public.connections
-        SET status = 'pending', updated_at = NOW()
+        SET status = 'pending', requester_id = $2, updated_at = NOW()
         WHERE id = $1
         RETURNING *
       `,
-      [existing.id],
+      [existing.id, requester.id],
     );
 
     return updated.rows[0];
@@ -127,11 +131,11 @@ export const createConnectionRequest = async ({
 
   const inserted = await pool.query(
     `
-      INSERT INTO public.connections (investor_id, startup_id, status)
-      VALUES ($1, $2, 'pending')
+      INSERT INTO public.connections (investor_id, startup_id, requester_id, status)
+      VALUES ($1, $2, $3, 'pending')
       RETURNING *
     `,
-    [ordered.investorId, ordered.startupId],
+    [ordered.investorId, ordered.startupId, requester.id],
   );
 
   return inserted.rows[0];
@@ -307,9 +311,18 @@ export const updateConnectionStatus = async ({
 
   const connection = existing.rows[0];
 
-  if (String(connection.startup_id) !== String(userId)) {
+  // The responder is whichever party did NOT initiate the request.
+  const isInvestor = String(connection.investor_id) === String(userId);
+  const isStartup = String(connection.startup_id) === String(userId);
+  if (!isInvestor && !isStartup) {
+    const error = new Error("You are not part of this connection request");
+    error.code = "FORBIDDEN";
+    throw error;
+  }
+
+  if (String(connection.requester_id) === String(userId)) {
     const error = new Error(
-      "Only the startup user can respond to this connection request",
+      "You cannot respond to your own connection request — only the other party can accept or decline.",
     );
     error.code = "FORBIDDEN";
     throw error;

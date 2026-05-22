@@ -2,21 +2,14 @@ import pool from "../config/database.js";
 import { getPendingReceivedRequestsForUser } from "../repositories/ConnectionRepository.js";
 import { getConversationsByUserId } from "../repositories/messageRepository.js";
 
-const ensureNotificationReadTable = async () => {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS user_notification_reads (
-      user_id UUID NOT NULL,
-      notification_key TEXT NOT NULL,
-      read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (user_id, notification_key)
-    )
-  `);
-};
+// Table creation lives in migration 20260324_create_user_notification_reads.sql.
+// The previous code ran CREATE TABLE IF NOT EXISTS on every request, which
+// added needless information_schema work and a brief lock on a hot path
+// (Header polls notifications every 30s per session).
 
 export const getInAppNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
-    await ensureNotificationReadTable();
 
     const [pendingReceived, conversations] = await Promise.all([
       getPendingReceivedRequestsForUser(userId),
@@ -95,7 +88,6 @@ export const markNotificationAsRead = async (req, res) => {
       });
     }
 
-    await ensureNotificationReadTable();
     await pool.query(
       `
         INSERT INTO user_notification_reads (user_id, notification_key)

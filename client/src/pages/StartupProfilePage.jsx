@@ -153,6 +153,8 @@ const StartupProfilePage = () => {
   const [shareToast, setShareToast]         = useState(false);
 
   useEffect(() => {
+    // Scroll to top when navigating between profiles.
+    window.scrollTo({ top: 0, behavior: "auto" });
     (async () => {
       setLoading(true);
       setError("");
@@ -163,17 +165,19 @@ const StartupProfilePage = () => {
       setConnectionStatus(data?.connection_status || null);
       setConnectionId(data?.connection_id || null);
       setLoading(false);
+      // Ensure we're at the top after the new content paints.
+      window.scrollTo({ top: 0, behavior: "auto" });
     })();
   }, [id]);
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#080318]">
       <div className="w-10 h-10 border-4 border-purple-600/30 border-t-purple-600 rounded-full animate-spin" />
     </div>
   );
 
   if (error || !profile) return (
-    <div className="min-h-screen px-6 py-10">
+    <div className="px-6 py-10">
       <div className="max-w-4xl mx-auto rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-rose-100">
         {error || "Profile not found"}
       </div>
@@ -258,17 +262,17 @@ const StartupProfilePage = () => {
 
           <div className="bg-black/40 backdrop-blur-sm px-6 pb-6">
             {/* avatar row */}
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-8">
-              <div className="flex items-end gap-4">
-                <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${gFrom} ${gTo} border-4 border-black/40 flex items-center justify-center flex-shrink-0 shadow-xl overflow-hidden`}>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-20">
+              <div className="flex items-end gap-5 min-w-0">
+                <div className={`w-32 h-32 sm:w-36 sm:h-36 rounded-2xl bg-gradient-to-br ${gFrom} ${gTo} border-4 border-black/40 flex items-center justify-center flex-shrink-0 shadow-xl overflow-hidden`}>
                   {profile.logo_url
                     ? <img src={profile.logo_url} alt={name} className="w-full h-full object-cover" />
-                    : <span className="text-3xl font-bold text-white">{initial}</span>
+                    : <span className="text-5xl font-bold text-white">{initial}</span>
                   }
                 </div>
-                <div className="pb-1">
-                  <h1 className="text-2xl font-bold text-white">{name}</h1>
-                  {profile.tagline && <p className="text-gray-300 text-sm mt-0.5">{profile.tagline}</p>}
+                <div className="min-w-0 pb-2">
+                  <h1 className="text-2xl font-bold text-white leading-tight truncate">{name}</h1>
+                  {profile.tagline && <p className="text-gray-300 text-sm mt-1 line-clamp-2">{profile.tagline}</p>}
                 </div>
               </div>
 

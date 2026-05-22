@@ -1,58 +1,7 @@
-import axios from "axios";
+import api from "./apiClient";
 import { API_ENDPOINTS } from "../utils/constants";
 
-// Create axios instance for general API calls
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Add token to requests if available
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
-
-// Handle 401 responses
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("userData");
-      // Notify AuthContext so in-memory state is also cleared before redirect
-      window.dispatchEvent(new Event("auth:force-logout"));
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
-      }
-    }
-    return Promise.reject(error);
-  },
-);
-
-/**
- * General API service for non-auth related calls
- * NOTE: These endpoints are NOT your responsibility (other developers')
- * They use PROFILE, STARTUPS, INVESTORS, CONNECTIONS endpoints
- */
 export const apiService = {
-  /**
-   * Get current user profile
-   * IMPORTANT: /auth/me endpoint was removed from backend
-   * Using /profile endpoint instead (if it exists)
-   * @returns {Promise} Response with user data
-   */
   getCurrentUser: async () => {
     try {
       const response = await api.get(API_ENDPOINTS.AUTH.ME);

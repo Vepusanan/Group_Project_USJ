@@ -9,12 +9,15 @@ const GEOGRAPHIES = [
   "Global","North America","Europe","APAC","MENA","LATAM","Africa","South Asia",
 ];
 
+// Stage preference values must match the startup funding_stage vocabulary so
+// the InvestorsPage stage filter and the startup ↔ investor matching work.
 const STAGES = [
-  { value: "IDEA", label: "Idea" },
-  { value: "MVP", label: "MVP" },
-  { value: "EARLY_REVENUE", label: "Early Revenue" },
-  { value: "GROWTH", label: "Growth" },
-  { value: "SCALING", label: "Scaling" },
+  { value: "PRE_SEED", label: "Pre-seed" },
+  { value: "SEED", label: "Seed" },
+  { value: "SERIES_A", label: "Series A" },
+  { value: "SERIES_B", label: "Series B" },
+  { value: "SERIES_C", label: "Series C" },
+  { value: "SERIES_D_PLUS", label: "Series D+" },
 ];
 
 const toggle = (arr, val) =>

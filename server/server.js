@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import dotenv from "dotenv";
 import { createServer } from "http";
@@ -15,7 +16,7 @@ import searchRoutes from "./routes/search.js";
 import investorSearchRoutes from "./routes/investorSearch.js";
 import uploadsRoutes from "./routes/uploads.js";
 import settingsRoutes from "./routes/settings.js";
-import connectionsRoutes from "./routes/connectons.js";
+import connectionsRoutes from "./routes/connections.js";
 import notificationsRoutes from "./routes/notifications.js";
 import cron from "node-cron";
 import { deleteStaleUnverifiedUsers } from "./utils/cleanup.js";
@@ -27,9 +28,32 @@ dotenv.config({ quiet: true });
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// CORS — cookies require an exact origin + credentials:true.
+// Production: require explicit whitelist via FRONTEND_URL (comma-separated).
+// Development: also accept any http://localhost:<port> or http://127.0.0.1:<port>
+// because Vite floats the port when the default is taken.
+const corsOriginEnv = process.env.FRONTEND_URL;
+const corsWhitelist = corsOriginEnv
+  ? corsOriginEnv.split(",").map((o) => o.trim()).filter(Boolean)
+  : [];
+
+const isDev = process.env.NODE_ENV !== "production";
+const localhostRegex = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
 app.use(helmet());
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // No-Origin requests are server-to-server / curl — allow.
+      if (!origin) return callback(null, true);
+      if (corsWhitelist.includes(origin)) return callback(null, true);
+      if (isDev && localhostRegex.test(origin)) return callback(null, true);
+      return callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
+    credentials: true,
+  }),
+);
+app.use(cookieParser());
 app.use(express.json()); //body parser
 app.use(express.urlencoded({ extended: true }));
 

@@ -31,8 +31,7 @@ import SettingsPage from "./pages/SettingsPage";
 import Header from "./components/common/Header.jsx";
 import Footer from "./components/common/Footer";
 import { useAuth } from "./hooks/useAuth";
-import { profileService } from "./services/profileService";
-import { investorProfileService } from "./services/investorProfileService";
+import { useProfileExistence } from "./hooks/useProfileCache";
 
 const getRoleHomePath = (userType) =>
   userType === "investor" ? "/startups" : "/investors";
@@ -58,53 +57,13 @@ const ProtectedRoute = ({ children }) => {
 
 // Redirects users without a profile to their onboarding route.
 // Wraps all protected routes except the onboarding pages themselves.
-// Module-level cache: userId -> redirect path (null = has profile, string = needs onboarding)
-export const onboardingCheckCache = new Map();
-export const clearOnboardingCache = () => onboardingCheckCache.clear();
-
+// Backed by useProfileExistence so the answer is fetched once per session and
+// shared with every other consumer (LoginForm, OnboardingPage, etc.).
 const OnboardingGuard = ({ children }) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isReady, onboardingPath } = useProfileExistence();
 
-  const userId = user?.id ?? null;
-  const cached = userId ? onboardingCheckCache.get(userId) : undefined;
-  // If already cached we know the answer synchronously — no spinner needed.
-  const alreadyChecked = cached !== undefined;
-
-  const [checking, setChecking] = useState(!alreadyChecked);
-  const [onboardingPath, setOnboardingPath] = useState(alreadyChecked ? cached : null);
-
-  useEffect(() => {
-    if (isLoading || !isAuthenticated || !user) return;
-    if (onboardingCheckCache.has(user.id)) return;
-
-    const check = async () => {
-      let redirect = null;
-      try {
-        if (user.userType === "startup") {
-          const result = await profileService.getMyProfile();
-          const data = result.data?.data || result.data;
-          const hasProfile = Boolean(data?.startup_profile_id || data?.id);
-          if (!hasProfile) redirect = "/onboarding";
-        } else if (user.userType === "investor") {
-          const result = await investorProfileService.getMyProfile();
-          const data = result.data?.data || result.data;
-          const hasProfile = Boolean(data?.investor_profile_id || data?.id);
-          if (!hasProfile) redirect = "/investor-onboarding";
-        }
-      } catch {
-        // network error — allow through rather than blocking the user
-      } finally {
-        onboardingCheckCache.set(user.id, redirect);
-        setOnboardingPath(redirect);
-        setChecking(false);
-      }
-    };
-
-    check();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, isAuthenticated, userId]);
-
-  if (isLoading || checking) {
+  if (authLoading || (isAuthenticated && !isReady)) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-black">
         <div className="w-16 h-16 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
@@ -379,7 +338,19 @@ const AppShell = () => {
   const isHomePage = location.pathname === "/";
 
   return (
-    <div className={`min-h-screen bg-black text-white relative${!isHomePage ? " overflow-hidden" : ""}`}>
+    <div
+      className={`min-h-screen text-white relative${!isHomePage ? " overflow-hidden" : ""}`}
+      style={
+        !isHomePage
+          ? {
+              // Deep-purple gradient base that matches the bg-image tones, so long
+              // pages don't reveal a flat-black gap below the viewport-anchored images.
+              background:
+                "linear-gradient(180deg, #0a0420 0%, #0d0626 30%, #0c0522 60%, #080318 100%)",
+            }
+          : { backgroundColor: "#000" }
+      }
+    >
       {!isHomePage && (
         <div className="absolute inset-0 pointer-events-none">
           <img

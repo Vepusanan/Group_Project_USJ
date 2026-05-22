@@ -23,7 +23,10 @@ const pool = new Pool({
   database: "postgres",
   password: process.env.DB_PASSWORD,
   port: 5432,
-  idleTimeoutMillis: 240000,
+  // Supabase Pooler drops idle clients ~5 min. Evict ours first so the pool
+  // doesn't hand out half-dead sockets and emit "Connection terminated".
+  idleTimeoutMillis: 30000,
+  keepAlive: true,
   ssl: {
     rejectUnauthorized: false,
   },

@@ -1,76 +1,4 @@
-import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  timeout: 10000,
-});
-
-api.interceptors.request.use(
-  (config) => {
-    const accessToken = localStorage.getItem("accessToken");
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
-    return config;
-  },
-  (error) => {
-    console.error("Request interceptor error:", error);
-    return Promise.reject(error);
-  },
-);
-
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    const requestUrl = originalRequest?.url || "";
-    const isTokenRefreshRequest = requestUrl.includes("/auth/token");
-
-    const redirectToLogin = () => {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("userData");
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
-      }
-    };
-
-    if (error.response?.status === 401 && isTokenRefreshRequest) {
-      redirectToLogin();
-      return Promise.reject(error);
-    }
-
-    if (error.response?.status === 401 && !originalRequest?._retry) {
-      originalRequest._retry = true;
-      const refreshToken = localStorage.getItem("refreshToken");
-
-      if (refreshToken) {
-        try {
-          const response = await api.post("/auth/token", { refreshToken });
-          const newAccessToken = response.data.accessToken;
-          localStorage.setItem("accessToken", newAccessToken);
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          return api(originalRequest);
-        } catch (refreshError) {
-          redirectToLogin();
-        }
-      } else {
-        redirectToLogin();
-      }
-    }
-
-    if (!error.response) {
-      console.error("Network error:", error.message);
-    }
-
-    return Promise.reject(error);
-  },
-);
+import api from "./apiClient";
 
 const authService = {
   register: async (userData) => {
@@ -111,20 +39,15 @@ const authService = {
       });
 
       if (response.data.success) {
-        if (response.data.accessToken) {
-          localStorage.setItem("accessToken", response.data.accessToken);
-        }
-        if (response.data.refreshToken) {
-          localStorage.setItem("refreshToken", response.data.refreshToken);
-        }
+        // Tokens now live in HttpOnly cookies set by the backend.
+        // userData is cached so AuthContext can render an authenticated
+        // skeleton immediately on next page load while /auth/me confirms.
         if (response.data.user) {
           localStorage.setItem("userData", JSON.stringify(response.data.user));
         }
 
         return {
           success: true,
-          accessToken: response.data.accessToken,
-          refreshToken: response.data.refreshToken,
           user: response.data.user,
         };
       }
@@ -205,24 +128,12 @@ const authService = {
     }
   },
 
-  refreshAccessToken: async (refreshToken) => {
+  refreshAccessToken: async () => {
+    // The refresh_token cookie is sent automatically; the backend sets a
+    // new access_token cookie on success. Nothing for us to read or store.
     try {
-      const response = await api.post("/auth/token", { refreshToken });
-
-      if (response.data.success) {
-        const newAccessToken = response.data.accessToken;
-        localStorage.setItem("accessToken", newAccessToken);
-
-        return {
-          success: true,
-          accessToken: newAccessToken,
-        };
-      }
-
-      return {
-        success: false,
-        error: response.data.error || "Failed to refresh token",
-      };
+      const response = await api.post("/auth/token");
+      return { success: !!response.data?.success };
     } catch (error) {
       const errorMessage =
         error.response?.data?.message ||
@@ -230,10 +141,7 @@ const authService = {
         error.message ||
         "Failed to refresh token";
       console.error("Token refresh error:", errorMessage);
-      return {
-        success: false,
-        error: errorMessage,
-      };
+      return { success: false, error: errorMessage };
     }
   },
 
@@ -329,20 +237,15 @@ const authService = {
   },
 
   logout: async () => {
-    const refreshToken = localStorage.getItem("refreshToken");
-
+    // Backend reads the refresh cookie and clears both cookies; we just
+    // drop the local userData cache.
     try {
-      if (refreshToken) {
-        await api.post("/auth/logout", { refreshToken });
-      }
+      await api.post("/auth/logout");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
       localStorage.removeItem("userData");
     }
-
     return { success: true };
   },
 
@@ -351,8 +254,6 @@ const authService = {
       const response = await api.post("/auth/logout-all");
 
       if (response.data.success) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
         localStorage.removeItem("userData");
 
         return {

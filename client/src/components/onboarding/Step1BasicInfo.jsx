@@ -88,7 +88,7 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
             )}
           </div>
           <div>
-            <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10 transition-all">
+            <label className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-500/10 border border-solid border-emerald-500/40 text-sm font-medium text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/60 transition-all">
               <Upload className="w-4 h-4" />
               {formData.logo_preview ? "Change Logo" : "Upload Logo"}
               <input

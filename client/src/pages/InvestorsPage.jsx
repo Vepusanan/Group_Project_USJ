@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   LayoutGrid,
@@ -7,7 +7,15 @@ import {
   DollarSign,
   Briefcase,
   TrendingUp,
+  Target,
+  Layers,
+  Globe,
+  Search,
+  ChevronDown,
+  ArrowUpDown,
+  X,
 } from "lucide-react";
+import { useDebounce } from "../hooks/useDebounce";
 import { apiService } from "../services/apiService";
 import { useAuth } from "../hooks/useAuth";
 
@@ -127,6 +135,7 @@ const InvestorCard = ({
   isListView,
   currentUserId,
   canSendRequest,
+  canInitiateRequest,
 }) => {
   const connectionStatus = investor.connection_status || "not_connected";
   const isReceivedRequest =
@@ -153,91 +162,113 @@ const InvestorCard = ({
   const name = investor.name_or_firm || investor.name || "Unnamed Investor";
   const avatarInitial = name.charAt(0).toUpperCase();
   const avatarGradient = getAvatarGradient(name);
-  const location = parseList(investor.geographic_preference)
-    .slice(0, 2)
+  // Prefer the investor's physical location (country/city) — that's what users
+  // expect from a "location" field on a card. Fall back to their geographic
+  // investment preference if no physical location is set.
+  const physicalLocation = [investor.location_city, investor.location_country]
+    .filter(Boolean)
     .join(", ");
+  const location =
+    physicalLocation ||
+    parseList(investor.geographic_preference).slice(0, 2).join(", ");
   const checkSize = currencyRange(
     investor.min_investment_size,
     investor.max_investment_size,
   );
   const profileUrl = `/investors/${investor.investor_profile_id || investor.id}`;
 
+  const STAGE_LABEL = {
+    PRE_SEED: "Pre-seed",
+    SEED: "Seed",
+    SERIES_A: "Series A",
+    SERIES_B: "Series B",
+    SERIES_C: "Series C",
+    SERIES_D_PLUS: "Series D+",
+  };
+  const stages = parseList(investor.stage_preference)
+    .map((s) => STAGE_LABEL[s] || s)
+    .slice(0, 3);
+  const investorTypeLabel = investor.investor_type
+    ? String(investor.investor_type).replace(/_/g, " ")
+    : "Investor";
+  const yearsExp = investor.years_of_experience;
+
   if (isListView) {
     return (
-      <div className="group relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.02] hover:border-purple-500/30 hover:from-white/[0.07] hover:to-white/[0.03] backdrop-blur-sm transition-all duration-300 p-4 sm:p-5">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-5">
-          <div className="min-w-0 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2">
-            <div
-              className={`row-span-3 h-12 w-12 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center shrink-0 shadow-lg overflow-hidden`}
-            >
-              {investor.photo_url ? (
-                <img
-                  src={investor.photo_url}
-                  alt={name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-white font-bold text-base">
-                  {avatarInitial}
-                </span>
-              )}
-            </div>
+      <div className="group relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.02] hover:border-purple-500/30 hover:from-white/[0.07] hover:to-white/[0.03] backdrop-blur-sm transition-all duration-300 overflow-hidden">
+        {/* Top accent bar */}
+        <div className={`h-1 w-full bg-gradient-to-r ${avatarGradient}`} />
 
-            <div className="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1">
-              <h3 className="truncate text-sm font-semibold text-white sm:text-base">
-                {name}
-              </h3>
-              <span
-                className={`px-2 py-0.5 text-[10px] font-medium border rounded-full shrink-0 ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}
-              >
-                {connectionStatus === "accepted"
-                  ? "Connected"
-                  : connectionStatus === "pending"
-                    ? "Pending"
-                    : connectionStatus === "self"
-                      ? "You"
-                      : "Not connected"}
+        <div className="p-5 flex items-stretch gap-5">
+          {/* Avatar */}
+          <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden self-start`}>
+            {investor.photo_url
+              ? <img src={investor.photo_url} alt={name} className="w-full h-full object-cover" />
+              : <span className="text-white font-bold text-3xl">{avatarInitial}</span>
+            }
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            <h3 className="text-base font-semibold text-white leading-tight truncate">{name}</h3>
+            <p className="text-xs text-purple-300/80 mt-1 font-medium uppercase tracking-wide truncate">{investorTypeLabel}</p>
+
+            {/* Check size hero stat + Industries/Stages pills */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/25 text-emerald-200 font-medium">
+                <DollarSign className="w-3 h-3" />{checkSize}
               </span>
+              {industries.map((ind) => (
+                <span key={ind} className="text-[11px] px-2.5 py-1 rounded-full bg-indigo-500/15 border border-indigo-400/25 text-indigo-200">
+                  {ind}
+                </span>
+              ))}
+              {stages.map((s) => (
+                <span key={s} className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-400/25 text-blue-200">
+                  <Layers className="w-2.5 h-2.5" />{s}
+                </span>
+              ))}
             </div>
 
-            <p className="min-w-0 text-xs font-medium text-purple-300/80">
-              {investor.investor_type || "Investor"}
-            </p>
-
-            <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            {/* Meta strip */}
+            <div className="mt-3 flex items-center gap-4 flex-wrap text-xs text-gray-400">
               {location && (
-                <span className="flex items-center gap-1 text-xs text-gray-400">
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  {location}
+                <span className="flex items-center gap-1.5">
+                  <Globe className="w-3 h-3 text-purple-400" />{location}
                 </span>
               )}
-              <span className="flex items-center gap-1 text-xs text-gray-400">
-                <DollarSign className="h-3 w-3 shrink-0" />
-                {checkSize}
-              </span>
-              {industries.length > 0 && (
-                <span className="max-w-full truncate text-xs text-gray-500">
-                  {industries.join(" · ")}
+              {yearsExp != null && yearsExp !== "" && (
+                <span className="flex items-center gap-1.5">
+                  <Briefcase className="w-3 h-3 text-purple-400" />{yearsExp} yr{Number(yearsExp) === 1 ? "" : "s"} exp
+                </span>
+              )}
+              {investor.follow_on_investment && (
+                <span className="flex items-center gap-1.5">
+                  <Target className="w-3 h-3 text-purple-400" />Follow-on open
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center justify-end gap-2 md:self-center">
-            <Link
-              to={profileUrl}
-              className="h-9 px-3 text-xs rounded-lg border border-white/20 text-gray-300 hover:text-white hover:border-white/40 hover:bg-white/5 transition-all inline-flex items-center"
-            >
-              View Profile
-            </Link>
-            {canSendRequest &&
-              (isReceivedRequest ? (
-                <>
+          {/* Actions column — status on top, buttons grouped below */}
+          <div className="flex flex-col items-end justify-between gap-3 shrink-0 w-[150px]">
+            <span className={`px-2.5 py-1 text-[11px] font-medium border rounded-full whitespace-nowrap ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}>
+              {connectionStatus === "accepted" ? "Connected" : connectionStatus === "pending" ? "Pending" : connectionStatus === "self" ? "You" : "Not connected"}
+            </span>
+            <div className="flex flex-col items-stretch gap-2 w-full">
+              <Link
+                to={profileUrl}
+                className="text-center px-4 py-2.5 text-sm rounded-xl border border-white/20 text-gray-200 hover:text-white hover:border-white/40 hover:bg-white/5 transition-all font-medium"
+              >
+                View Profile
+              </Link>
+              {canSendRequest && isReceivedRequest ? (
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     disabled={isConnecting}
                     onClick={() => onAccept(investor.connection_id)}
-                    className="h-9 px-3 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-colors"
+                    className="px-2 py-2.5 text-sm rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-colors"
                   >
                     {isConnecting ? "…" : "Accept"}
                   </button>
@@ -245,26 +276,28 @@ const InvestorCard = ({
                     type="button"
                     disabled={isConnecting}
                     onClick={() => onDecline(investor.connection_id)}
-                    className="h-9 px-3 text-xs rounded-lg border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 font-medium disabled:opacity-40 transition-colors"
+                    className="px-2 py-2.5 text-sm rounded-xl border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 font-medium disabled:opacity-40 transition-colors"
                   >
                     Decline
                   </button>
-                </>
-              ) : (
+                </div>
+              ) : canInitiateRequest ? (
                 <button
                   type="button"
                   disabled={!canConnect || isConnecting}
                   onClick={() => onConnect(investor.user_id)}
-                  className="h-9 px-4 text-xs rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/30"
+                  className="px-4 py-2.5 text-sm rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/30"
                 >
                   {isConnecting ? "…" : canConnect ? "Connect" : statusLabel}
                 </button>
-              ))}
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
     );
   }
+  const followOn = investor.follow_on_investment;
 
   return (
     <div className="group relative rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.02] hover:border-purple-500/30 hover:shadow-xl hover:shadow-purple-900/20 backdrop-blur-sm transition-all duration-300 overflow-hidden flex flex-col">
@@ -275,7 +308,7 @@ const InvestorCard = ({
         {/* Header row */}
         <div className="flex items-start gap-3">
           <div
-            className={`w-12 h-12 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden`}
+            className={`w-14 h-14 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden`}
           >
             {investor.photo_url ? (
               <img
@@ -284,7 +317,7 @@ const InvestorCard = ({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-white font-bold text-lg">
+              <span className="text-white font-bold text-xl">
                 {avatarInitial}
               </span>
             )}
@@ -293,15 +326,9 @@ const InvestorCard = ({
             <h3 className="text-base font-semibold text-white leading-tight truncate">
               {name}
             </h3>
-            <p className="text-xs text-purple-300/80 font-medium mt-0.5">
-              {investor.investor_type || "Investor"}
+            <p className="text-xs text-purple-300/80 font-medium mt-0.5 truncate uppercase tracking-wide">
+              {investorTypeLabel}
             </p>
-            {location && (
-              <p className="flex items-center gap-1 text-xs text-gray-400 mt-1">
-                <MapPin className="w-3 h-3 flex-shrink-0" />
-                {location}
-              </p>
-            )}
           </div>
           <span
             className={`px-2 py-0.5 text-[10px] font-medium border rounded-full flex-shrink-0 ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}
@@ -316,73 +343,115 @@ const InvestorCard = ({
           </span>
         </div>
 
-        {/* Check size */}
-        <div className="mt-4 flex items-center gap-1.5 text-xs text-gray-300 bg-white/5 rounded-lg px-3 py-2">
-          <DollarSign className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-          <span className="font-medium text-emerald-300">{checkSize}</span>
+        {/* Check size — hero stat */}
+        <div className="mt-4 flex items-center justify-between gap-2 bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border border-emerald-400/20 rounded-xl px-3 py-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <DollarSign className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[10px] text-emerald-300/70 uppercase tracking-wide font-medium leading-none">Check size</p>
+              <p className="text-sm font-semibold text-emerald-200 truncate mt-0.5">{checkSize}</p>
+            </div>
+          </div>
         </div>
 
         {/* Industry tags */}
         {industries.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {industries.map((ind) => (
-              <span
-                key={ind}
-                className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-400/25 text-indigo-200"
-              >
-                {ind}
-              </span>
-            ))}
+          <div className="mt-3">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium mb-1.5">Industries of interest</p>
+            <div className="flex flex-wrap gap-1.5">
+              {industries.map((ind) => (
+                <span
+                  key={ind}
+                  className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-400/25 text-indigo-200"
+                >
+                  {ind}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Description */}
-        <p className="mt-3 text-xs text-gray-400 leading-relaxed flex-1">
-          {description}
-        </p>
+        {/* Stage tags */}
+        {stages.length > 0 && (
+          <div className="mt-3">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium mb-1.5">Investment stages</p>
+            <div className="flex flex-wrap gap-1.5">
+              {stages.map((s) => (
+                <span
+                  key={s}
+                  className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-400/25 text-blue-200"
+                >
+                  <Layers className="w-2.5 h-2.5" />{s}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Stats grid — fills card with substantive content */}
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+          {location && (
+            <div className="flex items-center gap-1.5 text-gray-300 bg-white/5 rounded-lg px-2.5 py-1.5 min-w-0">
+              <Globe className="w-3 h-3 text-purple-400 flex-shrink-0" />
+              <span className="truncate">{location}</span>
+            </div>
+          )}
+          {yearsExp != null && yearsExp !== "" && (
+            <div className="flex items-center gap-1.5 text-gray-300 bg-white/5 rounded-lg px-2.5 py-1.5 min-w-0">
+              <Briefcase className="w-3 h-3 text-purple-400 flex-shrink-0" />
+              <span className="truncate">{yearsExp} yr{Number(yearsExp) === 1 ? "" : "s"} exp</span>
+            </div>
+          )}
+          {followOn && (
+            <div className="flex items-center gap-1.5 text-gray-300 bg-white/5 rounded-lg px-2.5 py-1.5 min-w-0 col-span-2">
+              <Target className="w-3 h-3 text-purple-400 flex-shrink-0" />
+              <span className="truncate">Open to follow-on rounds</span>
+            </div>
+          )}
+        </div>
+
 
         {/* Divider + Actions */}
-        <div className="mt-4 pt-4 border-t border-white/8 flex gap-2">
+        <div className="mt-auto pt-4 flex gap-2">
           <Link
             to={profileUrl}
             className="flex-1 text-center px-3 py-2 text-xs rounded-xl border border-white/15 text-gray-300 hover:text-white hover:border-white/30 hover:bg-white/5 transition-all font-medium"
           >
             View Profile
           </Link>
-          {canSendRequest &&
-            (isReceivedRequest ? (
-              <>
-                <button
-                  type="button"
-                  disabled={isConnecting}
-                  onClick={() => onAccept(investor.connection_id)}
-                  className="flex-1 px-3 py-2 text-xs rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-colors"
-                >
-                  {isConnecting ? "…" : "Accept"}
-                </button>
-                <button
-                  type="button"
-                  disabled={isConnecting}
-                  onClick={() => onDecline(investor.connection_id)}
-                  className="flex-1 px-3 py-2 text-xs rounded-xl border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 font-medium disabled:opacity-40 transition-colors"
-                >
-                  Decline
-                </button>
-              </>
-            ) : (
+          {canSendRequest && isReceivedRequest ? (
+            <>
               <button
                 type="button"
-                disabled={!canConnect || isConnecting}
-                onClick={() => onConnect(investor.user_id)}
-                className="flex-1 px-3 py-2 text-xs rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/40"
+                disabled={isConnecting}
+                onClick={() => onAccept(investor.connection_id)}
+                className="flex-1 px-3 py-2 text-xs rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-colors"
               >
-                {isConnecting
-                  ? "Connecting…"
-                  : canConnect
-                    ? "Connect"
-                    : statusLabel}
+                {isConnecting ? "…" : "Accept"}
               </button>
-            ))}
+              <button
+                type="button"
+                disabled={isConnecting}
+                onClick={() => onDecline(investor.connection_id)}
+                className="flex-1 px-3 py-2 text-xs rounded-xl border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 font-medium disabled:opacity-40 transition-colors"
+              >
+                Decline
+              </button>
+            </>
+          ) : canInitiateRequest ? (
+            <button
+              type="button"
+              disabled={!canConnect || isConnecting}
+              onClick={() => onConnect(investor.user_id)}
+              className="flex-1 px-3 py-2 text-xs rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity shadow-md shadow-purple-900/40"
+            >
+              {isConnecting
+                ? "Connecting…"
+                : canConnect
+                  ? "Connect"
+                  : statusLabel}
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
@@ -400,12 +469,25 @@ const InvestorsPage = () => {
   const [connectingUserId, setConnectingUserId] = useState(null);
   const [isListView, setIsListView] = useState(false);
 
+  // Debounce free-text fields so we don't fetch on every keystroke.
+  // When a free-text input is cleared we want the empty state to apply
+  // immediately (otherwise the previous value lingers for the debounce
+  // window and the user sees stale/empty results).
+  const debouncedQ = useDebounce(filters.q, 350);
+  const debouncedLocation = useDebounce(filters.location, 350);
+  const effectiveQ = filters.q.trim() === "" ? "" : debouncedQ;
+  const effectiveLocation = filters.location.trim() === "" ? "" : debouncedLocation;
+  const effectiveFilters = useMemo(
+    () => ({ ...filters, q: effectiveQ, location: effectiveLocation }),
+    [filters, effectiveQ, effectiveLocation],
+  );
+
   const fetchInvestors = useCallback(async () => {
     setLoading(true);
     setError("");
 
     const result = await apiService.getInvestors({
-      ...filters,
+      ...effectiveFilters,
       page,
       limit: 9,
     });
@@ -421,7 +503,7 @@ const InvestorsPage = () => {
     setInvestors(Array.isArray(payload.data) ? payload.data : []);
     setTotalPages(payload.totalPages || 1);
     setLoading(false);
-  }, [filters, page]);
+  }, [effectiveFilters, page]);
 
   useEffect(() => {
     fetchInvestors();
@@ -517,108 +599,130 @@ const InvestorsPage = () => {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          <input
-            type="text"
-            placeholder="Search by name, firm, or keyword"
-            value={filters.q}
-            onChange={(e) => handleFilterChange("q", e.target.value)}
-            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500"
-          />
-          <select
-            value={filters.investor_type}
-            onChange={(e) =>
-              handleFilterChange("investor_type", e.target.value)
-            }
-            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-          >
-            <option value="">All Investor Types</option>
-            {INVESTOR_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filters.industries}
-            onChange={(e) => handleFilterChange("industries", e.target.value)}
-            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-          >
-            <option value="">All Industries</option>
-            {INDUSTRIES.map((ind) => (
-              <option key={ind} value={ind}>
-                {ind}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Location / Country"
-            value={filters.location}
-            onChange={(e) => handleFilterChange("location", e.target.value)}
-            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500"
-          />
-          <select
-            value={filters.investment_stage}
-            onChange={(e) =>
-              handleFilterChange("investment_stage", e.target.value)
-            }
-            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white"
-          >
-            <option value="">All Stages</option>
-            {INVESTMENT_STAGES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-          {/* Investment size range */}
-          <div className="flex items-center gap-2">
+        {/* Filters Panel */}
+        <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-4 space-y-3">
+          {/* Row 1: Search (wide) */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
             <input
-              type="number"
-              placeholder="Min $"
-              value={filters.investment_min}
-              onChange={(e) =>
-                handleFilterChange("investment_min", e.target.value)
-              }
-              className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500"
-              min="0"
-            />
-            <span className="text-gray-500 text-sm flex-shrink-0">–</span>
-            <input
-              type="number"
-              placeholder="Max $"
-              value={filters.investment_max}
-              onChange={(e) =>
-                handleFilterChange("investment_max", e.target.value)
-              }
-              className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white placeholder:text-gray-500"
-              min="0"
+              type="text"
+              placeholder="Search by name, firm, or keyword"
+              value={filters.q}
+              onChange={(e) => handleFilterChange("q", e.target.value)}
+              className="w-full h-10 rounded-lg bg-black/40 border border-white/15 pl-10 pr-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
             />
           </div>
-        </div>
 
-        {/* Sort + clear */}
-        <div className="mt-3 flex items-center gap-3 flex-wrap">
-          <select
-            value={filters.sort}
-            onChange={(e) => handleFilterChange("sort", e.target.value)}
-            className="rounded-lg bg-black/40 border border-white/20 px-3 py-2 text-white text-sm"
-          >
-            <option value="newest">Newest First</option>
-            <option value="alphabetical">Alphabetical</option>
-            <option value="most_experienced">Most Experienced</option>
-          </select>
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="text-sm text-gray-400 hover:text-white underline"
-            >
-              Clear filters
-            </button>
-          )}
+          {/* Row 2: Dropdown filters */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="relative">
+              <select
+                value={filters.investor_type}
+                onChange={(e) => handleFilterChange("investor_type", e.target.value)}
+                className="w-full h-10 appearance-none rounded-lg bg-black/40 border border-white/15 pl-3 pr-9 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+              >
+                <option value="">All Investor Types</option>
+                {INVESTOR_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+            </div>
+
+            <div className="relative">
+              <select
+                value={filters.industries}
+                onChange={(e) => handleFilterChange("industries", e.target.value)}
+                className="w-full h-10 appearance-none rounded-lg bg-black/40 border border-white/15 pl-3 pr-9 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+              >
+                <option value="">All Industries</option>
+                {INDUSTRIES.map((ind) => (
+                  <option key={ind} value={ind}>{ind}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+            </div>
+
+            <div className="relative">
+              <select
+                value={filters.investment_stage}
+                onChange={(e) => handleFilterChange("investment_stage", e.target.value)}
+                className="w-full h-10 appearance-none rounded-lg bg-black/40 border border-white/15 pl-3 pr-9 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+              >
+                <option value="">All Stages</option>
+                {INVESTMENT_STAGES.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+            </div>
+
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Location / Country"
+                value={filters.location}
+                onChange={(e) => handleFilterChange("location", e.target.value)}
+                className="w-full h-10 rounded-lg bg-black/40 border border-white/15 pl-9 pr-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Row 3: Check-size range + Sort + Clear (right-aligned) */}
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3 pt-1">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Check size:</span>
+              <div className="relative flex-1 max-w-[140px]">
+                <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={filters.investment_min}
+                  onChange={(e) => handleFilterChange("investment_min", e.target.value)}
+                  className="w-full h-10 rounded-lg bg-black/40 border border-white/15 pl-7 pr-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+                  min="0"
+                />
+              </div>
+              <span className="text-gray-500 text-sm flex-shrink-0">–</span>
+              <div className="relative flex-1 max-w-[140px]">
+                <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={filters.investment_max}
+                  onChange={(e) => handleFilterChange("investment_max", e.target.value)}
+                  className="w-full h-10 rounded-lg bg-black/40 border border-white/15 pl-7 pr-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+                  min="0"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 lg:ml-auto">
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 h-10 px-3 rounded-lg border border-white/15 bg-black/40 text-sm text-gray-300 hover:text-white hover:border-white/30 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" /> Clear
+                </button>
+              )}
+              <div className="relative">
+                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                <select
+                  value={filters.sort}
+                  onChange={(e) => handleFilterChange("sort", e.target.value)}
+                  className="h-10 appearance-none rounded-lg bg-black/40 border border-white/15 pl-9 pr-9 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="alphabetical">Alphabetical</option>
+                  <option value="most_experienced">Most Experienced</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+              </div>
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -649,6 +753,7 @@ const InvestorsPage = () => {
                   isListView={isListView}
                   currentUserId={user?.id}
                   canSendRequest={user?.userType === "startup"}
+                  canInitiateRequest={user?.userType === "startup"}
                 />
               ))}
             </div>

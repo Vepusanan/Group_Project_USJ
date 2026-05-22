@@ -8,7 +8,7 @@ import InvestorStep4InvestmentDetails from "./InvestorStep4InvestmentDetails";
 import InvestorStep7Contact from "./InvestorStep7Contact";
 import investorProfileService from "../../services/investorProfileService";
 import { useAuth } from "../../hooks/useAuth";
-import { onboardingCheckCache } from "../../App";
+import { useProfileExistence } from "../../hooks/useProfileCache";
 
 const STEPS = [
   { number: 1, title: "Identity",   short: "Who you are",     component: InvestorStep1BasicInfo },
@@ -21,6 +21,7 @@ const STEPS = [
 const InvestorOnboardingWizard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { markComplete } = useProfileExistence();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     name_or_firm: "",
@@ -143,8 +144,9 @@ const InvestorOnboardingWizard = () => {
       }
       const result = await investorProfileService.createProfile(fd);
       if (result.success) {
-        // Mark profile as created so OnboardingGuard skips the API check
-        if (user?.id) onboardingCheckCache.set(user.id, null);
+        // Mark profile as created so OnboardingGuard skips the API check on
+        // the next navigation.
+        markComplete(user?.id);
         navigate("/startups", { state: { message: "Investor profile created successfully!" } });
       } else {
         setSubmitError(result.error || "Failed to create investor profile");

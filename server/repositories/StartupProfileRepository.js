@@ -68,6 +68,7 @@ const buildListStartupsQuery = ({
   currentStage,
   fundingStage,
   revenueStatus,
+  locationCountry,
   requesterUserId,
 }) => {
   const clauses = [];
@@ -107,6 +108,13 @@ const buildListStartupsQuery = ({
     clauses.push(`sp.revenue_status = ${queryRef}::public.revenue_status_enum`);
   }
 
+  if (locationCountry && locationCountry.trim()) {
+    const ref = addValue(`%${locationCountry.trim().toLowerCase()}%`);
+    clauses.push(
+      `(LOWER(COALESCE(sp.location_country, '')) LIKE ${ref} OR LOWER(COALESCE(sp.location_city, '')) LIKE ${ref})`,
+    );
+  }
+
   if (requesterUserId) {
     const queryRef = addValue(requesterUserId);
     clauses.push(
@@ -127,9 +135,10 @@ const getSortClause = (sort) => {
     case "alphabetical":
       return "ORDER BY sp.company_name ASC NULLS LAST";
     case "recently_updated":
+      return "ORDER BY sp.updated_at DESC NULLS LAST, sp.startup_profile_id DESC";
     case "newest":
     default:
-      return "ORDER BY sp.founded_date DESC NULLS LAST, sp.startup_profile_id DESC";
+      return "ORDER BY sp.created_at DESC NULLS LAST, sp.startup_profile_id DESC";
   }
 };
 
@@ -262,6 +271,7 @@ export async function listStartups(options = {}) {
     current_stage,
     funding_stage,
     revenue_status,
+    location_country,
     sort = "newest",
     requesterUserId = null,
   } = options;
@@ -281,6 +291,7 @@ export async function listStartups(options = {}) {
     currentStage: current_stage,
     fundingStage: funding_stage,
     revenueStatus: revenue_status,
+    locationCountry: location_country,
     requesterUserId,
   });
 
@@ -337,7 +348,10 @@ export async function getConnectionStatusesForStartups(
   if (connectionMeta.schemaType === "investor_startup") {
     const connectionResult = await pool.query(
       `
-        SELECT c.startup_id::text AS startup_user_id, c.status
+        SELECT c.id::text AS connection_id,
+               c.startup_id::text AS startup_user_id,
+               c.requester_id::text AS requester_id,
+               c.status
         FROM public.connections c
         WHERE c.investor_id::text = $1
           AND c.startup_id::text = ANY($2::text[])
@@ -347,11 +361,12 @@ export async function getConnectionStatusesForStartups(
 
     return new Map(
       connectionResult.rows
-        .map((row) => [
-          row.startup_user_id,
-          normalizeConnectionStatus(row.status),
-        ])
-        .filter(([, status]) => Boolean(status)),
+        .map((row) => {
+          const status = normalizeConnectionStatus(row.status);
+          if (!status) return null;
+          return [row.startup_user_id, { status, connection_id: row.connection_id, requester_id: row.requester_id }];
+        })
+        .filter(Boolean),
     );
   }
 
