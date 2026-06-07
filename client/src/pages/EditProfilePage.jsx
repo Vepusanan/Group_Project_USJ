@@ -30,8 +30,8 @@ const appendIfPresent = (fd, key, value) => {
 
 /* ─── shared section wrapper ────────────────────────────────────────────────── */
 const Section = ({ title, children }) => (
-  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 space-y-5">
-    <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest pb-1 border-b border-white/5">{title}</h2>
+  <div className="rounded-xl border border-line bg-surface-alt p-6 space-y-5">
+    <h2 className="text-xs font-semibold text-content-muted uppercase tracking-widest pb-1 border-b border-line">{title}</h2>
     {children}
   </div>
 );
@@ -39,15 +39,15 @@ const Section = ({ title, children }) => (
 /* ─── shared field wrapper ─────────────────────────────────────────────────── */
 const Field = ({ label, required, hint, children }) => (
   <div>
-    <label className="block text-xs font-medium text-gray-400 mb-1.5">
-      {label}{required && <span className="text-red-400 ml-1">*</span>}
-      {hint && <span className="text-gray-600 ml-2 font-normal">{hint}</span>}
+    <label className="block text-xs font-medium text-content-secondary mb-1.5">
+      {label}{required && <span className="text-error ml-1">*</span>}
+      {hint && <span className="text-content-secondary ml-2 font-normal">{hint}</span>}
     </label>
     {children}
   </div>
 );
 
-const inputCls = "w-full px-3 py-2.5 rounded-lg bg-black/40 border border-white/15 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/60 transition-all";
+const inputCls = "w-full px-3 py-2.5 rounded-lg bg-surface-alt border border-line text-sm text-content placeholder:text-content-muted focus:outline-none focus:border-primary-light/60 transition-all";
 const textareaCls = `${inputCls} resize-none`;
 
 /* ─── image uploader ────────────────────────────────────────────────────────── */
@@ -55,21 +55,21 @@ const ImageUploader = ({ currentUrl, preview, onFile, label }) => {
   const ref = useRef();
   return (
     <div className="flex items-center gap-4">
-      <div className="w-20 h-20 rounded-xl border-2 border-dashed border-white/20 bg-white/5 overflow-hidden flex items-center justify-center shrink-0">
+      <div className="w-20 h-20 rounded-xl border-2 border-dashed border-line bg-surface-alt overflow-hidden flex items-center justify-center shrink-0">
         {preview || currentUrl
           ? <img src={preview || currentUrl} alt="preview" className="w-full h-full object-cover" />
-          : <User className="w-8 h-8 text-gray-600" />}
+          : <User className="w-8 h-8 text-content-secondary" />}
       </div>
       <div>
         <button
           type="button"
           onClick={() => ref.current?.click()}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10 transition-all"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-alt border border-line text-sm text-content-secondary hover:bg-surface-alt transition-all"
         >
           <Upload className="w-4 h-4" />
           {preview || currentUrl ? "Change Image" : `Upload ${label}`}
         </button>
-        <p className="text-xs text-gray-600 mt-1">PNG, JPG — max 2 MB</p>
+        <p className="text-xs text-content-secondary mt-1">PNG, JPG — max 2 MB</p>
         <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0] || null)} />
       </div>
     </div>
@@ -343,7 +343,7 @@ const EditProfilePage = () => {
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="w-10 h-10 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
+      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
     </div>
   );
 
@@ -353,14 +353,14 @@ const EditProfilePage = () => {
   return (
     <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
       <div className="max-w-3xl mx-auto space-y-4">
-        <div className="rounded-xl border border-white/15 bg-black/45 p-6">
-          <h1 className="text-2xl font-bold text-white">Edit Profile</h1>
-          <p className="text-gray-400 text-sm mt-1">Update your {isInvestor ? "investor" : "startup"} profile information.</p>
+        <div className="rounded-xl border border-line bg-surface shadow-sm p-6">
+          <h1 className="text-2xl font-bold text-content">Edit Profile</h1>
+          <p className="text-content-muted text-sm mt-1">Update your {isInvestor ? "investor" : "startup"} profile information.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-rose-100 text-sm">{error}</div>}
-          {success && <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-emerald-100 text-sm">{success}</div>}
+          {error && <div className="rounded-lg border border-error/40 bg-error/10 px-4 py-3 text-error text-sm">{error}</div>}
+          {success && <div className="rounded-lg border border-success/40 bg-success/10 px-4 py-3 text-success text-sm">{success}</div>}
 
           {isInvestor ? (
             <>
@@ -380,8 +380,8 @@ const EditProfilePage = () => {
                   </Field>
                   <Field label="Investor Type">
                     <select value={inv.investor_type} onChange={inv2("investor_type")} className={inputCls}>
-                      <option value="" className="bg-gray-900">Select type</option>
-                      {INVESTOR_TYPES.map((t) => <option key={t.value} value={t.value} className="bg-gray-900">{t.label}</option>)}
+                      <option value="" className="bg-surface">Select type</option>
+                      {INVESTOR_TYPES.map((t) => <option key={t.value} value={t.value} className="bg-surface">{t.label}</option>)}
                     </select>
                   </Field>
                   <Field label="Years of Experience">
@@ -426,9 +426,9 @@ const EditProfilePage = () => {
                       type="checkbox"
                       checked={inv.follow_on_investment}
                       onChange={(e) => setInv((p) => ({ ...p, follow_on_investment: e.target.checked }))}
-                      className="w-4 h-4 accent-purple-500"
+                      className="w-4 h-4 accent-primary"
                     />
-                    <span className="text-sm text-gray-300">I make follow-on investments</span>
+                    <span className="text-sm text-content-secondary">I make follow-on investments</span>
                   </label>
                 </Field>
               </Section>
@@ -475,8 +475,8 @@ const EditProfilePage = () => {
                   </Field>
                   <Field label="Preferred Contact Method">
                     <select value={inv.preferred_contact_method} onChange={inv2("preferred_contact_method")} className={inputCls}>
-                      <option value="" className="bg-gray-900">Select method</option>
-                      {CONTACT_METHODS.map((m) => <option key={m} value={m} className="bg-gray-900">{m}</option>)}
+                      <option value="" className="bg-surface">Select method</option>
+                      {CONTACT_METHODS.map((m) => <option key={m} value={m} className="bg-surface">{m}</option>)}
                     </select>
                   </Field>
                 </div>
@@ -519,8 +519,8 @@ const EditProfilePage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="Industry">
                     <select value={sf.industry} onChange={sf2("industry")} className={inputCls}>
-                      <option value="" className="bg-gray-900">Select industry</option>
-                      {INDUSTRIES.map((i) => <option key={i} value={i} className="bg-gray-900">{i}</option>)}
+                      <option value="" className="bg-surface">Select industry</option>
+                      {INDUSTRIES.map((i) => <option key={i} value={i} className="bg-surface">{i}</option>)}
                     </select>
                   </Field>
                   <Field label="Founded Date">
@@ -528,8 +528,8 @@ const EditProfilePage = () => {
                   </Field>
                   <Field label="Current Stage">
                     <select value={sf.current_stage} onChange={sf2("current_stage")} className={inputCls}>
-                      <option value="" className="bg-gray-900">Select stage</option>
-                      {STAGES.map((s) => <option key={s.value} value={s.value} className="bg-gray-900">{s.label}</option>)}
+                      <option value="" className="bg-surface">Select stage</option>
+                      {STAGES.map((s) => <option key={s.value} value={s.value} className="bg-surface">{s.label}</option>)}
                     </select>
                   </Field>
                   <Field label="Team Size">
@@ -560,14 +560,14 @@ const EditProfilePage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="Funding Stage">
                     <select value={sf.funding_stage} onChange={sf2("funding_stage")} className={inputCls}>
-                      <option value="" className="bg-gray-900">Select stage</option>
-                      {FUNDING_STAGES.map((s) => <option key={s.value} value={s.value} className="bg-gray-900">{s.label}</option>)}
+                      <option value="" className="bg-surface">Select stage</option>
+                      {FUNDING_STAGES.map((s) => <option key={s.value} value={s.value} className="bg-surface">{s.label}</option>)}
                     </select>
                   </Field>
                   <Field label="Revenue Status">
                     <select value={sf.revenue_status} onChange={sf2("revenue_status")} className={inputCls}>
-                      <option value="" className="bg-gray-900">Select status</option>
-                      {REVENUE_STATUSES.map((s) => <option key={s.value} value={s.value} className="bg-gray-900">{s.label}</option>)}
+                      <option value="" className="bg-surface">Select status</option>
+                      {REVENUE_STATUSES.map((s) => <option key={s.value} value={s.value} className="bg-surface">{s.label}</option>)}
                     </select>
                   </Field>
                   <Field label="Amount Seeking (USD)">
@@ -639,14 +639,14 @@ const EditProfilePage = () => {
             <button
               type="button"
               onClick={() => navigate("/profile")}
-              className="px-5 py-2.5 rounded-lg border border-white/15 text-gray-300 text-sm hover:bg-white/5 transition-all"
+              className="px-5 py-2.5 rounded-lg border border-line text-content-secondary text-sm hover:bg-surface-alt transition-all"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium disabled:opacity-50 hover:opacity-90 transition-opacity"
+              className="px-6 py-2.5 rounded-lg bg-primary text-sm text-content-inverse font-medium disabled:opacity-50 hover:opacity-90 transition-opacity"
             >
               {saving ? "Saving…" : "Save Changes"}
             </button>

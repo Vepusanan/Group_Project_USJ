@@ -2,38 +2,38 @@ import React from "react";
 import { Users } from "lucide-react";
 
 const textareaCls =
-  "w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all resize-none";
+  "w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all resize-none";
 
 const Field = ({ label, required, error, hint, children }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+    <label className="block text-sm font-medium text-content-secondary mb-1.5">
       {label}
-      {required && <span className="text-red-400 ml-1">*</span>}
-      {hint && <span className="text-gray-500 font-normal ml-2 text-xs">{hint}</span>}
+      {required && <span className="text-error ml-1">*</span>}
+      {hint && <span className="text-content-muted font-normal ml-2 text-xs">{hint}</span>}
     </label>
     {children}
-    {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+    {error && <p className="text-xs text-error mt-1.5">{error}</p>}
   </div>
 );
 
 const Step3TeamInfo = ({ formData, updateFormData, errors }) => (
   <div className="space-y-5">
     <div className="pb-2">
-      <h2 className="text-xl font-semibold text-white">Team & Traction</h2>
-      <p className="text-sm text-gray-400 mt-1">Show investors who's building this and what you've proven so far.</p>
+      <h2 className="text-xl font-semibold text-content">Team & Traction</h2>
+      <p className="text-sm text-content-muted mt-1">Show investors who's building this and what you've proven so far.</p>
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Field label="Team Size" required error={errors.team_size}>
         <div className="relative">
-          <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="number"
             min="1"
             placeholder="e.g., 8"
             value={formData.team_size}
             onChange={(e) => updateFormData({ team_size: e.target.value })}
-            className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all"
+            className="w-full pl-11 pr-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all"
           />
         </div>
       </Field>
@@ -49,8 +49,8 @@ const Step3TeamInfo = ({ formData, updateFormData, errors }) => (
       />
     </Field>
 
-    <div className="border-t border-white/5 pt-5">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Traction & Evidence</p>
+    <div className="border-t border-line pt-5">
+      <p className="text-xs font-semibold text-content-muted uppercase tracking-widest mb-4">Traction & Evidence</p>
 
       <div className="space-y-4">
         <Field label="Key Metrics" hint="optional">

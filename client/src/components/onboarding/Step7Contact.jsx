@@ -2,25 +2,25 @@ import React from "react";
 import { Facebook, Instagram, Linkedin, Mail, Phone, Twitter, UserRound } from "lucide-react";
 
 const inputCls =
-  "w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all";
+  "w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all";
 const iconInputCls =
-  "w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all";
+  "w-full pl-11 pr-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all";
 
 const Field = ({ label, required, error, hint, children }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+    <label className="block text-sm font-medium text-content-secondary mb-1.5">
       {label}
-      {required && <span className="text-red-400 ml-1">*</span>}
-      {hint && <span className="text-gray-500 font-normal ml-2 text-xs">{hint}</span>}
+      {required && <span className="text-error ml-1">*</span>}
+      {hint && <span className="text-content-muted font-normal ml-2 text-xs">{hint}</span>}
     </label>
     {children}
-    {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+    {error && <p className="text-xs text-error mt-1.5">{error}</p>}
   </div>
 );
 
 const SocialField = ({ label, icon: Icon, value, onChange, placeholder }) => (
   <div className="relative">
-    <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+    <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
     <input
       type="url"
       placeholder={placeholder}
@@ -35,13 +35,13 @@ const SocialField = ({ label, icon: Icon, value, onChange, placeholder }) => (
 const Step7Contact = ({ formData, updateFormData, errors }) => (
   <div className="space-y-5">
     <div className="pb-2">
-      <h2 className="text-xl font-semibold text-white">Contact Details</h2>
-      <p className="text-sm text-gray-400 mt-1">Let investors know how and who to reach.</p>
+      <h2 className="text-xl font-semibold text-content">Contact Details</h2>
+      <p className="text-sm text-content-muted mt-1">Let investors know how and who to reach.</p>
     </div>
 
     <Field label="Primary Contact Name" required error={errors.primary_contact_name}>
       <div className="relative">
-        <UserRound className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+        <UserRound className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
         <input
           type="text"
           placeholder="Full name of main point of contact"
@@ -55,7 +55,7 @@ const Step7Contact = ({ formData, updateFormData, errors }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Field label="Contact Email" required error={errors.contact_email}>
         <div className="relative">
-          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="email"
             placeholder="contact@company.com"
@@ -68,7 +68,7 @@ const Step7Contact = ({ formData, updateFormData, errors }) => (
 
       <Field label="Phone Number" hint="optional">
         <div className="relative">
-          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="tel"
             placeholder="+1 555 000 0000"
@@ -80,8 +80,8 @@ const Step7Contact = ({ formData, updateFormData, errors }) => (
       </Field>
     </div>
 
-    <div className="border-t border-white/5 pt-5">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Social Media</p>
+    <div className="border-t border-line pt-5">
+      <p className="text-xs font-semibold text-content-muted uppercase tracking-widest mb-4">Social Media</p>
       <div className="space-y-3">
         <SocialField
           label="LinkedIn"

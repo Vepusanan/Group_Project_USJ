@@ -7,8 +7,8 @@ const RegistrationPage = () => {
   return (
     <div className="w-full max-w-md mx-auto self-start mt-4 md:mt-8">
       {/* Form Card */}
-      <div className="glass-dark rounded-2xl p-6 border border-gray-700/50 shadow-2xl">
-        <h1 className="text-2xl font-bold text-white text-center mb-5">
+      <div className="surface-card p-6 border border-line shadow-card">
+        <h1 className="text-2xl font-bold text-content text-center mb-5">
           Sign up
         </h1>
 

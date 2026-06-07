@@ -16,18 +16,18 @@ const COUNTRIES = [
 ];
 
 const inputCls =
-  "w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all";
+  "w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all";
 const iconInputCls =
-  "w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all";
+  "w-full pl-11 pr-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all";
 
 const Field = ({ label, required, error, children }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+    <label className="block text-sm font-medium text-content-secondary mb-1.5">
       {label}
-      {required && <span className="text-red-400 ml-1">*</span>}
+      {required && <span className="text-error ml-1">*</span>}
     </label>
     {children}
-    {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+    {error && <p className="text-xs text-error mt-1.5">{error}</p>}
   </div>
 );
 
@@ -73,22 +73,22 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
   return (
     <div className="space-y-5">
       <div className="pb-2">
-        <h2 className="text-xl font-semibold text-white">Company Identity</h2>
-        <p className="text-sm text-gray-400 mt-1">Start with the essentials — your company and founders.</p>
+        <h2 className="text-xl font-semibold text-content">Company Identity</h2>
+        <p className="text-sm text-content-muted mt-1">Start with the essentials — your company and founders.</p>
       </div>
 
       {/* Logo upload */}
       <Field label="Company Logo" error={errors.logo_file || logoError}>
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center overflow-hidden bg-white/5 shrink-0">
+          <div className="w-20 h-20 rounded-xl border-2 border-dashed border-line flex items-center justify-center overflow-hidden bg-surface-alt shrink-0">
             {formData.logo_preview ? (
               <img src={formData.logo_preview} alt="Logo preview" className="w-full h-full object-cover" />
             ) : (
-              <Upload className="w-6 h-6 text-gray-500" />
+              <Upload className="w-6 h-6 text-content-muted" />
             )}
           </div>
           <div>
-            <label className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-500/10 border border-solid border-emerald-500/40 text-sm font-medium text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/60 transition-all">
+            <label className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-light border border-solid border-primary-light text-sm font-medium text-primary hover:bg-primary/20 hover:border-primary transition-all">
               <Upload className="w-4 h-4" />
               {formData.logo_preview ? "Change Logo" : "Upload Logo"}
               <input
@@ -98,14 +98,14 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
                 className="hidden"
               />
             </label>
-            <p className="text-xs text-gray-500 mt-1.5">PNG, JPG or SVG — max 2 MB</p>
+            <p className="text-xs text-content-muted mt-1.5">PNG, JPG or SVG — max 2 MB</p>
           </div>
         </div>
       </Field>
 
       <Field label="Company Name" required error={errors.company_name}>
         <div className="relative">
-          <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="text"
             placeholder="e.g., Acme Technologies"
@@ -122,7 +122,7 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
           {founders.map((name, idx) => (
             <div key={idx} className="flex items-center gap-2">
               <div className="relative flex-1">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
                 <input
                   type="text"
                   placeholder={`Founder ${idx + 1} full name`}
@@ -135,7 +135,7 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
                 <button
                   type="button"
                   onClick={() => removeFounder(idx)}
-                  className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                  className="p-2 rounded-lg text-content-muted hover:text-error hover:bg-error/10 transition-all"
                   aria-label="Remove founder"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -147,7 +147,7 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
             <button
               type="button"
               onClick={addFounder}
-              className="flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 transition-colors mt-1"
+              className="flex items-center gap-1.5 text-sm text-primary hover:text-primary transition-colors mt-1"
             >
               <Plus className="w-4 h-4" />
               Add another founder
@@ -159,15 +159,15 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="Country" required error={errors.location_country}>
           <div className="relative">
-            <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px] pointer-events-none" />
+            <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px] pointer-events-none" />
             <select
               value={formData.location_country || ""}
               onChange={(e) => updateFormData({ location_country: e.target.value })}
               className={`${iconInputCls} appearance-none`}
             >
-              <option value="" className="bg-gray-900">Select country</option>
+              <option value="" className="bg-surface">Select country</option>
               {COUNTRIES.map((c) => (
-                <option key={c} value={c} className="bg-gray-900">{c}</option>
+                <option key={c} value={c} className="bg-surface">{c}</option>
               ))}
             </select>
           </div>
@@ -175,7 +175,7 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
 
         <Field label="City" required error={errors.location_city}>
           <div className="relative">
-            <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+            <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
             <input
               type="text"
               placeholder="e.g., San Francisco"
@@ -189,7 +189,7 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
 
       <Field label="Website URL" error={errors.website_url}>
         <div className="relative">
-          <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="url"
             placeholder="https://yourcompany.com"
@@ -202,7 +202,7 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
 
       <Field label="LinkedIn Profile" error={errors.linkedin_url}>
         <div className="relative">
-          <Linkedin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <Linkedin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="url"
             placeholder="https://linkedin.com/company/your-company"

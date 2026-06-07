@@ -12,44 +12,33 @@
    CSS VARIABLES - Design System
    =================================== */
 :root {
-  /* Primary Colors */
-  --color-primary: #0056D2;
-  --color-primary-dark: #003B95;
-  --color-primary-light: #E8F1FF;
-  
-  /* Brand/Accent Colors */
-  --color-purple: #9F7AEA;
-  --color-purple-dark: #805AD5;
-  --color-pink: #FF7EAB;
-  --color-blue-cyan: #42E8FF;
-  --color-blue-light: #3083FF;
-  --color-violet: #7147FF;
-  
-  /* Gradient Colors */
-  --gradient-conic: conic-gradient(from 179.42deg at 47.87% -110.87%, #1ADBE3 -25.84deg, #7001D3 0.27deg, #FE6272 22.53deg, #BD38FF 127.5deg, #1752CA 196.87deg, #1ADBE3 334.16deg, #7001D3 360.27deg);
-  --gradient-text: linear-gradient(90.27deg, #FFFFFF 1.63%, rgba(255, 255, 255, 0.7) 103.32%);
-  --gradient-glass: linear-gradient(180deg, rgba(255, 255, 255, 0.11) 0%, rgba(204, 204, 204, 0.0878) 20.17%, rgba(0, 0, 0, 0) 100%);
-  --gradient-border: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0.4) 100%);
-  
-  /* Neutral Colors */
-  --color-text-primary: #1A1A1A;
-  --color-text-secondary: #4A4A4A;
-  --color-text-muted: #AFAFAF;
-  --color-text-light: #E0E0E0;
-  --color-white: #FFFFFF;
-  --color-black: #000000;
-  
-  /* Background Colors */
-  --color-bg-dark: #000000;
-  --color-bg-darker: #0a0a0a;
-  --color-bg-gray: #1a1a1a;
-  --color-bg-light: #F8F9FA;
-  
-  /* Border Colors */
-  --color-border: #666666;
-  --color-border-light: #E0E0E0;
-  --color-border-dark: #444444;
-  --color-border-glass: rgba(255, 255, 255, 0.4);
+  /* Trust SaaS Blue — page & surfaces */
+  --color-page: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #F8FAFC;
+
+  /* Brand */
+  --color-primary: #2563EB;
+  --color-primary-dark: #1D4ED8;
+  --color-primary-light: #EFF6FF;
+  --color-success: #10B981;
+  --color-success-dark: #059669;
+
+  /* Text */
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #475569;
+  --color-text-inverse: #FFFFFF;
+
+  /* Borders & shadows */
+  --color-border: #E2E8F0;
+  --color-border-strong: #CBD5E1;
+  --gradient-text: linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%);
+
+  /* Legacy aliases (point to light tokens) */
+  --color-white: var(--color-surface);
+  --color-bg-light: var(--color-page);
+  --color-border-light: var(--color-border);
   
   /* Spacing (8px Grid System) */
   --spacing-xxs: 4px;
@@ -82,11 +71,15 @@
   --font-size-hero: 3.125rem;
   
   /* Shadows */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.06);
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
   --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.25);
+  --radius-pill: 9999px;
+  --radius-card: 24px;
   --shadow-glass: 0px 30px 60px rgba(0, 0, 0, 0.25);
   --shadow-button: 0px 10px 10px rgba(0, 0, 0, 0.1), 0px 4px 4px rgba(0, 0, 0, 0.05), 0px 1px 0px rgba(0, 0, 0, 0.05);
   --shadow-glow: 0 0 20px rgba(106, 90, 205, 0.3);
@@ -121,11 +114,8 @@ body {
   font-family: var(--font-family-inter);
   font-size: var(--font-size-base);
   line-height: 1.6;
-  /* Deep-purple base so scrollable pages don't expose a flat-black gap
-     below the viewport-anchored background images. AppShell paints
-     bg-black on the home route to keep the original home look. */
-  background-color: #080318;
-  color: var(--color-text-light);
+  background-color: var(--color-page);
+  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -139,7 +129,7 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.2;
   margin-top: 0;
   margin-bottom: var(--spacing-sm);
-  color: var(--color-white);
+  color: var(--color-text-primary);
 }
 
 h1 {
@@ -149,6 +139,16 @@ h1 {
 
 h2 {
   font-size: var(--font-size-3xl);
+}
+
+@media (max-width: 640px) {
+  h1 {
+    font-size: var(--font-size-2xl);
+  }
+
+  h2 {
+    font-size: var(--font-size-2xl);
+  }
 }
 
 h3 {
@@ -175,19 +175,181 @@ a:hover {
 }
 
 /* ===================================
+   COMPONENT CLASSES (token-based)
+   =================================== */
+@layer components {
+  .glass,
+  .glass-dark {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .hero-gradient {
+    background-image: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 60%, #F8FAFC 100%);
+  }
+
+  .section-alt {
+    background-color: var(--color-surface-alt);
+  }
+
+  .surface-card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .btn-primary-token {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-primary);
+    color: var(--color-text-inverse);
+    box-shadow: var(--shadow-soft);
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .btn-primary-token:hover {
+    background-color: var(--color-primary-dark);
+  }
+
+  .btn-primary-token:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-connect-token {
+    color: var(--color-text-inverse);
+    background-image: linear-gradient(
+      to right,
+      var(--color-primary),
+      var(--color-primary-dark)
+    );
+  }
+
+  .btn-connect-token:hover {
+    opacity: 0.9;
+  }
+
+  .btn-connect-token:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .avatar-initial {
+    color: var(--color-text-inverse);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* Card / profile name + role — tight spacing (overrides global heading margins) */
+  .card-identity {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .card-identity h1,
+  .card-identity h2,
+  .card-identity h3,
+  .card-identity h4,
+  .card-identity p {
+    margin: 0;
+  }
+
+  /* Card label + value / tags — tight spacing (overrides global paragraph margins) */
+  .card-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .card-field p {
+    margin: 0;
+  }
+
+  /* Profile section title + icon — same horizontal center line */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-width: 0;
+  }
+
+  .section-header h1,
+  .section-header h2,
+  .section-header h3,
+  .section-header h4 {
+    margin: 0;
+    line-height: 1;
+  }
+
+  .btn-secondary-token {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .btn-secondary-token:hover {
+    background-color: var(--color-surface-alt);
+  }
+
+  .btn-secondary-token:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-highlight-token {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-success);
+    color: var(--color-text-inverse);
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .btn-highlight-token:hover {
+    background-color: var(--color-success-dark);
+  }
+
+  .btn-highlight-token:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .badge-class {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+}
+
+/* ===================================
    CUSTOM UTILITY CLASSES
    =================================== */
 @layer utilities {
   /* Gradient Text */
   .text-gradient-primary {
-    @apply bg-gradient-to-r from-[#9F7AEA] to-[#0056D2] bg-clip-text text-transparent;
-  }
-  
-  .text-gradient-blue {
-    @apply bg-gradient-to-r from-[#3083FF] to-[#0056D2] bg-clip-text text-transparent;
-  }
-  
-  .text-gradient-white {
     background: var(--gradient-text);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -199,14 +361,6 @@ a:hover {
     font-family: var(--font-family-library);
   }
   
-  /* Glass Effect */
-  .glass {
-    @apply bg-white/5 backdrop-blur-lg border border-white/10;
-  }
-  
-  .glass-dark {
-    @apply bg-black/50 backdrop-blur-lg border border-white/5;
-  }
   
   /* Custom Shadows */
   .shadow-glow-blue {
@@ -249,19 +403,7 @@ a:hover {
   
   /* Custom Backgrounds */
   .bg-gradient-primary {
-    @apply bg-gradient-to-r from-[#9F7AEA] to-[#0056D2];
-  }
-  
-  .bg-gradient-blue {
-    @apply bg-gradient-to-r from-[#3083FF] to-[#0056D2];
-  }
-  
-  .bg-gradient-dark {
-    @apply bg-gradient-to-r from-[#805AD5] to-[#003B95];
-  }
-  
-  .bg-conic-gradient {
-    background: var(--gradient-conic);
+    background-color: var(--color-primary);
   }
   
   /* Custom Borders */
@@ -298,7 +440,7 @@ a:hover {
     content: '';
     position: absolute;
     inset: 1px;
-    background: rgba(0, 0, 0, 0.8);
+    background: var(--color-surface);
     border-radius: calc(var(--radius-md) - 1px);
     backdrop-filter: var(--blur-sm);
   }
@@ -309,9 +451,9 @@ a:hover {
   }
   
   .btn-blur {
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--color-surface);
     backdrop-filter: var(--blur-md);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--color-border);
     box-shadow: var(--shadow-button);
   }
   
@@ -347,13 +489,13 @@ input, textarea, select {
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
-  color: var(--color-white);
-  background-color: transparent;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface);
 }
 
 input:focus, textarea:focus, select:focus {
   outline: none;
-  ring: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 button {
@@ -380,24 +522,24 @@ button:focus {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-darker);
+  background: var(--color-surface-alt);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border-dark);
+  background: var(--color-border-strong);
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border);
+  background: var(--color-text-muted);
 }
 
 /* ===================================
    SELECTION STYLING
    =================================== */
 ::selection {
-  background-color: rgba(0, 86, 210, 0.3);
-  color: var(--color-white);
+  background-color: var(--color-primary-light);
+  color: var(--color-text-primary);
 }
 
 /* ===================================
@@ -487,7 +629,12 @@ button:focus {
    LOADING ANIMATIONS
    =================================== */
 .loading-shimmer {
-  background: linear-gradient(90deg, var(--color-bg-gray) 25%, var(--color-border-dark) 50%, var(--color-bg-gray) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-alt) 25%,
+    var(--color-border) 50%,
+    var(--color-surface-alt) 75%
+  );
   background-size: 1000px 100%;
   animation: shimmer 2s infinite linear;
 }
@@ -517,37 +664,36 @@ button:focus {
 .input-base {
   width: 100%;
   padding: 12px 16px;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  color: var(--color-white);
+  color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   transition: all 0.2s ease;
 }
 
 .input-base::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-muted);
 }
 
 .input-base:focus {
   border-color: var(--color-primary);
-  background-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(0, 86, 210, 0.1);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 /* Card Base Styles */
 .card-base {
-  background-color: var(--color-bg-gray);
-  border: 1px solid var(--color-border-dark);
-  border-radius: var(--radius-xl);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
   padding: var(--spacing-lg);
   transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .card-base:hover {
-  border-color: var(--color-purple);
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary-light);
+  box-shadow: var(--shadow-md);
 }
 
 /* Badge Base Styles */
@@ -735,19 +881,17 @@ button:focus {
 /* Fix for backdrop-filter on Safari */
 @supports not (backdrop-filter: blur(10px)) {
   .glass,
-  .glass-dark,
-  .btn-blur,
-  .btn-glass {
-    background: rgba(0, 0, 0, 0.8);
+  .glass-dark {
+    background: var(--color-surface);
   }
 }
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   :root {
-    --color-text-light: #FFFFFF;
-    --color-border: #FFFFFF;
-    --color-primary: #0056D2;
+    --color-text-primary: #000000;
+    --color-border: #000000;
+    --color-primary: #1D4ED8;
   }
 }
 
@@ -768,13 +912,6 @@ button:focus {
   }
 }
 
-/* Dark mode optimizations */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-text-light: #F0F0F0;
-    --color-border: #404040;
-  }
-}
 
 /* ===================================
    PERFORMANCE OPTIMIZATIONS
@@ -808,9 +945,8 @@ button:focus {
   top: 0;
   left: 0;
   right: 0;
-  height: 100vh;
-  min-height: 800px;
-  background: url("/images/lightRay-top/Noise & Texture.png") center top / cover no-repeat;
+  height: 360px;
+  background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-page) 100%);
   pointer-events: none;
   z-index: 0;
 }

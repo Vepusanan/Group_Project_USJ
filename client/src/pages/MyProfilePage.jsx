@@ -1,6 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
+  cardIdentityClass,
+  profileIdentityTitleClass,
+  profileIdentitySubtitleClass,
+  profileIdentitySubtitleMutedClass,
+} from "../styles/theme";
+import {
   Building2, Calendar, DollarSign, Edit3, ExternalLink,
   Facebook, Globe, Instagram, Linkedin, Mail, MapPin,
   Phone, Twitter, User, Users,
@@ -31,8 +37,8 @@ const formatCurrency = (value) => {
 };
 
 const Section = ({ title, children }) => (
-  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
-    <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{title}</h2>
+  <div className="rounded-xl border border-line bg-surface-alt p-6 space-y-4">
+    <h2 className="text-xs font-semibold text-content-muted uppercase tracking-widest">{title}</h2>
     {children}
   </div>
 );
@@ -41,8 +47,8 @@ const Field = ({ label, value, wide }) => {
   if (!value && value !== 0) return null;
   return (
     <div className={wide ? "col-span-full" : ""}>
-      <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className="text-sm text-gray-100 leading-relaxed whitespace-pre-line break-words">{value}</p>
+      <p className="text-xs text-content-muted mb-1">{label}</p>
+      <p className="text-sm text-content-secondary leading-relaxed whitespace-pre-line break-words">{value}</p>
     </div>
   );
 };
@@ -51,10 +57,10 @@ const TagList = ({ label, items }) => {
   if (!items?.length) return null;
   return (
     <div className="col-span-full">
-      <p className="text-xs text-gray-500 mb-2">{label}</p>
+      <p className="text-xs text-content-muted mb-2">{label}</p>
       <div className="flex flex-wrap gap-2">
         {items.map((item, i) => (
-          <span key={i} className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-gray-200">
+          <span key={i} className="px-2.5 py-1 rounded-full bg-surface-alt border border-line text-xs text-content-secondary">
             {item}
           </span>
         ))}
@@ -65,11 +71,11 @@ const TagList = ({ label, items }) => {
 
 const SocialLinks = ({ links, platform }) => {
   const PLATFORMS = {
-    linkedin: { icon: Linkedin, label: "LinkedIn", color: "hover:border-blue-400/50 hover:text-blue-400" },
+    linkedin: { icon: Linkedin, label: "LinkedIn", color: "hover:border-primary-light hover:text-primary" },
     twitter:  { icon: Twitter,  label: "Twitter / X", color: "hover:border-sky-400/50 hover:text-sky-400" },
-    facebook: { icon: Facebook, label: "Facebook", color: "hover:border-blue-500/50 hover:text-blue-500" },
-    instagram:{ icon: Instagram,label: "Instagram", color: "hover:border-pink-400/50 hover:text-pink-400" },
-    website:  { icon: Globe,    label: "Website", color: "hover:border-emerald-400/50 hover:text-emerald-400" },
+    facebook: { icon: Facebook, label: "Facebook", color: "hover:border-primary hover:text-primary" },
+    instagram:{ icon: Instagram,label: "Instagram", color: "hover:border-primary hover:text-primary" },
+    website:  { icon: Globe,    label: "Website", color: "hover:border-primary-light hover:text-primary" },
   };
 
   const entries = Object.entries(links || {}).filter(([, v]) => v);
@@ -77,10 +83,10 @@ const SocialLinks = ({ links, platform }) => {
 
   return (
     <div className="col-span-full">
-      <p className="text-xs text-gray-500 mb-2">Social / Links</p>
+      <p className="text-xs text-content-muted mb-2">Social / Links</p>
       <div className="flex flex-wrap gap-2">
         {entries.map(([key, url]) => {
-          const cfg = PLATFORMS[key] || { icon: Globe, label: key, color: "hover:border-white/30" };
+          const cfg = PLATFORMS[key] || { icon: Globe, label: key, color: "hover:border-line-strong" };
           const Icon = cfg.icon;
           const href = url.startsWith("http") ? url : `https://${url}`;
           return (
@@ -89,7 +95,7 @@ const SocialLinks = ({ links, platform }) => {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-xs text-gray-300 transition-all ${cfg.color}`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border border-line bg-surface-alt text-xs text-content-secondary transition-all ${cfg.color}`}
             >
               <Icon className="w-3.5 h-3.5" />
               {cfg.label}
@@ -108,17 +114,17 @@ const MyProfilePage = () => {
 
   if (!isReady && !error) return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="w-10 h-10 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
+      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
     </div>
   );
 
   if (error) return (
     <div className="min-h-screen px-6 py-10">
-      <div className="max-w-3xl mx-auto rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-100 flex items-center justify-between gap-4">
+      <div className="max-w-3xl mx-auto rounded-xl border border-error/30 bg-error/10 p-5 text-error flex items-center justify-between gap-4">
         <span>{error}</span>
         <button
           onClick={() => invalidate()}
-          className="shrink-0 px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-200 text-sm hover:bg-rose-500/30 transition-colors"
+          className="shrink-0 px-3 py-1.5 rounded-lg bg-error/10 border border-error/40 text-error text-sm hover:bg-error/20 transition-colors"
         >
           Retry
         </button>
@@ -128,9 +134,9 @@ const MyProfilePage = () => {
 
   if (!profile) return (
     <div className="min-h-screen px-6 py-10">
-      <div className="max-w-3xl mx-auto rounded-xl border border-white/15 bg-black/45 p-6 text-gray-300">
+      <div className="max-w-3xl mx-auto rounded-xl border border-line bg-surface shadow-sm p-6 text-content-secondary">
         Profile not created yet.{" "}
-        <Link to={user?.userType === "investor" ? "/investor-onboarding" : "/onboarding"} className="text-blue-400 underline">
+        <Link to={user?.userType === "investor" ? "/investor-onboarding" : "/onboarding"} className="text-primary underline">
           Complete onboarding
         </Link>
       </div>
@@ -150,21 +156,21 @@ const MyProfilePage = () => {
       <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
         <div className="max-w-3xl mx-auto space-y-4">
           {/* Header card */}
-          <div className="rounded-xl border border-white/15 bg-black/45 p-6">
+          <div className="rounded-xl border border-line bg-surface shadow-sm p-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-              <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl border border-white/15 bg-white/5 overflow-hidden flex items-center justify-center shrink-0 shadow-xl">
+              <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl border border-line bg-surface-alt overflow-hidden flex items-center justify-center shrink-0 shadow-card">
                 {profile.photo_url
                   ? <img src={profile.photo_url} alt="Profile" className="w-full h-full object-cover" />
-                  : <User className="w-12 h-12 text-gray-500" />}
+                  : <User className="w-12 h-12 text-content-muted" />}
               </div>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-3xl font-bold text-white leading-tight truncate">{profile.name_or_firm || "—"}</h1>
-                <p className="text-gray-300 text-sm mt-1.5">
+              <div className={`flex-1 min-w-0 ${cardIdentityClass}`}>
+                <h1 className="text-3xl font-bold text-content leading-none truncate">{profile.name_or_firm || "—"}</h1>
+                <p className={profileIdentitySubtitleClass}>
                   {profile.investor_type?.replace(/_/g, " ")}
                   {profile.years_of_experience ? ` · ${profile.years_of_experience} yrs experience` : ""}
                 </p>
               </div>
-              <Link to="/profile/edit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity shrink-0 self-start sm:self-center">
+              <Link to="/profile/edit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-sm text-content-inverse font-medium hover:opacity-90 transition-opacity shrink-0 self-start sm:self-center">
                 <Edit3 className="w-4 h-4" /> Edit Profile
               </Link>
             </div>
@@ -229,26 +235,26 @@ const MyProfilePage = () => {
     <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
       <div className="max-w-3xl mx-auto space-y-4">
         {/* Header card */}
-        <div className="rounded-xl border border-white/15 bg-black/45 p-6">
+        <div className="rounded-xl border border-line bg-surface shadow-sm p-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-            <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl border border-white/15 bg-white/5 overflow-hidden flex items-center justify-center shrink-0 shadow-xl">
+            <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl border border-line bg-surface-alt overflow-hidden flex items-center justify-center shrink-0 shadow-card">
               {profile.logo_url
                 ? <img src={profile.logo_url} alt="Logo" className="w-full h-full object-cover" />
-                : <Building2 className="w-12 h-12 text-gray-500" />}
+                : <Building2 className="w-12 h-12 text-content-muted" />}
             </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-bold text-white leading-tight truncate">{profile.company_name || "—"}</h1>
-              {profile.tagline && <p className="text-gray-300 text-sm mt-1.5 line-clamp-2">{profile.tagline}</p>}
+            <div className={cardIdentityClass}>
+              <h1 className="text-3xl font-bold text-content leading-none truncate">{profile.company_name || "—"}</h1>
+              {profile.tagline && <p className={profileIdentitySubtitleMutedClass}>{profile.tagline}</p>}
               <div className="flex flex-wrap items-center gap-2 mt-3">
                 {profile.industry && (
-                  <span className="px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-400/20 text-xs text-blue-300">{profile.industry}</span>
+                  <span className="px-2.5 py-1 rounded-full bg-primary/15 border border-primary-light text-xs text-primary">{profile.industry}</span>
                 )}
                 {profile.current_stage && (
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/20 text-xs text-emerald-300">{profile.current_stage.replace(/_/g, " ")}</span>
+                  <span className="px-2.5 py-1 rounded-full bg-primary/15 border border-primary-light text-xs text-primary">{profile.current_stage.replace(/_/g, " ")}</span>
                 )}
               </div>
             </div>
-            <Link to="/profile/edit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity shrink-0 self-start sm:self-center">
+            <Link to="/profile/edit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-sm text-content-inverse font-medium hover:opacity-90 transition-opacity shrink-0 self-start sm:self-center">
               <Edit3 className="w-4 h-4" /> Edit Profile
             </Link>
           </div>
@@ -289,19 +295,19 @@ const MyProfilePage = () => {
             <div className="flex flex-wrap gap-3">
               {profile.pitch_deck_url && (
                 <a href={profile.pitch_deck_url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all">
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line bg-surface-alt text-sm text-content-secondary hover:bg-surface-alt hover:border-line transition-all">
                   <ExternalLink className="w-4 h-4" /> Pitch Deck
                 </a>
               )}
               {profile.business_plan_url && (
                 <a href={profile.business_plan_url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all">
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line bg-surface-alt text-sm text-content-secondary hover:bg-surface-alt hover:border-line transition-all">
                   <ExternalLink className="w-4 h-4" /> Business Plan
                 </a>
               )}
               {profile.product_demo_url && (
                 <a href={profile.product_demo_url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-gray-300 hover:bg-white/10 hover:border-white/20 transition-all">
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line bg-surface-alt text-sm text-content-secondary hover:bg-surface-alt hover:border-line transition-all">
                   <ExternalLink className="w-4 h-4" /> Product Demo
                 </a>
               )}

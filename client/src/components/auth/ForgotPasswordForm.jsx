@@ -54,20 +54,20 @@ const ForgotPasswordForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-red-400 text-sm text-center">{error}</p>
+        <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg">
+          <p className="text-error text-sm text-center">{error}</p>
         </div>
       )}
 
       {authError && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-red-400 text-sm text-center">{authError}</p>
+        <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg">
+          <p className="text-error text-sm text-center">{authError}</p>
         </div>
       )}
 
       {success && (
-        <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-          <p className="text-blue-300 text-sm text-center">
+        <div className="mb-6 p-4 bg-primary-light border border-primary-light rounded-lg">
+          <p className="text-primary text-sm text-center">
             Watch your email — a password reset link has been sent to your
             inbox.
           </p>
@@ -75,11 +75,11 @@ const ForgotPasswordForm = () => {
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-content-secondary mb-2">
           Enter email address
         </label>
         <div className="relative">
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-content-muted">
             <svg
               className="w-5 h-5"
               fill="none"

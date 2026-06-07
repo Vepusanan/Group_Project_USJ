@@ -1,25 +1,25 @@
 import React from "react";
 
 const textareaCls =
-  "w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all resize-none";
+  "w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary-light focus:bg-surface-alt transition-all resize-none";
 
 const Field = ({ label, required, error, hint, children }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+    <label className="block text-sm font-medium text-content-secondary mb-1.5">
       {label}
-      {required && <span className="text-red-400 ml-1">*</span>}
-      {hint && <span className="text-gray-500 font-normal ml-2 text-xs">{hint}</span>}
+      {required && <span className="text-error ml-1">*</span>}
+      {hint && <span className="text-content-muted font-normal ml-2 text-xs">{hint}</span>}
     </label>
     {children}
-    {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+    {error && <p className="text-xs text-error mt-1.5">{error}</p>}
   </div>
 );
 
 const InvestorStep4InvestmentDetails = ({ formData, updateFormData, errors }) => (
   <div className="space-y-5">
     <div className="pb-2">
-      <h2 className="text-xl font-semibold text-white">Portfolio & Criteria</h2>
-      <p className="text-sm text-gray-400 mt-1">Share your track record and what you look for in investments.</p>
+      <h2 className="text-xl font-semibold text-content">Portfolio & Criteria</h2>
+      <p className="text-sm text-content-muted mt-1">Share your track record and what you look for in investments.</p>
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -30,7 +30,7 @@ const InvestorStep4InvestmentDetails = ({ formData, updateFormData, errors }) =>
           placeholder="e.g., 24"
           value={formData.number_of_investments}
           onChange={(e) => updateFormData({ number_of_investments: e.target.value })}
-          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all"
+          className="w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary-light focus:bg-surface-alt transition-all"
         />
       </Field>
 
@@ -41,7 +41,7 @@ const InvestorStep4InvestmentDetails = ({ formData, updateFormData, errors }) =>
           placeholder="e.g., 5"
           value={formData.successful_exits}
           onChange={(e) => updateFormData({ successful_exits: e.target.value })}
-          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all"
+          className="w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary-light focus:bg-surface-alt transition-all"
         />
       </Field>
     </div>
@@ -66,8 +66,8 @@ const InvestorStep4InvestmentDetails = ({ formData, updateFormData, errors }) =>
       />
     </Field>
 
-    <div className="border-t border-white/5 pt-5">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Investment Criteria</p>
+    <div className="border-t border-line pt-5">
+      <p className="text-xs font-semibold text-content-muted uppercase tracking-widest mb-4">Investment Criteria</p>
 
       <div className="space-y-4">
         <Field label="What You Look For" required error={errors.what_you_look_for}>

@@ -15,7 +15,7 @@ const InvestorOnboardingPage = () => {
 
   if (!isReady) {
     return (
-      <div className="min-h-screen px-6 py-10 text-gray-300">
+      <div className="min-h-screen px-6 py-10 text-content-secondary">
         Checking profile status...
       </div>
     );

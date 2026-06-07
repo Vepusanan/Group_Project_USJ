@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiService } from "../services/apiService";
+import {
+  cardIdentityClass,
+  cardIdentitySubtitleMutedClass,
+  cardIdentityTitleClass,
+} from "../styles/theme";
 
 const ConnectionsPage = () => {
   const navigate = useNavigate();
@@ -122,26 +127,26 @@ const ConnectionsPage = () => {
     <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
       <div className="mx-auto max-w-5xl space-y-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white">My Connections</h1>
-          <p className="text-gray-400 mt-1 text-sm">
+          <h1 className="text-3xl md:text-4xl font-bold text-content">My Connections</h1>
+          <p className="text-content-muted mt-1 text-sm">
             {acceptedConnections.length} connection{acceptedConnections.length !== 1 ? "s" : ""}
           </p>
         </div>
 
         {error && (
-          <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-rose-100 text-sm">
+          <div className="rounded-lg border border-error/40 bg-error/10 px-4 py-3 text-error text-sm">
             {error}
           </div>
         )}
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-4 border-purple-600/30 border-t-purple-600 rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-primary-light/30 border-t-primary rounded-full animate-spin" />
           </div>
         ) : (
-          <section className="rounded-xl border border-white/15 bg-black/45 p-5">
+          <section className="rounded-xl border border-line bg-surface shadow-sm p-5">
             {/* Tab bar */}
-            <div className="flex flex-wrap gap-2 mb-5 border-b border-white/10 pb-4">
+            <div className="flex flex-wrap gap-2 mb-5 border-b border-line pb-4">
               {tabs.map((tab) => (
                 <button
                   key={tab.key}
@@ -149,16 +154,16 @@ const ConnectionsPage = () => {
                   onClick={() => setActiveTab(tab.key)}
                   className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm border transition-colors ${
                     activeTab === tab.key
-                      ? "bg-purple-500/30 border-purple-400/60 text-white"
-                      : "bg-white/5 border-white/15 text-gray-300 hover:text-white"
+                      ? "bg-primary-light/30 border-primary-light/60 text-content"
+                      : "bg-surface-alt border-line text-content-secondary hover:text-content"
                   }`}
                 >
                   {tab.label}
                   {tab.count > 0 && (
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                       activeTab === tab.key
-                        ? "bg-purple-500/50 text-white"
-                        : "bg-white/10 text-gray-400"
+                        ? "bg-primary-light/50 text-content"
+                        : "bg-surface-alt text-content-muted"
                     }`}>
                       {tab.count}
                     </span>
@@ -172,13 +177,13 @@ const ConnectionsPage = () => {
               <div className="space-y-3">
                 {acceptedConnections.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-gray-300 mb-2">No connections yet.</p>
-                    <p className="text-gray-500 text-sm">
+                    <p className="text-content-secondary mb-2">No connections yet.</p>
+                    <p className="text-content-muted text-sm">
                       Visit{" "}
                       <button
                         type="button"
                         onClick={() => navigate("/startups")}
-                        className="text-blue-300 hover:text-blue-200 underline"
+                        className="text-primary hover:text-primary-dark underline"
                       >
                         startups
                       </button>{" "}
@@ -186,7 +191,7 @@ const ConnectionsPage = () => {
                       <button
                         type="button"
                         onClick={() => navigate("/investors")}
-                        className="text-blue-300 hover:text-blue-200 underline"
+                        className="text-primary hover:text-primary-dark underline"
                       >
                         investors
                       </button>{" "}
@@ -202,30 +207,30 @@ const ConnectionsPage = () => {
                     return (
                       <div
                         key={connection.id}
-                        className="rounded-lg border border-white/15 bg-black/30 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                        className="rounded-lg border border-line bg-surface-alt p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          <div className="w-10 h-10 rounded-full bg-surface-alt border border-line flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {connection.other_user_photo_url
                               ? <img src={connection.other_user_photo_url} alt={connection.other_user_name} className="w-full h-full object-cover" />
-                              : <span className="text-sm font-semibold text-white/50">{(connection.other_user_name || "U").charAt(0).toUpperCase()}</span>
+                              : <span className="text-sm font-semibold text-content/50">{(connection.other_user_name || "U").charAt(0).toUpperCase()}</span>
                             }
                           </div>
-                          <div>
+                          <div className={cardIdentityClass}>
                             {profilePath ? (
                               <button
                                 type="button"
                                 onClick={() => navigate(profilePath)}
-                                className="text-white font-medium hover:text-purple-300 transition-colors text-left"
+                                className={`${cardIdentityTitleClass} hover:text-primary transition-colors text-left`}
                               >
                                 {connection.other_user_name || "User"}
                               </button>
                             ) : (
-                              <p className="text-white font-medium">
+                              <p className={cardIdentityTitleClass}>
                                 {connection.other_user_name || "User"}
                               </p>
                             )}
-                            <p className="text-xs text-gray-400 capitalize">
+                            <p className={`${cardIdentitySubtitleMutedClass} capitalize`}>
                               {connection.other_user_type || "member"}
                             </p>
                           </div>
@@ -236,7 +241,7 @@ const ConnectionsPage = () => {
                             <button
                               type="button"
                               onClick={() => navigate(profilePath)}
-                              className="px-3 py-1.5 rounded-lg border border-white/15 text-gray-300 hover:text-white text-sm transition-colors"
+                              className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm transition-colors"
                             >
                               View Profile
                             </button>
@@ -244,7 +249,7 @@ const ConnectionsPage = () => {
                           <button
                             type="button"
                             onClick={() => handleMessage(connection)}
-                            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm transition-colors"
+                            className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-dark text-sm !text-content-inverse transition-colors"
                           >
                             Message
                           </button>
@@ -252,7 +257,7 @@ const ConnectionsPage = () => {
                             type="button"
                             onClick={() => handleRemoveConnection(connection.id)}
                             disabled={actionLoadingId === connection.id}
-                            className="px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 text-sm disabled:opacity-50 transition-colors"
+                            className="px-3 py-1.5 rounded-lg border border-error/30 text-error hover:bg-error/10 text-sm disabled:opacity-50 transition-colors"
                           >
                             {actionLoadingId === connection.id ? "…" : "Remove"}
                           </button>
@@ -269,7 +274,7 @@ const ConnectionsPage = () => {
               <div className="space-y-3">
                 {pendingSent.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-gray-300">No pending sent requests.</p>
+                    <p className="text-content-secondary">No pending sent requests.</p>
                   </div>
                 ) : (
                   pendingSent.map((request) => {
@@ -280,30 +285,30 @@ const ConnectionsPage = () => {
                     return (
                       <div
                         key={request.id}
-                        className="rounded-lg border border-white/15 bg-black/30 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                        className="rounded-lg border border-line bg-surface-alt p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          <div className="w-10 h-10 rounded-full bg-surface-alt border border-line flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {request.other_user_photo_url
                               ? <img src={request.other_user_photo_url} alt={request.target_user_name} className="w-full h-full object-cover" />
-                              : <span className="text-sm font-semibold text-white/50">{(request.target_user_name || "U").charAt(0).toUpperCase()}</span>
+                              : <span className="text-sm font-semibold text-content/50">{(request.target_user_name || "U").charAt(0).toUpperCase()}</span>
                             }
                           </div>
-                          <div>
+                          <div className={cardIdentityClass}>
                             {profilePath ? (
                               <button
                                 type="button"
                                 onClick={() => navigate(profilePath)}
-                                className="text-white font-medium hover:text-purple-300 transition-colors text-left"
+                                className={`${cardIdentityTitleClass} hover:text-primary transition-colors text-left`}
                               >
                                 {request.target_user_name || "User"}
                               </button>
                             ) : (
-                              <p className="text-white font-medium">
+                              <p className={cardIdentityTitleClass}>
                                 {request.target_user_name || "User"}
                               </p>
                             )}
-                            <p className="text-xs text-gray-400 capitalize">
+                            <p className={`${cardIdentitySubtitleMutedClass} capitalize`}>
                               {request.target_user_type || "member"}
                             </p>
                           </div>
@@ -314,19 +319,19 @@ const ConnectionsPage = () => {
                             <button
                               type="button"
                               onClick={() => navigate(profilePath)}
-                              className="px-3 py-1.5 rounded-lg border border-white/15 text-gray-300 hover:text-white text-sm transition-colors"
+                              className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm transition-colors"
                             >
                               View Profile
                             </button>
                           )}
-                          <span className="px-2.5 py-1 text-xs border border-amber-400/30 bg-amber-500/15 text-amber-200 rounded-full">
+                          <span className="px-2.5 py-1 text-xs border border-warning/30 bg-warning/15 text-warning rounded-full">
                             Pending
                           </span>
                           <button
                             type="button"
                             onClick={() => handleCancelRequest(request.id)}
                             disabled={actionLoadingId === request.id}
-                            className="px-3 py-1.5 rounded-lg border border-white/15 text-gray-400 hover:text-white text-sm disabled:opacity-50 transition-colors"
+                            className="px-3 py-1.5 rounded-lg border border-line text-content-muted hover:text-content text-sm disabled:opacity-50 transition-colors"
                           >
                             {actionLoadingId === request.id ? "…" : "Cancel"}
                           </button>
@@ -343,7 +348,7 @@ const ConnectionsPage = () => {
               <div className="space-y-3">
                 {pendingReceived.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-gray-300">No pending received requests.</p>
+                    <p className="text-content-secondary">No pending received requests.</p>
                   </div>
                 ) : (
                   pendingReceived.map((request) => {
@@ -354,39 +359,39 @@ const ConnectionsPage = () => {
                     return (
                       <div
                         key={request.id}
-                        className="rounded-lg border border-white/15 bg-black/30 p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3"
+                        className="rounded-lg border border-line bg-surface-alt p-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3"
                       >
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/15 flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-surface-alt border border-line flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {request.other_user_photo_url
                               ? <img src={request.other_user_photo_url} alt={request.requester_name} className="w-full h-full object-cover" />
-                              : <span className="text-sm font-semibold text-white/50">{(request.requester_name || "U").charAt(0).toUpperCase()}</span>
+                              : <span className="text-sm font-semibold text-content/50">{(request.requester_name || "U").charAt(0).toUpperCase()}</span>
                             }
                           </div>
-                          <div>
+                          <div className={cardIdentityClass}>
                             {profilePath ? (
                               <button
                                 type="button"
                                 onClick={() => navigate(profilePath)}
-                                className="text-white font-medium hover:text-purple-300 transition-colors text-left"
+                                className={`${cardIdentityTitleClass} hover:text-primary transition-colors text-left`}
                               >
                                 {request.requester_name || "User"}
                               </button>
                             ) : (
-                              <p className="text-white font-medium">
+                              <p className={cardIdentityTitleClass}>
                                 {request.requester_name || "User"}
                               </p>
                             )}
-                            <p className="text-xs text-gray-400 capitalize">
+                            <p className={`${cardIdentitySubtitleMutedClass} capitalize`}>
                               {request.requester_user_type || "member"}
                             </p>
                             {request.message && (
-                              <p className="text-sm text-gray-300 mt-1 italic">
+                              <p className="text-sm text-content-secondary mt-1 italic">
                                 "{request.message}"
                               </p>
                             )}
                             {request.created_at && (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-content-muted mt-1">
                                 {new Date(request.created_at).toLocaleDateString()}
                               </p>
                             )}
@@ -398,7 +403,7 @@ const ConnectionsPage = () => {
                             <button
                               type="button"
                               onClick={() => navigate(profilePath)}
-                              className="px-3 py-1.5 rounded-lg border border-white/15 text-gray-300 hover:text-white text-sm transition-colors"
+                              className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm transition-colors"
                             >
                               View Profile
                             </button>
@@ -407,7 +412,7 @@ const ConnectionsPage = () => {
                             type="button"
                             onClick={() => handleRespond(request.id, "accepted")}
                             disabled={actionLoadingId === request.id}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm disabled:opacity-50 transition-colors"
+                            className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-dark text-sm text-content-inverse disabled:opacity-50 transition-colors"
                           >
                             {actionLoadingId === request.id ? "…" : "Accept"}
                           </button>
@@ -415,7 +420,7 @@ const ConnectionsPage = () => {
                             type="button"
                             onClick={() => handleRespond(request.id, "declined")}
                             disabled={actionLoadingId === request.id}
-                            className="px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 text-sm disabled:opacity-50 transition-colors"
+                            className="px-3 py-1.5 rounded-lg border border-error/30 text-error hover:bg-error/10 text-sm disabled:opacity-50 transition-colors"
                           >
                             Decline
                           </button>

@@ -19,6 +19,16 @@ const ALLOWED_INVESTOR_SORTS = new Set([
   "most_experienced",
 ]);
 
+const ALLOWED_INVESTOR_TYPES = new Set([
+  "ANGEL",
+  "VC_FIRM",
+  "CORPORATE_VC",
+  "FAMILY_OFFICE",
+  "ACCELERATOR",
+  "INCUBATOR",
+  "PRIVATE_EQUITY",
+]);
+
 const toPositiveInteger = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
 
@@ -133,6 +143,19 @@ export const getInvestors = async (req, res, next) => {
       });
     }
 
+    const investorTypeRaw = String(req.query.investor_type || "").trim();
+    const investor_type = investorTypeRaw
+      ? investorTypeRaw.toUpperCase()
+      : null;
+
+    if (investor_type && !ALLOWED_INVESTOR_TYPES.has(investor_type)) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Invalid investor type. Allowed values: ANGEL, VC_FIRM, CORPORATE_VC, FAMILY_OFFICE, ACCELERATOR, INCUBATOR, PRIVATE_EQUITY",
+      });
+    }
+
     const investment_min =
       req.query.investment_min != null && req.query.investment_min !== ""
         ? Number.parseInt(req.query.investment_min, 10) || null
@@ -146,7 +169,7 @@ export const getInvestors = async (req, res, next) => {
       page,
       limit,
       q: req.query.q,
-      investor_type: req.query.investor_type,
+      investor_type,
       location: req.query.location,
       industries: req.query.industries,
       investment_stage: req.query.investment_stage,

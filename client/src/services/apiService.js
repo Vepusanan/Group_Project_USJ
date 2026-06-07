@@ -1,6 +1,13 @@
 import api from "./apiClient";
 import { API_ENDPOINTS } from "../utils/constants";
 
+const cleanQueryParams = (params = {}) =>
+  Object.fromEntries(
+    Object.entries(params).filter(
+      ([, value]) => value !== "" && value !== null && value !== undefined,
+    ),
+  );
+
 export const apiService = {
   getCurrentUser: async () => {
     try {
@@ -25,7 +32,9 @@ export const apiService = {
    */
   getStartups: async (params = {}) => {
     try {
-      const response = await api.get(API_ENDPOINTS.STARTUPS, { params });
+      const response = await api.get(API_ENDPOINTS.STARTUPS, {
+        params: cleanQueryParams(params),
+      });
       return {
         success: true,
         data: response.data,
@@ -46,7 +55,9 @@ export const apiService = {
    */
   getInvestors: async (params = {}) => {
     try {
-      const response = await api.get(API_ENDPOINTS.INVESTORS, { params });
+      const response = await api.get(API_ENDPOINTS.INVESTORS, {
+        params: cleanQueryParams(params),
+      });
       return {
         success: true,
         data: response.data,

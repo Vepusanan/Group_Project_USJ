@@ -134,14 +134,14 @@ const DashboardPage = () => {
     <div className="min-h-screen py-12 px-4">
       <div className="max-w-7xl mx-auto">
         {message && (
-          <div className="mb-6 bg-green-600/10 border border-green-600/30 rounded-lg p-4">
-            <p className="text-green-400 text-center">{message}</p>
+          <div className="mb-6 bg-success/10 border border-success/30 rounded-lg p-4">
+            <p className="text-success text-center">{message}</p>
           </div>
         )}
 
         <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Dashboard</h1>
-          <p className="text-gray-300 text-lg mb-8">
+          <h1 className="text-4xl font-bold text-content mb-2">Dashboard</h1>
+          <p className="text-content-secondary text-lg mb-8">
             Welcome back{user?.fullName ? `, ${user.fullName}` : ""}. Continue
             from the sections below.
           </p>
@@ -150,10 +150,10 @@ const DashboardPage = () => {
             {statCards.map((card) => (
               <div
                 key={card.title}
-                className="bg-white/4 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50"
+                className="bg-surface  rounded-2xl p-6 border border-line"
               >
-                <p className="text-sm text-gray-300">{card.title}</p>
-                <p className="text-3xl font-bold text-white mt-1">
+                <p className="text-sm text-content-secondary">{card.title}</p>
+                <p className="text-3xl font-bold text-content mt-1">
                   {loading ? "..." : card.value}
                 </p>
               </div>
@@ -165,33 +165,33 @@ const DashboardPage = () => {
               <Link
                 key={item.to}
                 to={item.to}
-                className="bg-white/4 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50 hover:border-purple-400/40 hover:bg-white/8 transition-colors"
+                className="bg-surface  rounded-2xl p-6 border border-line hover:border-primary-light/40 hover:bg-surface-alt transition-colors"
               >
-                <h2 className="text-xl font-semibold text-white mb-2">
+                <h2 className="text-xl font-semibold text-content mb-2">
                   {item.title}
                 </h2>
-                <p className="text-gray-300 text-sm">{item.desc}</p>
+                <p className="text-content-secondary text-sm">{item.desc}</p>
               </Link>
             ))}
           </div>
 
-          <div className="mt-6 bg-white/4 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50">
-            <h2 className="text-xl font-semibold text-white mb-3">
+          <div className="mt-6 bg-surface  rounded-2xl p-6 border border-line">
+            <h2 className="text-xl font-semibold text-content mb-3">
               Recent Activity
             </h2>
             {loading ? (
-              <p className="text-gray-300">Loading activity...</p>
+              <p className="text-content-secondary">Loading activity...</p>
             ) : recentActivity.length === 0 ? (
-              <p className="text-gray-300">No recent activity yet.</p>
+              <p className="text-content-secondary">No recent activity yet.</p>
             ) : (
               <div className="space-y-2">
                 {recentActivity.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-lg border border-white/10 bg-black/30 p-3"
+                    className="rounded-lg border border-line bg-surface-alt p-3"
                   >
-                    <p className="text-white text-sm">{item.text}</p>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-sm text-content">{item.text}</p>
+                    <p className="text-xs text-content-muted mt-1">
                       {item.date
                         ? new Date(item.date).toLocaleString()
                         : "Recent"}

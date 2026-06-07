@@ -21,30 +21,30 @@ const toggle = (arr, val) =>
   arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
 
 const iconInputCls =
-  "w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all appearance-none";
+  "w-full pl-11 pr-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary-light focus:bg-surface-alt transition-all appearance-none";
 
 const Field = ({ label, required, error, children }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+    <label className="block text-sm font-medium text-content-secondary mb-1.5">
       {label}
-      {required && <span className="text-red-400 ml-1">*</span>}
+      {required && <span className="text-error ml-1">*</span>}
     </label>
     {children}
-    {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+    {error && <p className="text-xs text-error mt-1.5">{error}</p>}
   </div>
 );
 
 const InvestorStep3InvestmentFocus = ({ formData, updateFormData, errors }) => (
   <div className="space-y-5">
     <div className="pb-2">
-      <h2 className="text-xl font-semibold text-white">Investment Details</h2>
-      <p className="text-sm text-gray-400 mt-1">Set your check size, structure preferences, and timeline.</p>
+      <h2 className="text-xl font-semibold text-content">Investment Details</h2>
+      <p className="text-sm text-content-muted mt-1">Set your check size, structure preferences, and timeline.</p>
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Field label="Min Investment (USD)" required error={errors.min_investment_size}>
         <div className="relative">
-          <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="number"
             min="0"
@@ -58,7 +58,7 @@ const InvestorStep3InvestmentFocus = ({ formData, updateFormData, errors }) => (
 
       <Field label="Max Investment (USD)" required error={errors.max_investment_size}>
         <div className="relative">
-          <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="number"
             min="0"
@@ -82,8 +82,8 @@ const InvestorStep3InvestmentFocus = ({ formData, updateFormData, errors }) => (
               onClick={() => updateFormData({ investment_structure: toggle(formData.investment_structure, s.value) })}
               className={`px-3.5 py-1.5 rounded-full text-sm border transition-all ${
                 selected
-                  ? "bg-indigo-600/25 border-indigo-500/50 text-indigo-300 font-medium"
-                  : "bg-white/3 border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-300"
+                  ? "bg-primary/25 border-primary/50 text-primary font-medium"
+                  : "bg-surface-alt border-line text-content-muted hover:border-line hover:text-content-secondary"
               }`}
             >
               {s.label}
@@ -104,8 +104,8 @@ const InvestorStep3InvestmentFocus = ({ formData, updateFormData, errors }) => (
               onClick={() => updateFormData({ investment_timeline: t.value })}
               className={`py-2.5 px-3 rounded-xl text-sm border transition-all text-center ${
                 selected
-                  ? "bg-violet-600/25 border-violet-500/50 text-violet-300 font-medium"
-                  : "bg-white/3 border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-300"
+                  ? "bg-primary-light border-primary-light text-primary font-medium"
+                  : "bg-surface-alt border-line text-content-muted hover:border-line hover:text-content-secondary"
               }`}
             >
               {t.label}
@@ -119,22 +119,22 @@ const InvestorStep3InvestmentFocus = ({ formData, updateFormData, errors }) => (
       onClick={() => updateFormData({ follow_on_investment: !formData.follow_on_investment })}
       className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
         formData.follow_on_investment
-          ? "bg-violet-600/10 border-violet-500/30"
-          : "bg-white/3 border-white/10 hover:border-white/20"
+          ? "bg-primary-light border-primary-light"
+          : "bg-surface-alt border-line hover:border-line"
       }`}
     >
       <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${
-        formData.follow_on_investment ? "bg-violet-600 border-violet-500" : "border-gray-600 bg-white/5"
+        formData.follow_on_investment ? "bg-primary-light border-primary-light" : "border-line bg-surface-alt"
       }`}>
         {formData.follow_on_investment && (
-          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
+          <svg className="w-3 h-3 text-content" fill="none" viewBox="0 0 12 12">
             <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         )}
       </div>
       <div>
-        <p className="text-sm font-medium text-white">Open to follow-on investments</p>
-        <p className="text-xs text-gray-500 mt-0.5">You're willing to invest in subsequent rounds for portfolio companies</p>
+        <p className="text-sm font-medium text-content">Open to follow-on investments</p>
+        <p className="text-xs text-content-muted mt-0.5">You're willing to invest in subsequent rounds for portfolio companies</p>
       </div>
     </div>
   </div>

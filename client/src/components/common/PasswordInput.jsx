@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
+import { inputClass } from "../../styles/theme";
 
 const PasswordInput = ({
   label,
-  placeholder = 'Your password',
+  placeholder = "Your password",
   value,
   onChange,
   error,
   disabled = false,
   required = false,
   compact = false,
-  className = '',
+  className = "",
   autoHideDelay = 3000,
   ...props
 }) => {
@@ -17,17 +18,12 @@ const PasswordInput = ({
   const timeoutRef = useRef(null);
 
   const togglePassword = () => {
-    // Clear any existing timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    
-    // Show password
     const newShowState = !showPassword;
     setShowPassword(newShowState);
-    
-    // If showing, set timeout to hide
     if (newShowState) {
       timeoutRef.current = setTimeout(() => {
         setShowPassword(false);
@@ -36,31 +32,31 @@ const PasswordInput = ({
     }
   };
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
-  const baseClasses = `w-full px-4 ${compact ? 'py-2' : 'py-3'} bg-white/5 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all duration-200`;
-  const errorClasses = error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : '';
-  const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : '';
-  const combinedClasses = `${baseClasses} ${errorClasses} ${disabledClasses} ${className}`;
+  const errorClasses = error
+    ? "border-error focus:border-error focus:ring-error/20"
+    : "";
+  const disabledClasses = disabled ? "opacity-50 cursor-not-allowed bg-surface-alt" : "";
+  const combinedClasses = `${inputClass} ${compact ? "py-2" : ""} ${errorClasses} ${disabledClasses} ${className}`;
 
   return (
     <div className="w-full">
       {label && (
-        <label className={`block text-sm font-medium text-gray-300 ${compact ? 'mb-1' : 'mb-2'}`}>
+        <label
+          className={`block text-sm font-medium text-content-secondary ${compact ? "mb-1" : "mb-2"}`}
+        >
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-error ml-1">*</span>}
         </label>
       )}
       <div className="relative">
         <input
-          type={showPassword ? 'text' : 'password'}
+          type={showPassword ? "text" : "password"}
           placeholder={placeholder}
           value={value}
           onChange={onChange}
@@ -71,9 +67,9 @@ const PasswordInput = ({
         <button
           type="button"
           onClick={togglePassword}
-          className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${showPassword ? 'text-purple-400' : 'text-gray-400'} hover:text-gray-300 focus:outline-none transition-colors duration-200`}
+          className={`absolute right-3 top-1/2 -translate-y-1/2 ${showPassword ? "text-primary" : "text-content-muted"} hover:text-content-secondary focus:outline-none transition-colors`}
           tabIndex={-1}
-          aria-label={showPassword ? `Hide password (auto-hides in ${autoHideDelay/1000}s)` : 'Show password'}
+          aria-label={showPassword ? "Hide password" : "Show password"}
         >
           {showPassword ? (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,12 +83,7 @@ const PasswordInput = ({
           )}
         </button>
       </div>
-      {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
-      {showPassword && (
-        <p className="mt-1 text-xs text-purple-400 animate-pulse">
-          Password will hide automatically in {autoHideDelay/1000} seconds
-        </p>
-      )}
+      {error && <p className="mt-1 text-sm text-error">{error}</p>}
     </div>
   );
 };

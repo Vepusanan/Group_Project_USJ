@@ -13,13 +13,15 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey =
   process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
 
-// Initialize Supabase client with your specific storage configuration
+const projectRef = supabaseUrl?.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
+const storageEndpoint =
+  process.env.SUPABASE_STORAGE_ENDPOINT ||
+  (projectRef ? `https://${projectRef}.storage.supabase.co` : undefined);
+
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   storage: {
     region: process.env.SUPABASE_STORAGE_REGION || "ap-southeast-2",
-    endpoint:
-      process.env.SUPABASE_STORAGE_ENDPOINT ||
-      "https://shvlqkqyvccflxtkhyqd.storage.supabase.co",
+    ...(storageEndpoint ? { endpoint: storageEndpoint } : {}),
   },
 });
 

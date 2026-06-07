@@ -14,11 +14,12 @@ const truncateToWords = (text, limit) => {
 
 const INVESTOR_TYPES = [
   { value: "ANGEL", label: "Angel Investor" },
-  { value: "VC", label: "Venture Capital" },
-  { value: "CORPORATE", label: "Corporate Investor" },
+  { value: "VC_FIRM", label: "VC Firm" },
+  { value: "CORPORATE_VC", label: "Corporate VC" },
   { value: "FAMILY_OFFICE", label: "Family Office" },
-  { value: "ACCELERATOR", label: "Accelerator / Incubator" },
-  { value: "OTHER", label: "Other" },
+  { value: "ACCELERATOR", label: "Accelerator" },
+  { value: "INCUBATOR", label: "Incubator" },
+  { value: "PRIVATE_EQUITY", label: "Private Equity" },
 ];
 
 const COUNTRIES = [
@@ -34,30 +35,30 @@ const COUNTRIES = [
 ];
 
 const iconInputCls =
-  "w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all appearance-none";
+  "w-full pl-11 pr-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary-light focus:bg-surface-alt transition-all appearance-none";
 
 const Field = ({ label, required, error, hint, children }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+    <label className="block text-sm font-medium text-content-secondary mb-1.5">
       {label}
-      {required && <span className="text-red-400 ml-1">*</span>}
-      {hint && <span className="text-gray-500 font-normal ml-2 text-xs">{hint}</span>}
+      {required && <span className="text-error ml-1">*</span>}
+      {hint && <span className="text-content-muted font-normal ml-2 text-xs">{hint}</span>}
     </label>
     {children}
-    {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+    {error && <p className="text-xs text-error mt-1.5">{error}</p>}
   </div>
 );
 
 const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
   <div className="space-y-5">
     <div className="pb-2">
-      <h2 className="text-xl font-semibold text-white">Your Identity</h2>
-      <p className="text-sm text-gray-400 mt-1">Tell startups who you are as an investor.</p>
+      <h2 className="text-xl font-semibold text-content">Your Identity</h2>
+      <p className="text-sm text-content-muted mt-1">Tell startups who you are as an investor.</p>
     </div>
 
     <Field label="Name or Firm" required error={errors.name_or_firm}>
       <div className="relative">
-        <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+        <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
         <input
           type="text"
           placeholder="e.g., Acme Ventures or Jane Doe"
@@ -71,15 +72,15 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Field label="Investor Type" required error={errors.investor_type}>
         <div className="relative">
-          <BadgeCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px] pointer-events-none" />
+          <BadgeCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px] pointer-events-none" />
           <select
             value={formData.investor_type}
             onChange={(e) => updateFormData({ investor_type: e.target.value })}
             className={iconInputCls}
           >
-            <option value="" className="bg-gray-900">Select type</option>
+            <option value="" className="bg-surface">Select type</option>
             {INVESTOR_TYPES.map((t) => (
-              <option key={t.value} value={t.value} className="bg-gray-900">{t.label}</option>
+              <option key={t.value} value={t.value} className="bg-surface">{t.label}</option>
             ))}
           </select>
         </div>
@@ -87,7 +88,7 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
 
       <Field label="Years of Experience" required error={errors.years_of_experience}>
         <div className="relative">
-          <CalendarClock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <CalendarClock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="number"
             min="0"
@@ -103,15 +104,15 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Field label="Country" required error={errors.location_country}>
         <div className="relative">
-          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px] pointer-events-none" />
+          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px] pointer-events-none" />
           <select
             value={formData.location_country || ""}
             onChange={(e) => updateFormData({ location_country: e.target.value })}
             className={iconInputCls}
           >
-            <option value="" className="bg-gray-900">Select country</option>
+            <option value="" className="bg-surface">Select country</option>
             {COUNTRIES.map((c) => (
-              <option key={c} value={c} className="bg-gray-900">{c}</option>
+              <option key={c} value={c} className="bg-surface">{c}</option>
             ))}
           </select>
         </div>
@@ -119,7 +120,7 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
 
       <Field label="City" required error={errors.location_city}>
         <div className="relative">
-          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="text"
             placeholder="e.g., New York"
@@ -134,7 +135,7 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Field label="Website" hint="optional">
         <div className="relative">
-          <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="url"
             placeholder="https://yourfirm.com"
@@ -147,7 +148,7 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
 
       <Field label="LinkedIn Profile" required error={errors.linkedin_url}>
         <div className="relative">
-          <Linkedin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 w-[18px] h-[18px]" />
+          <Linkedin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
             type="url"
             placeholder="https://linkedin.com/in/..."
@@ -174,14 +175,14 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
           }
           updateFormData({ professional_background: next });
         }}
-        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all resize-none"
+        className="w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary-light focus:bg-surface-alt transition-all resize-none"
       />
       <div className="mt-1.5 flex justify-end">
         <span
           className={`text-xs ${
             countWords(formData.professional_background) >= MAX_BIO_WORDS
-              ? "text-red-400"
-              : "text-gray-500"
+              ? "text-error"
+              : "text-content-muted"
           }`}
         >
           {countWords(formData.professional_background)} / {MAX_BIO_WORDS} words

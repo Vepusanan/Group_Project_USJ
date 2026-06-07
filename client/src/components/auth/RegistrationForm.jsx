@@ -119,38 +119,38 @@ const RegistrationForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {errors.general && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-red-400 text-sm text-center">{errors.general}</p>
+        <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg">
+          <p className="text-error text-sm text-center">{errors.general}</p>
         </div>
       )}
 
       {authError && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-red-400 text-sm text-center">{authError}</p>
+        <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg">
+          <p className="text-error text-sm text-center">{authError}</p>
         </div>
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">
-          User Type <span className="text-red-500">*</span>
+        <label className="block text-sm font-medium text-content-secondary mb-1">
+          User Type <span className="text-error">*</span>
         </label>
         <select
           value={formData.userType}
           onChange={(e) => handleInputChange("userType", e.target.value)}
-          className={`w-full px-4 py-2 bg-white/5 border ${errors.userType ? "border-red-500/50" : "border-gray-600"} rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200`}
+          className={`w-full px-4 py-2 bg-surface-alt border ${errors.userType ? "border-error/50" : "border-line"} rounded-lg text-content focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-light/40 transition-all duration-200`}
         >
-          <option value="" disabled className="bg-gray-900">
+          <option value="" disabled className="bg-surface">
             Select Your Role
           </option>
-          <option value="startup" className="bg-gray-900">
+          <option value="startup" className="bg-surface">
             Startup
           </option>
-          <option value="investor" className="bg-gray-900">
+          <option value="investor" className="bg-surface">
             Investor
           </option>
         </select>
         {errors.userType && (
-          <p className="mt-1 text-sm text-red-500">{errors.userType}</p>
+          <p className="mt-1 text-sm text-error">{errors.userType}</p>
         )}
       </div>
 
@@ -196,9 +196,9 @@ const RegistrationForm = () => {
 
       <Checkbox
         label={
-          <span className="text-gray-300 text-sm">
+          <span className="text-content-secondary text-sm">
             I agree to the{" "}
-            <Link to="/terms" className="text-blue-400 hover:text-blue-300">
+            <Link to="/terms" className="text-primary hover:text-primary">
               Terms and Conditions
             </Link>
           </span>

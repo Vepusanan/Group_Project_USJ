@@ -95,14 +95,14 @@ const LoginForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {errors.general && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-red-400 text-sm text-center">{errors.general}</p>
+        <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg">
+          <p className="text-error text-sm text-center">{errors.general}</p>
         </div>
       )}
 
       {authError && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-red-400 text-sm text-center">{authError}</p>
+        <div className="mb-6 p-4 bg-error/10 border border-error/30 rounded-lg">
+          <p className="text-error text-sm text-center">{authError}</p>
         </div>
       )}
 

@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "/api" : "http://localhost:5001/api");
 
 // Shared axios instance. Auth is cookie-based (TC-SEC-006): tokens are
 // HttpOnly cookies set by the backend, automatically attached by the

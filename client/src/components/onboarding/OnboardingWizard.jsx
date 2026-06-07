@@ -172,13 +172,13 @@ const OnboardingWizard = () => {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-light border border-primary-light text-primary text-xs font-medium mb-4">
             Startup Profile Setup
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white">
+          <h1 className="text-2xl md:text-3xl font-bold text-content">
             Complete Your Profile
           </h1>
-          <p className="text-gray-400 text-sm mt-2">
+          <p className="text-content-muted text-sm mt-2">
             Step {currentStep} of {STEPS.length} — {STEPS[currentStep - 1].short}
           </p>
         </div>
@@ -192,42 +192,42 @@ const OnboardingWizard = () => {
                 disabled={step.number >= currentStep}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   step.number < currentStep
-                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-pointer hover:bg-emerald-500/30"
+                    ? "bg-primary-light text-primary border border-primary-light cursor-pointer hover:bg-primary/20"
                     : step.number === currentStep
-                    ? "bg-white/10 text-white border border-white/20"
-                    : "bg-white/3 text-gray-600 border border-white/5 cursor-default"
+                    ? "bg-surface-alt text-content border border-line"
+                    : "bg-surface-alt text-content-secondary border border-line cursor-default"
                 }`}
               >
                 {step.number < currentStep ? (
                   <Check className="w-3 h-3" />
                 ) : (
                   <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    step.number === currentStep ? "bg-emerald-500 text-white" : "bg-gray-700 text-gray-500"
+                    step.number === currentStep ? "bg-primary text-content-inverse" : "bg-line text-content-muted"
                   }`}>{step.number}</span>
                 )}
                 <span className="hidden sm:inline">{step.title}</span>
               </button>
               {idx < STEPS.length - 1 && (
-                <div className={`flex-1 h-px transition-all ${step.number < currentStep ? "bg-emerald-500/40" : "bg-white/5"}`} />
+                <div className={`flex-1 h-px transition-all ${step.number < currentStep ? "bg-primary/40" : "bg-surface-alt"}`} />
               )}
             </React.Fragment>
           ))}
         </div>
 
         {/* Progress bar */}
-        <div className="h-1 bg-white/5 rounded-full mb-8 overflow-hidden">
+        <div className="h-1 bg-surface-alt rounded-full mb-8 overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
+            className="h-full bg-primary rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
 
         {/* Form card */}
-        <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-white/10 p-6 md:p-8">
+        <div className="bg-surface-alt backdrop-blur-xl rounded-2xl border border-line p-6 md:p-8">
           {submitError && (
-            <div className="mb-6 flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0" />
-              <p className="text-red-400 text-sm">{submitError}</p>
+            <div className="mb-6 flex items-start gap-3 bg-error/10 border border-error/30 rounded-xl p-4">
+              <div className="w-1.5 h-1.5 rounded-full bg-error mt-1.5 shrink-0" />
+              <p className="text-error text-sm">{submitError}</p>
             </div>
           )}
 
@@ -239,14 +239,14 @@ const OnboardingWizard = () => {
           />
 
           {/* Navigation */}
-          <div className="flex justify-between items-center mt-8 pt-6 border-t border-white/5">
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-line">
             <button
               onClick={handleBack}
               disabled={currentStep === 1 || isSaving}
               className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 currentStep === 1 || isSaving
-                  ? "text-gray-600 cursor-not-allowed"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                  ? "text-content-secondary cursor-not-allowed"
+                  : "text-content-muted hover:text-content hover:bg-surface-alt"
               }`}
             >
               Back
@@ -256,7 +256,7 @@ const OnboardingWizard = () => {
               <button
                 onClick={handleNext}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-emerald-900/30 disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-content-inverse rounded-xl text-sm font-semibold transition-all shadow-lg shadow-soft disabled:opacity-50"
               >
                 {isSaving ? (
                   <>
@@ -276,7 +276,7 @@ const OnboardingWizard = () => {
           </div>
         </div>
 
-        <p className="text-center text-xs text-gray-600 mt-6">
+        <p className="text-center text-xs text-content-secondary mt-6">
           You can edit your profile any time from Settings.
         </p>
       </div>

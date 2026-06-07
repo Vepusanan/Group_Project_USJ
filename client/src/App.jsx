@@ -46,8 +46,8 @@ const ProtectedRoute = ({ children }) => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-black">
-        <div className="w-16 h-16 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="flex justify-center items-center min-h-screen bg-page">
+        <div className="w-16 h-16 border-4 border-primary-light border-t-primary rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -65,8 +65,8 @@ const OnboardingGuard = ({ children }) => {
 
   if (authLoading || (isAuthenticated && !isReady)) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-black">
-        <div className="w-16 h-16 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="flex justify-center items-center min-h-screen bg-page">
+        <div className="w-16 h-16 border-4 border-primary-light border-t-primary rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -83,8 +83,8 @@ const PublicRoute = ({ children }) => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-black">
-        <div className="w-16 h-16 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="flex justify-center items-center min-h-screen bg-page">
+        <div className="w-16 h-16 border-4 border-primary-light border-t-primary rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -308,15 +308,15 @@ const AppContent = () => {
               <BaseLayout>
                 <PageLayout>
                   <div className="flex flex-col justify-center items-center min-h-[50vh] text-center">
-                    <h1 className="text-3xl font-bold text-white mb-4">
+                    <h1 className="text-3xl font-bold text-content mb-4">
                       404 - Page Not Found
                     </h1>
-                    <p className="text-lg text-gray-300 mb-6">
+                    <p className="text-lg text-content-secondary mb-6">
                       The page you're looking for doesn't exist.
                     </p>
                     <a
                       href="/"
-                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:opacity-90 transition-opacity"
+                      className="btn-primary-token px-4 py-2 text-sm"
                     >
                       Go to Home
                     </a>
@@ -333,46 +333,11 @@ const AppContent = () => {
   );
 };
 
-const AppShell = () => {
-  const location = useLocation();
-  const isHomePage = location.pathname === "/";
-
-  return (
-    <div
-      className={`min-h-screen text-white relative${!isHomePage ? " overflow-hidden" : ""}`}
-      style={
-        !isHomePage
-          ? {
-              // Deep-purple gradient base that matches the bg-image tones, so long
-              // pages don't reveal a flat-black gap below the viewport-anchored images.
-              background:
-                "linear-gradient(180deg, #0a0420 0%, #0d0626 30%, #0c0522 60%, #080318 100%)",
-            }
-          : { backgroundColor: "#000" }
-      }
-    >
-      {!isHomePage && (
-        <div className="absolute inset-0 pointer-events-none">
-          <img
-            src="/images/background/upLight.png"
-            alt=""
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-[140vw] max-w-none block opacity-90"
-            style={{ maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)", WebkitMaskImage: "linear-gradient(to bottom, black 50%, transparent 100%)" }}
-          />
-          <img
-            src="/images/background/footerLight.png"
-            alt=""
-            className="absolute bottom-[-260px] left-1/2 -translate-x-1/2 w-[2200px] max-w-none opacity-95"
-          />
-        </div>
-      )}
-
-      <div className="relative z-10">
-        <AppContent />
-      </div>
-    </div>
-  );
-};
+const AppShell = () => (
+  <div className="min-h-screen bg-page text-content relative">
+    <AppContent />
+  </div>
+);
 
 function App() {
   return (

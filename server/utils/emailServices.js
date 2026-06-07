@@ -12,17 +12,40 @@ const getBackendBaseUrl = () => {
   return url.replace(/\/+$/, "");
 };
 
-// Use environment variables for secure configuration
+const isDev = process.env.NODE_ENV === "development";
+const devLogOnly = process.env.EMAIL_DEV_LOG_ONLY === "true";
+
 const transporter = nodemailer.createTransport({
-  service: "gmail", // You can use any service (e.g., 'outlook', 'sendgrid')
+  service: process.env.EMAIL_SERVICE || "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
 
+const buildVerificationLink = (token) =>
+  `${getFrontendBaseUrl()}/verify-email?token=${encodeURIComponent(token)}`;
+
+const logDevVerificationLink = (email, link) => {
+  if (!isDev) return;
+  console.log(
+    `\n📧 Verification link for ${email} (copy from server terminal if email did not arrive):\n${link}\n`,
+  );
+};
+
 export const sendVerificationEmail = async (email, token) => {
-  const verificationLink = `${getBackendBaseUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+  const verificationLink = buildVerificationLink(token);
+  logDevVerificationLink(email, verificationLink);
+
+  if (devLogOnly) {
+    console.log("EMAIL_DEV_LOG_ONLY=true — skipping SMTP send.");
+    return true;
+  }
+
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error("EMAIL_USER or EMAIL_PASS is not set in server/.env");
+    return isDev;
+  }
 
   const mailOptions = {
     from: `"Startup Connect" <${process.env.EMAIL_USER}>`,
@@ -42,9 +65,14 @@ export const sendVerificationEmail = async (email, token) => {
     console.log(`Verification email sent to ${email}`);
     return true;
   } catch (error) {
-    console.error("Error sending verification email:", error);
-    // In a real application, you might log the error and decide how to proceed.
-    return false;
+    console.error("Error sending verification email:", error.message);
+    if (error.code === "EAUTH") {
+      console.error(
+        "Gmail rejected the login. Use a Google App Password (not your normal password) in EMAIL_PASS.",
+      );
+    }
+    // In development, registration can continue — link is printed above.
+    return isDev;
   }
 };
 

@@ -103,30 +103,7 @@ export const optionalAuth = async (req, res, next) => {
     req.user = await getUserFromToken(token);
     next();
   } catch (error) {
-    console.error("Optional JWT Auth Error:", error.message);
-
-    if (error.name === "TokenExpiredError") {
-      return res
-        .status(401)
-        .json({
-          success: false,
-          error: "Token expired. Please use refresh token to renew.",
-        });
-    }
-
-    if (error.statusCode === 403) {
-      return res.status(403).json({
-        success: false,
-        error: error.message,
-        ...(error.lockedUntil ? { lockedUntil: error.lockedUntil } : {}),
-      });
-    }
-
-    return res
-      .status(401)
-      .json({
-        success: false,
-        error: error.message || "Not authorized, token failed",
-      });
+    // Invalid or expired tokens should not block public browse routes.
+    next();
   }
 };

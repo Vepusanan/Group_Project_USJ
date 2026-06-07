@@ -6,15 +6,15 @@ import Button from '../components/common/Button';
 const LoginPage = () => {
   return (
     <div className="w-full max-w-md mx-auto self-start mt-4 md:mt-8">
-      <div className="bg-white/4 backdrop-blur-lg rounded-2xl p-8 md:p-10 border border-gray-700/50 shadow-2xl">
-        <h1 className="text-3xl font-bold text-white text-center mb-8">
+      <div className="bg-surface  rounded-2xl p-8 md:p-10 border border-line shadow-card">
+        <h1 className="text-3xl font-bold text-content text-center mb-8">
           Sign in
         </h1>
 
         <LoginForm />
 
         <div className="text-right pt-2">
-          <Link to="/forgot-password" className="text-sm text-gray-400 hover:text-purple-400 transition-colors">
+          <Link to="/forgot-password" className="text-sm text-content-muted hover:text-primary transition-colors">
             Forget your password?
           </Link>
         </div>
@@ -24,11 +24,11 @@ const LoginPage = () => {
 
       {/* Horizontal line with "New to our community?" centered */}
       <div className="mt-8 flex items-center gap-4">
-        <div className="flex-1 border-t border-gray-600"></div>
-        <p className="text-gray-400 text-sm whitespace-nowrap">
+        <div className="flex-1 border-t border-line"></div>
+        <p className="text-content-muted text-sm text-center">
           New to our community?
         </p>
-        <div className="flex-1 border-t border-gray-600"></div>
+        <div className="flex-1 border-t border-line"></div>
       </div>
 
       {/* Create an account button */}
