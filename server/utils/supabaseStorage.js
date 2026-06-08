@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 import dotenv from "dotenv";
+import { scanUpload } from "./uploadScan.js"; // T1.3 — upload content-safety scan
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +30,9 @@ export const BUCKETS = {
   DOCUMENTS: "startup_documents",
   INVESTOR_PHOTOS: "investor_photos",
   MESSAGE_ATTACHMENTS: "message-attachments",
+  // T1.3 — private data-room documents. This bucket MUST be created as PRIVATE
+  // in Supabase so objects are only reachable via signed (expiring) URLs.
+  DATA_ROOM: "data_room",
 };
 
 /**
@@ -323,4 +327,114 @@ export async function uploadMultipleDocuments(files, startupId) {
     console.error("Error uploading multiple documents:", error);
     throw error;
   }
+}
+
+// ===========================================================================
+// T1.3 — Private documents: scanned upload + expiring signed URLs
+//
+// Public assets (logos, photos, message attachments) keep using getPublicUrl
+// above. PRIVATE data-room documents go through these functions instead: every
+// upload is scanned first, files land in the PRIVATE `data_room` bucket, and
+// they are NEVER exposed via a permanent public URL — only via short-lived
+// signed URLs generated per request (T3.2 enforces who may request one).
+// ===========================================================================
+
+// Default signed-URL lifetime (seconds). Kept short so a leaked link expires
+// quickly. Callers may override per request.
+export const SIGNED_URL_TTL_SECONDS = 300; // 5 minutes
+
+/**
+ * Upload a PRIVATE document from an in-memory buffer after a content-safety
+ * scan. Nothing is written to storage unless the scan passes (fail-closed).
+ *
+ * @param {Buffer} fileBuffer   raw bytes (multer memoryStorage)
+ * @param {Object} opts
+ *   @param {string} opts.originalName  original filename (for naming + scan)
+ *   @param {string} opts.mimeType      declared MIME type
+ *   @param {string} opts.ownerId       startup user/profile id (for path + uniqueness)
+ *   @param {string} [opts.bucket]      defaults to BUCKETS.DATA_ROOM
+ *   @param {string} [opts.subPath]     optional folder path inside the bucket
+ * @returns {Promise<{ path: string, bucket: string, size: number, detectedType: string }>}
+ *   NOTE: returns the storage PATH, not a URL. Generate a signed URL on demand
+ *   with createSignedUrl(bucket, path).
+ */
+export async function uploadPrivateDocument(fileBuffer, opts = {}) {
+  const {
+    originalName = "file",
+    mimeType = "application/octet-stream",
+    ownerId = "unknown",
+    bucket = BUCKETS.DATA_ROOM,
+    subPath = "",
+  } = opts;
+
+  const scan = await scanUpload(fileBuffer, { originalName, mimeType });
+  if (!scan.clean) {
+    const error = new Error(scan.reason || "File failed safety scan.");
+    error.code = "UNSAFE_FILE";
+    throw error;
+  }
+
+  const ext = path.extname(originalName);
+  const baseName = path
+    .basename(originalName, ext)
+    .replace(/[^a-z0-9_-]/gi, "_")
+    .slice(0, 60);
+  const rand = Math.random().toString(36).substring(2, 9);
+  const safeName = `${Date.now()}_${rand}_${baseName}${ext}`;
+  const objectPath = [String(ownerId), subPath, safeName]
+    .filter(Boolean)
+    .join("/");
+
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(objectPath, fileBuffer, {
+      contentType: mimeType,
+      cacheControl: "0", // private docs should not be cached at the CDN edge
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(`Private document upload error: ${error.message}`);
+  }
+
+  return {
+    path: objectPath,
+    bucket,
+    size: fileBuffer.length,
+    detectedType: scan.detectedType,
+  };
+}
+
+/**
+ * Generate a short-lived signed URL for a private object. The URL expires after
+ * `expiresIn` seconds; after that it is useless. This is the ONLY way private
+ * data-room documents are served. Access authorization (who is allowed to ask
+ * for a URL at all) is enforced upstream by the route guard (T3.2 + rbac.js).
+ *
+ * @param {string} bucket
+ * @param {string} objectPath
+ * @param {number} [expiresIn=SIGNED_URL_TTL_SECONDS]
+ * @returns {Promise<string>} signed URL
+ */
+export async function createSignedUrl(
+  bucket,
+  objectPath,
+  expiresIn = SIGNED_URL_TTL_SECONDS
+) {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(objectPath, expiresIn);
+
+  if (error) {
+    throw new Error(`Signed URL error: ${error.message}`);
+  }
+  return data.signedUrl;
+}
+
+/**
+ * Delete a private object (e.g. when a data-room document is removed).
+ * @returns {Promise<boolean>}
+ */
+export async function deletePrivateDocument(objectPath, bucket = BUCKETS.DATA_ROOM) {
+  return deleteFromSupabase(bucket, objectPath);
 }
