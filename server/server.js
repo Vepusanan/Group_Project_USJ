@@ -20,6 +20,7 @@ import connectionsRoutes from "./routes/connections.js";
 import notificationsRoutes from "./routes/notifications.js";
 import cron from "node-cron";
 import { deleteStaleUnverifiedUsers } from "./utils/cleanup.js";
+import { startNotificationWorker } from "./utils/notificationQueue.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -170,4 +171,6 @@ httpServer.on("error", (error) => {
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV}`);
+  // T1.5 — start the async notification worker (in-process queue consumer).
+  startNotificationWorker();
 });

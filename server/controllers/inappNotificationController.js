@@ -1,6 +1,7 @@
 import pool from "../config/database.js";
 import { getPendingReceivedRequestsForUser } from "../repositories/ConnectionRepository.js";
 import { getConversationsByUserId } from "../repositories/messageRepository.js";
+import { suppressEmail } from "../utils/notificationQueue.js";
 
 // Table creation lives in migration 20260324_create_user_notification_reads.sql.
 // The previous code ran CREATE TABLE IF NOT EXISTS on every request, which
@@ -11,12 +12,42 @@ export const getInAppNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const [pendingReceived, conversations] = await Promise.all([
+    const [pendingReceived, conversations, storedRes] = await Promise.all([
       getPendingReceivedRequestsForUser(userId),
       getConversationsByUserId(userId),
+      // T1.5 — persisted notifications (V2 events: deck uploaded, round closing,
+      // verification approved, ...). Unread = read_at IS NULL. Best-effort: if the
+      // table isn't migrated yet, fall back to an empty set.
+      pool
+        .query(
+          `SELECT id, type, title, body, data, link, created_at
+             FROM public.notifications
+            WHERE user_id = $1 AND read_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 50`,
+          [userId],
+        )
+        .catch((err) => {
+          if (err.code !== "42P01") {
+            console.error("stored notifications query failed:", err.message);
+          }
+          return { rows: [] };
+        }),
     ]);
 
     const notifications = [];
+
+    // Stored (V2) notifications first — keyed by their own id.
+    for (const row of storedRes.rows) {
+      notifications.push({
+        key: `notification:${row.id}`,
+        type: row.type,
+        title: row.title,
+        message: row.body || row.title,
+        createdAt: row.created_at,
+        data: { notificationId: row.id, link: row.link, ...(row.data || {}) },
+      });
+    }
 
     for (const request of pendingReceived) {
       notifications.push({
@@ -76,6 +107,21 @@ export const getInAppNotifications = async (req, res) => {
   }
 };
 
+// T1.5 — Public one-click unsubscribe (clicked from an email, possibly while
+// logged out). Adds the address to the suppression list so the worker skips it.
+export const unsubscribeEmail = async (req, res) => {
+  const email = req.query.email;
+  if (!email || typeof email !== "string") {
+    return res.status(400).send("Missing email.");
+  }
+  await suppressEmail(email, "unsubscribed");
+  return res
+    .status(200)
+    .send(
+      "You have been unsubscribed from StartHub notification emails. You can re-enable them anytime in Settings.",
+    );
+};
+
 export const markNotificationAsRead = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -88,15 +134,27 @@ export const markNotificationAsRead = async (req, res) => {
       });
     }
 
-    await pool.query(
-      `
-        INSERT INTO user_notification_reads (user_id, notification_key)
-        VALUES ($1, $2)
-        ON CONFLICT (user_id, notification_key)
-        DO UPDATE SET read_at = NOW()
-      `,
-      [userId, notificationKey],
-    );
+    // Stored (T1.5) notifications carry a "notification:<uuid>" key — mark the
+    // row's read_at directly so it stays read. Derived notifications (connection
+    // requests, unread messages) use the user_notification_reads dismissal set.
+    const storedMatch = /^notification:(.+)$/.exec(notificationKey);
+    if (storedMatch) {
+      await pool.query(
+        `UPDATE public.notifications SET read_at = NOW()
+           WHERE id = $1 AND user_id = $2 AND read_at IS NULL`,
+        [storedMatch[1], userId],
+      );
+    } else {
+      await pool.query(
+        `
+          INSERT INTO user_notification_reads (user_id, notification_key)
+          VALUES ($1, $2)
+          ON CONFLICT (user_id, notification_key)
+          DO UPDATE SET read_at = NOW()
+        `,
+        [userId, notificationKey],
+      );
+    }
 
     res.json({
       success: true,
