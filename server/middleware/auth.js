@@ -20,7 +20,7 @@ const getBearerToken = (req) => {
 const getUserFromToken = async (token) => {
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   const userResult = await pool.query(
-    "SELECT id, email, user_type, full_name, email_verified, account_locked_until, created_at FROM users WHERE id = $1",
+    "SELECT id, email, user_type, full_name, email_verified, account_locked_until, created_at, deleted_at FROM users WHERE id = $1",
     [decoded.userId],
   );
 
@@ -45,6 +45,14 @@ const getUserFromToken = async (token) => {
     const error = new Error("Access denied. Account is temporarily locked.");
     error.statusCode = 403;
     error.lockedUntil = user.account_locked_until;
+    throw error;
+  }
+
+  if (user.deleted_at) {
+    const error = new Error(
+      "This account is scheduled for deletion. Log in again to cancel deletion.",
+    );
+    error.statusCode = 403;
     throw error;
   }
 
@@ -92,6 +100,18 @@ export const protect = async (req, res, next) => {
   }
 };
 
+const OPTIONAL_AUTH_LOOKUP_MS = 3000;
+
+const withTimeout = (promise, timeoutMs, label) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    }),
+  ]);
+
 export const optionalAuth = async (req, res, next) => {
   const token = getBearerToken(req);
 
@@ -100,10 +120,17 @@ export const optionalAuth = async (req, res, next) => {
   }
 
   try {
-    req.user = await getUserFromToken(token);
+    req.user = await withTimeout(
+      getUserFromToken(token),
+      OPTIONAL_AUTH_LOOKUP_MS,
+      "Optional auth lookup",
+    );
     next();
   } catch (error) {
-    // Invalid or expired tokens should not block public browse routes.
+    // Invalid, expired, or slow auth lookups must not block public browse routes.
+    if (error.message?.includes("timed out")) {
+      console.warn("Optional auth skipped:", error.message);
+    }
     next();
   }
 };

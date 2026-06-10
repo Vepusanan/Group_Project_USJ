@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -24,10 +24,22 @@ import InvestorsPage from "./pages/InvestorsPage";
 import ConnectionsPage from "./pages/ConnectionsPage";
 import MessagesPage from "./pages/MessagesPage";
 import StartupProfilePage from "./pages/StartupProfilePage";
+const PitchDeckViewerPage = React.lazy(() => import("./pages/PitchDeckViewerPage"));
+import DataRoomManagePage from "./pages/DataRoomManagePage";
+import DataRoomViewerPage from "./pages/DataRoomViewerPage";
+import FundingRoundManagePage from "./pages/FundingRoundManagePage";
+import DealPipelinePage from "./pages/DealPipelinePage";
+import StartupComparisonPage from "./pages/StartupComparisonPage";
+import StartupAnalyticsPage from "./pages/StartupAnalyticsPage";
+import WatchlistPage from "./pages/WatchlistPage";
+import AdminVerificationPage from "./pages/AdminVerificationPage";
+import AdminAnalyticsPage from "./pages/AdminAnalyticsPage";
 import InvestorProfilePage from "./pages/InvestorProfilePage";
 import MyProfilePage from "./pages/MyProfilePage";
 import EditProfilePage from "./pages/EditProfilePage";
 import SettingsPage from "./pages/SettingsPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import Header from "./components/common/Header.jsx";
 import Footer from "./components/common/Footer";
 import { useAuth } from "./hooks/useAuth";
@@ -141,6 +153,9 @@ const AppContent = () => {
             }
           />
 
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+
           <Route
             path="/forgot-password"
             element={
@@ -226,6 +241,69 @@ const AppContent = () => {
           />
 
           <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <StartupAnalyticsPage />
+                </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/funding-round"
+            element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <FundingRoundManagePage />
+                </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/data-room"
+            element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <DataRoomManagePage />
+                </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/startups/:id/data-room"
+            element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <DataRoomViewerPage />
+                </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/startups/:id/pitch-deck"
+            element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <Suspense
+                    fallback={
+                      <div className="min-h-screen flex items-center justify-center bg-page">
+                        <div className="w-10 h-10 border-4 border-primary-light border-t-primary rounded-full animate-spin" />
+                      </div>
+                    }
+                  >
+                    <PitchDeckViewerPage />
+                  </Suspense>
+                </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/investors"
             element={
               <ProtectedRoute>
@@ -242,6 +320,61 @@ const AppContent = () => {
               <ProtectedRoute>
                 <OnboardingGuard>
                   <InvestorProfilePage />
+                </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/pipeline"
+            element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <DealPipelinePage />
+                </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/compare"
+            element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <StartupComparisonPage />
+                </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/watchlist"
+            element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <WatchlistPage />
+                </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/analytics"
+            element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <AdminAnalyticsPage />
+                </OnboardingGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/verification"
+            element={
+              <ProtectedRoute>
+                <OnboardingGuard>
+                  <AdminVerificationPage />
                 </OnboardingGuard>
               </ProtectedRoute>
             }

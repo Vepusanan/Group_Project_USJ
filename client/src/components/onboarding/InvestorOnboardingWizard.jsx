@@ -25,6 +25,8 @@ const InvestorOnboardingWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     name_or_firm: "",
+    photo_file: null,
+    photo_preview: null,
     investor_type: "",
     years_of_experience: "",
     location_country: "",
@@ -132,7 +134,11 @@ const InvestorOnboardingWizard = () => {
     setSubmitError(null);
     try {
       const fd = new FormData();
+      if (formData.photo_file) {
+        fd.append("photo", formData.photo_file);
+      }
       for (const [key, value] of Object.entries(formData)) {
+        if (key === "photo_file" || key === "photo_preview") continue;
         if (value === undefined || value === null) continue;
         if (typeof value === "object") {
           const has = Array.isArray(value) ? value.length > 0 : Object.keys(value).length > 0;

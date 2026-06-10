@@ -1,4 +1,6 @@
 import pool from "../config/database.js";
+import { normalizeFilterToken } from "../utils/filterNormalize.js";
+import { ensureCompatibilityTables } from "./CompatibilityMatchScoreRepository.js";
 
 const safeStringify = (value) => {
   if (value === undefined || value === null) return null;
@@ -70,6 +72,8 @@ const buildListStartupsQuery = ({
   revenueStatus,
   locationCountry,
   requesterUserId,
+  minVerification,
+  excludePassedForInvestorId,
 }) => {
   const clauses = [];
   const values = [];
@@ -88,9 +92,11 @@ const buildListStartupsQuery = ({
 
   if (industries.length > 0) {
     const queryRef = addValue(
-      industries.map((industry) => industry.toLowerCase()),
+      industries.map((industry) => normalizeFilterToken(industry)),
     );
-    clauses.push(`LOWER(sp.industry) = ANY(${queryRef})`);
+    clauses.push(
+      `regexp_replace(LOWER(COALESCE(sp.industry, '')), '[^a-z0-9]', '', 'g') = ANY(${queryRef})`,
+    );
   }
 
   if (currentStage) {
@@ -124,21 +130,53 @@ const buildListStartupsQuery = ({
     clauses.push(`COALESCE(ps.profile_visibility, 'public') = 'public'`);
   }
 
+  if (minVerification) {
+    const tier = String(minVerification).toUpperCase();
+    if (tier === "IDENTITY_VERIFIED") {
+      clauses.push(
+        `COALESCE(u.verification_tier::text, 'UNVERIFIED') IN ('IDENTITY_VERIFIED', 'BUSINESS_VERIFIED')`,
+      );
+    } else if (tier === "BUSINESS_VERIFIED") {
+      clauses.push(`u.verification_tier = 'BUSINESS_VERIFIED'::public.verification_tier_enum`);
+    }
+  }
+
+  if (excludePassedForInvestorId) {
+    const ref = addValue(excludePassedForInvestorId);
+    clauses.push(`
+      NOT EXISTS (
+        SELECT 1
+        FROM public.investor_passed_startups ips
+        WHERE ips.investor_user_id = ${ref}
+          AND ips.startup_profile_id = sp.startup_profile_id
+      )`);
+  }
+
   const whereClause =
     clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
 
   return { whereClause, values };
 };
 
-const getSortClause = (sort) => {
+const verificationRankSql = `CASE COALESCE(u.verification_tier::text, 'UNVERIFIED')
+  WHEN 'BUSINESS_VERIFIED' THEN 2
+  WHEN 'IDENTITY_VERIFIED' THEN 1
+  ELSE 0
+END DESC`;
+
+const getSortClause = (sort, investorUserIdForScoring = null) => {
+  if (sort === "match_score" && investorUserIdForScoring) {
+    return `ORDER BY ${verificationRankSql}, cms.match_score DESC NULLS LAST, sp.created_at DESC NULLS LAST, sp.startup_profile_id DESC`;
+  }
+
   switch (sort) {
     case "alphabetical":
-      return "ORDER BY sp.company_name ASC NULLS LAST";
+      return `ORDER BY ${verificationRankSql}, sp.company_name ASC NULLS LAST`;
     case "recently_updated":
-      return "ORDER BY sp.updated_at DESC NULLS LAST, sp.startup_profile_id DESC";
+      return `ORDER BY ${verificationRankSql}, sp.updated_at DESC NULLS LAST, sp.startup_profile_id DESC`;
     case "newest":
     default:
-      return "ORDER BY sp.created_at DESC NULLS LAST, sp.startup_profile_id DESC";
+      return `ORDER BY ${verificationRankSql}, sp.created_at DESC NULLS LAST, sp.startup_profile_id DESC`;
   }
 };
 
@@ -148,9 +186,10 @@ export async function createStartupProfile(userId, payload) {
      current_stage, team_size, key_team_members, logo_url, team_photo_url, funding_stage, amount_seeking,
      previous_funding, use_of_funds, revenue_status, key_metrics, major_achievements,
      customer_testimonials, pitch_deck_url, business_plan_url, product_demo_url,
+     founder_video_url, founder_video_thumbnail_url,
      primary_contact_name, contact_email, phone_number, social_media_links,
      location_country, location_city, website_url)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32)
     RETURNING *`;
 
   const values = [
@@ -177,6 +216,8 @@ export async function createStartupProfile(userId, payload) {
     payload.pitch_deck_url || null,
     payload.business_plan_url || null,
     payload.product_demo_url || null,
+    payload.founder_video_url || null,
+    payload.founder_video_thumbnail_url || null,
     payload.primary_contact_name || null,
     payload.contact_email || null,
     payload.phone_number || null,
@@ -226,6 +267,8 @@ export async function updateStartupProfile(id, userId, updates) {
     "pitch_deck_url",
     "business_plan_url",
     "product_demo_url",
+    "founder_video_url",
+    "founder_video_thumbnail_url",
     "primary_contact_name",
     "contact_email",
     "phone_number",
@@ -272,8 +315,11 @@ export async function listStartups(options = {}) {
     funding_stage,
     revenue_status,
     location_country,
+    min_verification,
     sort = "newest",
     requesterUserId = null,
+    investorUserIdForScoring = null,
+    excludePassedForInvestorId = null,
   } = options;
 
   const industries = Array.isArray(industry)
@@ -293,19 +339,40 @@ export async function listStartups(options = {}) {
     revenueStatus: revenue_status,
     locationCountry: location_country,
     requesterUserId,
+    minVerification: min_verification,
+    excludePassedForInvestorId,
   });
 
   const offset = (page - 1) * limit;
-  const paginationValues = [...values, limit, offset];
+  const useMatchScoreSort = sort === "match_score" && investorUserIdForScoring;
+
+  if (useMatchScoreSort) {
+    await ensureCompatibilityTables();
+  }
+  const scoringValues = useMatchScoreSort
+    ? [...values, investorUserIdForScoring]
+    : values;
+  const investorRef = useMatchScoreSort ? `$${scoringValues.length}` : null;
+  const paginationValues = [...scoringValues, limit, offset];
   const limitRef = `$${paginationValues.length - 1}`;
   const offsetRef = `$${paginationValues.length}`;
 
+  const matchScoreJoin = useMatchScoreSort
+    ? `
+    LEFT JOIN compatibility_match_scores cms
+      ON cms.startup_profile_id = sp.startup_profile_id
+     AND cms.investor_user_id = ${investorRef}`
+    : "";
+
   const selectQuery = `
-    SELECT sp.*
+    SELECT sp.*, COALESCE(u.verification_tier::text, 'UNVERIFIED') AS verification_tier
+      ${useMatchScoreSort ? ", cms.match_score" : ""}
     FROM startup_profiles sp
     LEFT JOIN privacy_settings ps ON ps.user_id = sp.user_id
+    LEFT JOIN users u ON u.id = sp.user_id
+    ${matchScoreJoin}
     ${whereClause}
-    ${getSortClause(sort)}
+    ${getSortClause(sort, investorUserIdForScoring)}
     LIMIT ${limitRef} OFFSET ${offsetRef}
   `;
 
@@ -313,6 +380,7 @@ export async function listStartups(options = {}) {
     SELECT COUNT(*)::int AS total
     FROM startup_profiles sp
     LEFT JOIN privacy_settings ps ON ps.user_id = sp.user_id
+    LEFT JOIN users u ON u.id = sp.user_id
     ${whereClause}
   `;
 
@@ -351,7 +419,8 @@ export async function getConnectionStatusesForStartups(
         SELECT c.id::text AS connection_id,
                c.startup_id::text AS startup_user_id,
                c.requester_id::text AS requester_id,
-               c.status
+               c.status,
+               c.declined_at
         FROM public.connections c
         WHERE c.investor_id::text = $1
           AND c.startup_id::text = ANY($2::text[])
@@ -364,7 +433,15 @@ export async function getConnectionStatusesForStartups(
         .map((row) => {
           const status = normalizeConnectionStatus(row.status);
           if (!status) return null;
-          return [row.startup_user_id, { status, connection_id: row.connection_id, requester_id: row.requester_id }];
+          return [
+            row.startup_user_id,
+            {
+              status,
+              connection_id: row.connection_id,
+              requester_id: row.requester_id,
+              declined_at: row.declined_at || null,
+            },
+          ];
         })
         .filter(Boolean),
     );

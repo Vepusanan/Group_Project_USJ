@@ -130,12 +130,38 @@ const Step4FundingDetails = ({ formData, updateFormData, errors }) => (
     <div className="border-t border-line pt-5">
       <p className="text-xs font-semibold text-content-muted uppercase tracking-widest mb-4">Investor Materials</p>
       <div className="space-y-4">
+        <Field label="Pitch Deck (PDF)" hint="optional — in-platform viewer">
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            onChange={(e) => updateFormData({ pitch_deck_file: e.target.files?.[0] || null })}
+            className="block w-full text-sm text-content-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border file:border-line file:bg-surface-alt file:text-content-secondary"
+          />
+          {formData.pitch_deck_file && (
+            <p className="text-xs text-content-muted mt-1.5">
+              Selected: {formData.pitch_deck_file.name}
+            </p>
+          )}
+        </Field>
         <UrlField
           label="Pitch Deck URL"
           value={formData.pitch_deck_url}
           onChange={(e) => updateFormData({ pitch_deck_url: e.target.value })}
           placeholder="https://drive.google.com/..."
         />
+        <Field label="Business Plan (PDF)" hint="optional — file upload">
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            onChange={(e) => updateFormData({ business_plan_file: e.target.files?.[0] || null })}
+            className="block w-full text-sm text-content-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border file:border-line file:bg-surface-alt file:text-content-secondary"
+          />
+          {formData.business_plan_file && (
+            <p className="text-xs text-content-muted mt-1.5">
+              Selected: {formData.business_plan_file.name}
+            </p>
+          )}
+        </Field>
         <UrlField
           label="Business Plan URL"
           value={formData.business_plan_url}

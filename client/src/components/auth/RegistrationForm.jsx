@@ -83,6 +83,7 @@ const RegistrationForm = () => {
           fullName: formData.fullName,
           email: formData.email,
           password: formData.password,
+          agreedToTerms: formData.agreedToTerms,
         });
 
         if (result.success) {

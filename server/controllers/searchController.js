@@ -8,11 +8,27 @@ import {
   getConnectionStatusesForInvestors,
   listInvestors,
 } from "../repositories/InvestorProfileRepository.js";
+import { parseInvestmentAmount } from "../utils/parseInvestmentAmount.js";
+import {
+  getMatchScoreMapForInvestor,
+  scheduleInvestorMatchScores,
+} from "../services/compatibilityMatchService.js";
+import { getWatchlistIdsForInvestor } from "../repositories/WatchlistRepository.js";
+
+const ALLOWED_MIN_VERIFICATION = new Set([
+  "IDENTITY_VERIFIED",
+  "BUSINESS_VERIFIED",
+]);
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
-const ALLOWED_SORTS = new Set(["newest", "alphabetical", "recently_updated"]);
+const ALLOWED_SORTS = new Set([
+  "newest",
+  "alphabetical",
+  "recently_updated",
+  "match_score",
+]);
 const ALLOWED_INVESTOR_SORTS = new Set([
   "newest",
   "alphabetical",
@@ -60,14 +76,39 @@ export const getStartups = async (req, res, next) => {
     const page = toPositiveInteger(req.query.page, DEFAULT_PAGE);
     const requestedLimit = toPositiveInteger(req.query.limit, DEFAULT_LIMIT);
     const limit = Math.min(requestedLimit, MAX_LIMIT);
-    const sort = req.query.sort || "newest";
+    const isInvestorViewer = req.user?.user_type === "investor";
+    const investorUserIdForScoring = isInvestorViewer ? req.user.id : null;
+    const sort = req.query.sort || (isInvestorViewer ? "match_score" : "newest");
 
     if (!ALLOWED_SORTS.has(sort)) {
       return res.status(400).json({
         success: false,
         error:
-          "Invalid sort value. Allowed values: newest, alphabetical, recently_updated",
+          "Invalid sort value. Allowed values: newest, alphabetical, recently_updated, match_score",
       });
+    }
+
+    if (sort === "match_score" && !isInvestorViewer) {
+      return res.status(403).json({
+        success: false,
+        error: "Match score sorting is available to investors only.",
+      });
+    }
+
+    const minVerification = req.query.min_verification
+      ? String(req.query.min_verification).toUpperCase()
+      : null;
+
+    if (minVerification && !ALLOWED_MIN_VERIFICATION.has(minVerification)) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Invalid min_verification. Use IDENTITY_VERIFIED or BUSINESS_VERIFIED",
+      });
+    }
+
+    if (isInvestorViewer) {
+      scheduleInvestorMatchScores(req.user.id);
     }
 
     const result = await listStartups({
@@ -79,15 +120,26 @@ export const getStartups = async (req, res, next) => {
       funding_stage: req.query.funding_stage,
       revenue_status: req.query.revenue_status,
       location_country: req.query.location_country,
+      min_verification: minVerification,
       sort,
       requesterUserId: req.user?.id || null,
+      investorUserIdForScoring,
+      excludePassedForInvestorId: isInvestorViewer ? req.user.id : null,
     });
 
+    const matchScoreMap = isInvestorViewer
+      ? await getMatchScoreMapForInvestor(req.user.id, result.rows)
+      : new Map();
+
     const startupUserIds = result.rows.map((row) => row.user_id);
-    const connectionStatusMap = await getConnectionStatusesForStartups(
-      req.user?.id || null,
-      startupUserIds,
-    );
+    const startupProfileIds = result.rows.map((row) => row.startup_profile_id);
+
+    const [connectionStatusMap, watchlistIds] = await Promise.all([
+      getConnectionStatusesForStartups(req.user?.id || null, startupUserIds),
+      isInvestorViewer
+        ? getWatchlistIdsForInvestor(req.user.id, startupProfileIds)
+        : Promise.resolve(new Set()),
+    ]);
 
     const data = result.rows.map((row) => {
       const startup = new StartupProfile(row);
@@ -99,13 +151,27 @@ export const getStartups = async (req, res, next) => {
         ? "self"
         : connEntry?.status || (userId ? "not_connected" : null);
 
-      return {
+      const response = {
         ...startup.getPublicFields(),
         logo_url: row.logo_url || null,
+        verification_tier: row.verification_tier || "UNVERIFIED",
         connection_status: connStatus,
         connection_id: connEntry?.connection_id || null,
         connection_requester_id: connEntry?.requester_id || null,
+        connection_declined_at: connEntry?.declined_at || null,
       };
+
+      if (isInvestorViewer) {
+        const scoreEntry = matchScoreMap.get(String(startup.startup_profile_id));
+        const matchScore =
+          scoreEntry?.match_score ?? row.match_score ?? null;
+        response.match_score = matchScore;
+        response.is_watchlisted = watchlistIds.has(
+          String(startup.startup_profile_id),
+        );
+      }
+
+      return response;
     });
 
     res.json({
@@ -156,14 +222,19 @@ export const getInvestors = async (req, res, next) => {
       });
     }
 
-    const investment_min =
-      req.query.investment_min != null && req.query.investment_min !== ""
-        ? Number.parseInt(req.query.investment_min, 10) || null
-        : null;
-    const investment_max =
-      req.query.investment_max != null && req.query.investment_max !== ""
-        ? Number.parseInt(req.query.investment_max, 10) || null
-        : null;
+    const investment_min = parseInvestmentAmount(req.query.investment_min);
+    const investment_max = parseInvestmentAmount(req.query.investment_max);
+
+    if (
+      investment_min != null &&
+      investment_max != null &&
+      investment_min > investment_max
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "Check size minimum cannot be greater than maximum.",
+      });
+    }
 
     const result = await listInvestors({
       page,
@@ -195,9 +266,11 @@ export const getInvestors = async (req, res, next) => {
       return {
         ...investor.getPublicFields(),
         photo_url: row.photo_url || null,
+        verification_tier: row.verification_tier || "UNVERIFIED",
         connection_status: connStatus,
         connection_id: connEntry?.connection_id || null,
         connection_requester_id: connEntry?.requester_id || null,
+        connection_declined_at: connEntry?.declined_at || null,
       };
     });
 
@@ -217,6 +290,96 @@ export const getInvestors = async (req, res, next) => {
         investment_min: investment_min,
         investment_max: investment_max,
         sort,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const STAGE_LABELS = {
+  PRE_SEED: "Pre-seed",
+  SEED: "Seed",
+  SERIES_A: "Series A",
+  SERIES_B: "Series B",
+  SERIES_C: "Series C",
+  SERIES_D_PLUS: "Series D+",
+};
+
+const REVENUE_LABELS = {
+  PRE_REVENUE: "Pre-revenue",
+  REVENUE_GENERATING: "Revenue-generating",
+  PROFITABLE: "Profitable",
+};
+
+export const parseNaturalLanguageSearch = async (req, res, next) => {
+  try {
+    if (req.user?.user_type !== "investor") {
+      return res.status(403).json({
+        success: false,
+        error: "Natural language discovery search is available to investors only",
+      });
+    }
+
+    const phrase = String(req.body.phrase || "").trim();
+    if (!phrase) {
+      return res.status(400).json({
+        success: false,
+        error: "Search phrase is required",
+      });
+    }
+
+    const { generateGeminiDiscoveryFilters } = await import(
+      "../utils/geminiService.js"
+    );
+    const parsed = await generateGeminiDiscoveryFilters(phrase);
+
+    const { buildDiscoveryFiltersFallback } = await import(
+      "../utils/aiFallbacks.js"
+    );
+    const resolved = parsed || buildDiscoveryFiltersFallback(phrase);
+
+    const applied = {
+      industry: resolved.industry || "",
+      location_country: resolved.location_country || "",
+      funding_stage: resolved.funding_stage || "",
+      revenue_status: resolved.revenue_status || "",
+      q: resolved.keywords || "",
+    };
+
+    const summaryParts = [];
+    if (applied.industry) summaryParts.push(`Industry: ${applied.industry}`);
+    if (applied.location_country) {
+      summaryParts.push(`Geography: ${applied.location_country}`);
+    }
+    if (applied.funding_stage) {
+      summaryParts.push(
+        `Stage: ${STAGE_LABELS[applied.funding_stage] || applied.funding_stage}`,
+      );
+    }
+    if (applied.revenue_status) {
+      summaryParts.push(
+        `Revenue: ${REVENUE_LABELS[applied.revenue_status] || applied.revenue_status}`,
+      );
+    }
+    if (resolved.max_amount) {
+      summaryParts.push(`Max raise: $${resolved.max_amount.toLocaleString()}`);
+    }
+    if (applied.q) summaryParts.push(`Keywords: ${applied.q}`);
+
+    res.json({
+      success: true,
+      data: {
+        phrase,
+        filters: applied,
+        parsed: resolved,
+        applied_summary:
+          summaryParts.length > 0
+            ? summaryParts.join(" · ")
+            : "No specific filters extracted — showing all startups",
+        unsupported: resolved.max_amount
+          ? { max_amount: resolved.max_amount }
+          : null,
       },
     });
   } catch (error) {

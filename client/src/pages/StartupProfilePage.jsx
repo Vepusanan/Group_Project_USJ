@@ -3,9 +3,22 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   MapPin, Calendar, Users, Tag, Rocket, Globe, Linkedin,
   DollarSign, FileText, Video, BarChart2, Share2,
-  CheckCircle, Clock, MessageCircle, ArrowLeft, PenLine,
+  CheckCircle, Clock, MessageCircle, ArrowLeft, PenLine, Lock, Bookmark, Sparkles, Ban,
 } from "lucide-react";
+import ConnectModal from "../components/connections/ConnectModal";
+import ConnectionMeetingsPanel from "../components/connections/ConnectionMeetingsPanel";
+import PitchDeckSlidePreview from "../components/pitchDeck/PitchDeckSlidePreview";
+import investorIntentService from "../services/investorIntentService";
+import IntentLevelControl from "../components/investor/IntentLevelControl";
+import MatchExplanationBlock from "../components/investor/MatchExplanationBlock";
 import { apiService } from "../services/apiService";
+import { dataRoomService } from "../services/dataRoomService";
+import FundingRoundTracker from "../components/funding/FundingRoundTracker";
+import VerificationBadge from "../components/common/VerificationBadge";
+import CredibilitySignals from "../components/trust/CredibilitySignals";
+import ReportProfileButton from "../components/trust/ReportProfileButton";
+import MilestoneFeed from "../components/milestones/MilestoneFeed";
+import engagementService from "../services/engagementService";
 import { useAuth } from "../hooks/useAuth";
 import {
   getProfileRelationship,
@@ -83,6 +96,58 @@ const DocLink = ({ href, icon: Icon, label }) => {
   );
 };
 
+const DataRoomRequestButton = ({
+  startupProfileId,
+  companyName,
+  requestStatus,
+  onRequested,
+  busy,
+}) => (
+  <button
+    type="button"
+    disabled={busy || requestStatus === "pending"}
+    onClick={onRequested}
+    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-line bg-surface-alt hover:border-primary-light transition-all text-left disabled:opacity-60"
+  >
+    <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary-light flex items-center justify-center flex-shrink-0">
+      <Lock className="w-4 h-4 text-primary" />
+    </div>
+    <div className="min-w-0">
+      <span className="text-sm text-content-secondary block">
+        {requestStatus === "pending"
+          ? "Data room access requested"
+          : "Request data room access"}
+      </span>
+      <span className="text-[11px] text-content-muted">
+        {requestStatus === "pending"
+          ? "The startup will review your request"
+          : `Ask ${companyName || "this startup"} for due diligence documents`}
+      </span>
+    </div>
+  </button>
+);
+
+const DataRoomLink = ({ startupProfileId, companyName, isOwner }) => (
+  <Link
+    to={isOwner ? "/data-room" : `/startups/${startupProfileId}/data-room`}
+    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-surface-alt hover:border-primary-light transition-all group"
+  >
+    <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary-light flex items-center justify-center flex-shrink-0">
+      <Lock className="w-4 h-4 text-primary" />
+    </div>
+    <div className="min-w-0">
+      <span className="text-sm text-content-secondary group-hover:text-content transition-colors block">
+        {isOwner ? "Manage Private Data Room" : "Open Private Data Room"}
+      </span>
+      <span className="text-[11px] text-content-muted">
+        {isOwner
+          ? "Upload and grant investor access to confidential documents"
+          : `Due diligence documents from ${companyName || "this startup"}`}
+      </span>
+    </div>
+  </Link>
+);
+
 const StatChip = ({ icon: Icon, label, value, color = "gray" }) => {
   if (!value) return null;
   const textCls = { gray: "text-content-secondary", emerald: "text-primary", blue: "text-primary", purple: "text-primary" }[color];
@@ -108,10 +173,18 @@ const StartupProfilePage = () => {
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [connectionId, setConnectionId]     = useState(null);
   const [connectionRequesterId, setConnectionRequesterId] = useState(null);
+  const [connectionDeclinedAt, setConnectionDeclinedAt] = useState(null);
   const [showModal, setShowModal]           = useState(false);
   const [connectMsg, setConnectMsg]         = useState("");
   const [actionLoading, setActionLoading]   = useState(false);
   const [shareToast, setShareToast]         = useState(false);
+  const [dataRoomAccess, setDataRoomAccess] = useState(null);
+  const [dataRoomRequestBusy, setDataRoomRequestBusy] = useState(false);
+  const [isWatchlisted, setIsWatchlisted] = useState(false);
+  const [passing, setPassing] = useState(false);
+  const [showVideoPitch, setShowVideoPitch] = useState(false);
+  const [showMeetingsPanel, setShowMeetingsPanel] = useState(false);
+  const [profileIntent, setProfileIntent] = useState(null);
 
   useEffect(() => {
     // Scroll to top when navigating between profiles.
@@ -126,11 +199,38 @@ const StartupProfilePage = () => {
       setConnectionStatus(data?.connection_status || null);
       setConnectionId(data?.connection_id || null);
       setConnectionRequesterId(data?.connection_requester_id || null);
+      setConnectionDeclinedAt(data?.connection_declined_at || null);
+      setProfileIntent(data?.intent_level || data?.profile_intent_level || null);
       setLoading(false);
       // Ensure we're at the top after the new content paints.
       window.scrollTo({ top: 0, behavior: "auto" });
     })();
   }, [id]);
+
+  useEffect(() => {
+    if (!user?.id || !id) return;
+    (async () => {
+      const result = await dataRoomService.getMeta(id);
+      if (result.success) {
+        setDataRoomAccess(result.data);
+      } else {
+        setDataRoomAccess(null);
+      }
+    })();
+  }, [id, user?.id]);
+
+  useEffect(() => {
+    if (user?.userType !== "investor" || !id) return;
+    (async () => {
+      const list = await engagementService.getWatchlist();
+      if (list.success) {
+        const saved = (list.data || []).some(
+          (item) => String(item.startup_profile_id) === String(id),
+        );
+        setIsWatchlisted(saved);
+      }
+    })();
+  }, [id, user?.userType]);
 
   if (loading) return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface">
@@ -153,6 +253,7 @@ const StartupProfilePage = () => {
     profileOwnerType: PROFILE_OWNER_TYPES.STARTUP,
     connectionStatus,
     connectionRequesterId,
+    connectionDeclinedAt,
   });
 
   const isOwn = relationship.kind === "self";
@@ -175,16 +276,44 @@ const StartupProfilePage = () => {
     setConnectMsg("");
   };
 
-  const cancelRequest = async () => {
-    if (!connectionId) return;
-    setActionLoading(true);
-    const res = await apiService.removeConnection(connectionId);
-    setActionLoading(false);
-    if (res.success) {
-      setConnectionStatus(null);
-      setConnectionId(null);
-      setConnectionRequesterId(null);
+  const handlePass = async () => {
+    const profileId = profile?.startup_profile_id || id;
+    if (!profileId) return;
+    setPassing(true);
+    const result = await investorIntentService.passStartup(profileId);
+    setPassing(false);
+    if (!result.success) {
+      setError(result.error);
+      return;
     }
+    navigate("/startups");
+  };
+
+  const toggleWatchlist = async () => {
+    const profileId = profile?.startup_profile_id || id;
+    const result = isWatchlisted
+      ? await engagementService.removeFromWatchlist(profileId)
+      : await engagementService.addToWatchlist(profileId);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    setIsWatchlisted(!isWatchlisted);
+  };
+
+  const requestDataRoomAccess = async () => {
+    const profileId = profile?.startup_profile_id || id;
+    setDataRoomRequestBusy(true);
+    const result = await dataRoomService.requestAccess(profileId);
+    setDataRoomRequestBusy(false);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    setDataRoomAccess((prev) => ({
+      ...prev,
+      access_request_status: result.data?.status || "pending",
+    }));
   };
 
   const acceptRequest = async () => {
@@ -246,7 +375,10 @@ const StartupProfilePage = () => {
                   }
                 </div>
                 <div className={cardIdentityClass}>
-                  <h1 className={profileIdentityTitleClass}>{name}</h1>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className={profileIdentityTitleClass}>{name}</h1>
+                    <VerificationBadge tier={profile.verification_tier} size="lg" />
+                  </div>
                   {profile.tagline && (
                     <p className={profileIdentitySubtitleMutedClass}>{profile.tagline}</p>
                   )}
@@ -254,6 +386,20 @@ const StartupProfilePage = () => {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                {user?.userType === "investor" && !isOwn && (
+                  <button
+                    type="button"
+                    onClick={toggleWatchlist}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${
+                      isWatchlisted
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "bg-surface border-line text-content-secondary hover:bg-surface-alt"
+                    }`}
+                  >
+                    <Bookmark className={`w-3.5 h-3.5 ${isWatchlisted ? "fill-current" : ""}`} />
+                    {isWatchlisted ? "Saved" : "Watchlist"}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={share}
@@ -261,6 +407,12 @@ const StartupProfilePage = () => {
                 >
                   <Share2 className="w-3.5 h-3.5" /> Share
                 </button>
+                {!isOwn && user && (
+                  <ReportProfileButton
+                    reportedUserId={profile.user_id}
+                    reportedName={name}
+                  />
+                )}
                 {isOwn && (
                   <Link
                     to="/profile/edit"
@@ -276,10 +428,36 @@ const StartupProfilePage = () => {
                       <span className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-success/30 bg-success/10 text-success text-sm font-medium">
                         <CheckCircle className="w-4 h-4" /> Connected
                       </span>
+                      {(profile.can_view_pitch_deck || profile.pitch_deck_url) && (
+                        <Link
+                          to={`/startups/${profile.startup_profile_id || id}/pitch-deck`}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-primary-light/40 bg-primary/10 text-primary text-sm font-medium hover:bg-primary/15 transition-colors"
+                        >
+                          <BarChart2 className="w-4 h-4" /> View Pitch Deck
+                        </Link>
+                      )}
+                      {(profile.can_view_founder_video || profile.founder_video_url) && profile.founder_video_url && (
+                        <button
+                          type="button"
+                          onClick={() => setShowVideoPitch(true)}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-line bg-surface-alt text-content-secondary text-sm font-medium hover:text-content transition-colors"
+                        >
+                          <Video className="w-4 h-4" /> Video Pitch
+                        </button>
+                      )}
                       <button type="button" onClick={goMessage}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-sm text-content-inverse font-medium transition-colors">
                         <MessageCircle className="w-4 h-4" /> Message
                       </button>
+                      {user?.userType === "investor" && connectionId && (
+                        <button
+                          type="button"
+                          onClick={() => setShowMeetingsPanel(true)}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-line bg-surface-alt text-content-secondary text-sm font-medium hover:text-content transition-colors"
+                        >
+                          <Calendar className="w-4 h-4" /> Request Meeting
+                        </button>
+                      )}
                     </>
                   ) : relationship.canRespondToConnection ? (
                     <>
@@ -293,17 +471,33 @@ const StartupProfilePage = () => {
                       </button>
                     </>
                   ) : isPending ? (
-                    <button type="button" onClick={cancelRequest} disabled={actionLoading}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-warning/40 bg-warning/15 text-warning text-sm font-medium hover:bg-warning/25 disabled:opacity-50 transition-colors"
-                      title="Click to cancel">
+                    <span className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-warning/40 bg-warning/15 text-warning text-sm font-medium">
                       <Clock className="w-4 h-4" />
-                      {actionLoading ? "Cancelling…" : "Pending · Cancel"}
-                    </button>
+                      Pending
+                    </span>
+                  ) : relationship.kind === "declined_cooling" ? (
+                    <span
+                      className="px-3 py-2 rounded-xl border border-line bg-surface-alt text-content-muted text-sm"
+                      title="30-day cooling period after a declined request"
+                    >
+                      Connect available {relationship.coolingEndsLabel ? `after ${relationship.coolingEndsLabel}` : "later"}
+                    </span>
                   ) : relationship.canInitiateConnection ? (
-                    <button type="button" onClick={() => setShowModal(true)}
-                      className="px-5 py-2 rounded-xl btn-connect-token bg-primary hover:bg-primary-dark text-sm !text-content-inverse font-medium transition-colors shadow-soft">
-                      Connect
-                    </button>
+                    <>
+                      <button type="button" onClick={() => setShowModal(true)}
+                        className="px-5 py-2 rounded-xl btn-connect-token bg-primary hover:bg-primary-dark text-sm !text-content-inverse font-medium transition-colors shadow-soft">
+                        Connect
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handlePass}
+                        disabled={passing}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-line text-content-muted text-sm hover:text-content hover:bg-surface-alt disabled:opacity-50"
+                      >
+                        <Ban className="w-4 h-4" />
+                        {passing ? "Passing…" : "Pass"}
+                      </button>
+                    </>
                   ) : null}
                 </>
               )}
@@ -342,6 +536,37 @@ const StartupProfilePage = () => {
             </div>
         </div>
 
+        {user?.userType === "investor" && profile.match_score != null && (
+          <div className="rounded-2xl border border-primary-light/30 bg-primary-light/10 p-5 space-y-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <span className="text-2xl font-bold text-content">{Math.round(profile.match_score)}%</span>
+              <span className="text-sm font-medium text-content-secondary">compatibility match</span>
+            </div>
+            <MatchExplanationBlock
+              startupProfileId={profile.startup_profile_id || id}
+              matchScore={profile.match_score}
+            />
+          </div>
+        )}
+
+        {user?.userType === "investor" && !isOwn && (
+          <div className="rounded-2xl border border-line bg-surface-alt p-4 max-w-md">
+            <IntentLevelControl
+              connectionId={isConnected ? connectionId : null}
+              startupProfileId={profile.startup_profile_id || id}
+              value={profileIntent}
+              preConnection={!isConnected}
+              onChange={setProfileIntent}
+            />
+            {!isConnected && profileIntent && (
+              <p className="text-xs text-content-muted mt-2">
+                This startup appears in your pipeline under <strong>Discovered</strong>.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* ── ABOUT ─────────────────────────────────────────────────────────── */}
         {(profile.detailed_description || profile.problem_statement || profile.solution) && (
           <SectionCard title="About" icon={BarChart2} accent="purple">
@@ -368,6 +593,15 @@ const StartupProfilePage = () => {
             )}
           </SectionCard>
         )}
+
+        {profile.credibility_signals && (
+          <CredibilitySignals
+            signals={profile.credibility_signals}
+            userType="startup"
+          />
+        )}
+
+        <MilestoneFeed startupProfileId={profile.startup_profile_id || id} />
 
         {/* ── TEAM ──────────────────────────────────────────────────────────── */}
         {(profile.key_team_members || profile.team_size) && (
@@ -416,6 +650,14 @@ const StartupProfilePage = () => {
               )}
             </div>
           </SectionCard>
+        )}
+
+        {/* ── FUNDING ROUND TRACKER (public summary, financials gated) ─────── */}
+        {profile.funding_round && (
+          <FundingRoundTracker
+            round={profile.funding_round}
+            isOwner={isOwn}
+          />
         )}
 
         {/* ── FUNDING (private) ─────────────────────────────────────────────── */}
@@ -477,10 +719,58 @@ const StartupProfilePage = () => {
         >
           {relationship.canViewPrivate ? (
             <div className="space-y-2">
-              <DocLink href={profile.pitch_deck_url}    icon={BarChart2}   label="Pitch Deck" />
-              <DocLink href={profile.business_plan_url} icon={FileText}    label="Business Plan" />
-              <DocLink href={profile.product_demo_url}  icon={Video}       label="Product Demo" />
-              {!profile.pitch_deck_url && !profile.business_plan_url && !profile.product_demo_url && (
+              {(profile.can_view_pitch_deck || profile.pitch_deck_url) && (
+                <PitchDeckSlidePreview
+                  startupProfileId={profile.startup_profile_id || id}
+                  companyName={profile.company_name}
+                />
+              )}
+              {dataRoomAccess?.can_access ? (
+                <DataRoomLink
+                  startupProfileId={profile.startup_profile_id || id}
+                  companyName={profile.company_name}
+                  isOwner={dataRoomAccess.is_owner}
+                />
+              ) : (
+                isConnected &&
+                user?.userType === "investor" &&
+                dataRoomAccess && (
+                  <DataRoomRequestButton
+                    startupProfileId={profile.startup_profile_id || id}
+                    companyName={profile.company_name}
+                    requestStatus={dataRoomAccess.access_request_status}
+                    onRequested={requestDataRoomAccess}
+                    busy={dataRoomRequestBusy}
+                  />
+                )
+              )}
+              <DocLink href={profile.business_plan_url} icon={FileText} label="Business Plan" />
+              <DocLink href={profile.product_demo_url} icon={Video} label="Product Demo" />
+              {(profile.can_view_founder_video || profile.founder_video_url) && (
+                <div id="founder-video" className="rounded-xl border border-line bg-surface-alt p-3">
+                  <p className="text-sm font-medium text-content mb-2 flex items-center gap-2">
+                    <Video className="w-4 h-4 text-primary" />
+                    Founder Video Introduction
+                  </p>
+                  {profile.founder_video_url ? (
+                    <video
+                      src={profile.founder_video_url}
+                      controls
+                      playsInline
+                      poster={profile.founder_video_thumbnail_url || undefined}
+                      className="w-full rounded-lg border border-line max-h-80 bg-black"
+                    />
+                  ) : (
+                    <p className="text-xs text-content-muted">Video available to connected investors.</p>
+                  )}
+                </div>
+              )}
+              {!profile.has_pitch_deck &&
+                !profile.pitch_deck_url &&
+                !profile.business_plan_url &&
+                !profile.product_demo_url &&
+                !profile.has_founder_video &&
+                !profile.founder_video_url && (
                 <p className="text-sm text-content-muted">No documents uploaded yet.</p>
               )}
             </div>
@@ -553,40 +843,58 @@ const StartupProfilePage = () => {
         </div>
       </div>
 
-      {/* ── CONNECT MODAL ─────────────────────────────────────────────────── */}
-      {showModal && relationship.canInitiateConnection && (
-        <div className="fixed inset-0 z-50 bg-surface/40  flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl border border-line bg-surface shadow-card p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gFrom} ${gTo} flex items-center justify-center flex-shrink-0`}>
-                <span className="avatar-initial text-lg">{initial}</span>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-content">Connect with {name}</h3>
-                <p className="text-xs text-content-muted">Add an optional intro message</p>
-              </div>
+      {showVideoPitch && profile.founder_video_url && (
+        <div className="fixed inset-0 z-50 bg-surface/50 flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl rounded-2xl border border-line bg-surface shadow-card p-5">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h3 className="text-lg font-semibold text-content flex items-center gap-2">
+                <Video className="w-5 h-5 text-primary" />
+                Video Pitch — {name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowVideoPitch(false)}
+                className="px-3 py-1.5 rounded-lg border border-line text-sm text-content-secondary hover:text-content"
+              >
+                Close
+              </button>
             </div>
-            <textarea
-              value={connectMsg}
-              onChange={(e) => setConnectMsg(e.target.value.slice(0, 300))}
-              rows={4}
-              className="w-full rounded-xl bg-surface-alt border border-line px-4 py-3 text-sm text-content placeholder:text-content-muted resize-none focus:outline-none focus:border-primary-light/50 focus:bg-surface-alt transition-all"
-              placeholder="Hi! I'd love to learn more about your startup and explore how we might work together."
+            <video
+              src={profile.founder_video_url}
+              controls
+              playsInline
+              autoPlay
+              poster={profile.founder_video_thumbnail_url || undefined}
+              className="w-full rounded-xl border border-line max-h-[70vh] bg-black"
             />
-            <div className="text-xs text-content-secondary text-right mt-1 mb-4">{connectMsg.length}/300</div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setShowModal(false)}
-                className="flex-1 px-4 py-2.5 rounded-xl border border-line text-content-secondary text-sm hover:bg-surface-alt hover:text-content transition-all">
-                Cancel
-              </button>
-              <button type="button" onClick={sendConnection} disabled={actionLoading}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-sm !text-content-inverse font-medium disabled:opacity-50 hover:opacity-90 transition-opacity">
-                {actionLoading ? "Sending…" : "Send Request"}
-              </button>
-            </div>
           </div>
         </div>
       )}
+
+      {showMeetingsPanel && connectionId && (
+        <ConnectionMeetingsPanel
+          connectionId={connectionId}
+          otherUserName={name}
+          initialShowRequestForm
+          onClose={() => setShowMeetingsPanel(false)}
+        />
+      )}
+
+      <ConnectModal
+        open={showModal && relationship.canInitiateConnection}
+        companyName={name}
+        initial={initial}
+        gradientFrom={gFrom}
+        gradientTo={gTo}
+        message={connectMsg}
+        onMessageChange={setConnectMsg}
+        onCancel={() => {
+          setShowModal(false);
+          setConnectMsg("");
+        }}
+        onSubmit={sendConnection}
+        loading={actionLoading}
+      />
 
       {/* ── SHARE TOAST ───────────────────────────────────────────────────── */}
       {shareToast && (

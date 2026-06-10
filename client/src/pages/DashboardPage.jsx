@@ -105,6 +105,11 @@ const DashboardPage = () => {
       ]
     : [
         {
+          to: "/analytics",
+          title: "Analytics Dashboard",
+          desc: "Track investor engagement with your profile and pitch deck.",
+        },
+        {
           to: "/investors",
           title: "Discover Investors",
           desc: "Find investors who match your stage and industry.",

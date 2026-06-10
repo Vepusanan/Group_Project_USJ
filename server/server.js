@@ -18,15 +18,33 @@ import uploadsRoutes from "./routes/uploads.js";
 import settingsRoutes from "./routes/settings.js";
 import connectionsRoutes from "./routes/connections.js";
 import notificationsRoutes from "./routes/notifications.js";
+import pitchDecksRoutes from "./routes/pitchDecks.js";
+import dataRoomsRoutes from "./routes/dataRooms.js";
+import fundingRoundsRoutes from "./routes/fundingRounds.js";
+import dealPipelineRoutes from "./routes/dealPipeline.js";
+import investorIntentsRoutes from "./routes/investorIntents.js";
+import startupAnalyticsRoutes from "./routes/startupAnalytics.js";
+import verificationRoutes from "./routes/verification.js";
+import adminRoutes from "./routes/admin.js";
+import watchlistRoutes from "./routes/watchlist.js";
+import milestonesRoutes from "./routes/milestones.js";
+import meetingsRoutes from "./routes/meetings.js";
+import ddChecklistsRoutes from "./routes/ddChecklists.js";
+import comparisonsRoutes from "./routes/comparisons.js";
+import connectionQaRoutes from "./routes/connectionQa.js";
+import profileReportsRoutes from "./routes/profileReports.js";
 import cron from "node-cron";
-import { deleteStaleUnverifiedUsers } from "./utils/cleanup.js";
+import { runTrustCleanupJobs } from "./utils/cleanup.js";
+import { generalLimiter } from "./middleware/rateLimiter.js";
+import { requestTiming } from "./middleware/requestTiming.js";
+import { hasEmailCredentials } from "./utils/emailTransport.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
 dotenv.config({ quiet: true });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // CORS — cookies require an exact origin + credentials:true.
 // Production: require explicit whitelist via FRONTEND_URL (comma-separated).
@@ -56,6 +74,7 @@ app.use(
 app.use(cookieParser());
 app.use(express.json()); //body parser
 app.use(express.urlencoded({ extended: true }));
+app.use(requestTiming);
 
 // Expose uploads for local testing (POSTMAN). In production use S3 or equivalent.
 const __filename = fileURLToPath(import.meta.url);
@@ -72,21 +91,32 @@ if (process.env.NODE_ENV === "development") {
 
 // Health check route
 app.get("/api/health", async (req, res) => {
+  const checks = {
+    database: "unknown",
+    email: hasEmailCredentials() ? "configured" : "not_configured",
+    gemini: process.env.GEMINI_API_KEY ? "configured" : "not_configured",
+    storage: process.env.SUPABASE_URL ? "configured" : "not_configured",
+  };
+
   try {
     const result = await pool.query("SELECT NOW()");
+    checks.database = "connected";
     res.json({
       status: "ok",
-      database: "connected",
+      checks,
       timestamp: result.rows[0].now,
     });
   } catch (error) {
+    checks.database = "disconnected";
     res.status(500).json({
       status: "error",
-      database: "disconnected",
+      checks,
       error: error.message,
     });
   }
 });
+
+app.use("/api", generalLimiter);
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -101,6 +131,21 @@ app.use("/startups", searchRoutes);
 app.use("/api/startups", searchRoutes);
 app.use("/api/connections", connectionsRoutes);
 app.use("/api/notifications", notificationsRoutes);
+app.use("/api/pitch-decks", pitchDecksRoutes);
+app.use("/api/data-rooms", dataRoomsRoutes);
+app.use("/api/funding-rounds", fundingRoundsRoutes);
+app.use("/api/deal-pipeline", dealPipelineRoutes);
+app.use("/api/investor-intents", investorIntentsRoutes);
+app.use("/api/startup-analytics", startupAnalyticsRoutes);
+app.use("/api/verification", verificationRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/watchlist", watchlistRoutes);
+app.use("/api/milestones", milestonesRoutes);
+app.use("/api/meetings", meetingsRoutes);
+app.use("/api/dd-checklists", ddChecklistsRoutes);
+app.use("/api/comparisons", comparisonsRoutes);
+app.use("/api/connection-qa", connectionQaRoutes);
+app.use("/api/profile-reports", profileReportsRoutes);
 
 // ----------------------------------------------------
 // 1. Initialize HTTP Server
@@ -109,10 +154,17 @@ const httpServer = createServer(app);
 
 // 2. Initialize Socket.io Server
 // Allow connections from any origin (*) during development
+const socketCorsOrigins = corsWhitelist.length
+  ? corsWhitelist
+  : isDev
+    ? [/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/]
+    : [];
+
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
+    origin: socketCorsOrigins.length ? socketCorsOrigins : true,
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
@@ -141,7 +193,7 @@ cron.schedule(
       "⏳ Starting scheduled cleanup job (deleting stale unverified accounts)...",
     );
     try {
-      await deleteStaleUnverifiedUsers();
+      await runTrustCleanupJobs();
       console.log("✅ Scheduled cleanup job finished successfully.");
     } catch (error) {
       console.error("❌ Scheduled cleanup job failed.");
@@ -149,7 +201,7 @@ cron.schedule(
   },
   {
     scheduled: true,
-    timezone: "Asia/Colombo", // Set the timezone appropriate for your deployment environment
+    timezone: process.env.CRON_TIMEZONE || "Asia/Colombo",
   },
 );
 

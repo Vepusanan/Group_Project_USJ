@@ -72,18 +72,25 @@ const authService = {
 
   verifyEmail: async (token) => {
     try {
-      const response = await api.get(`/auth/verify-email?token=${token}`);
+      const response = await api.get(
+        `/auth/verify-email?token=${encodeURIComponent(token)}&format=json`,
+      );
 
-      if (response.status === 200) {
+      if (response.data?.success) {
+        if (response.data.user) {
+          localStorage.setItem("userData", JSON.stringify(response.data.user));
+        }
         return {
           success: true,
-          message: response.data || "Email verified successfully!",
+          message: response.data.message || "Email verified successfully!",
+          user: response.data.user,
+          redirectPath: response.data.redirectPath,
         };
       }
 
       return {
         success: false,
-        error: "Email verification failed",
+        error: response.data?.error || "Email verification failed",
       };
     } catch (error) {
       const errorMessage =

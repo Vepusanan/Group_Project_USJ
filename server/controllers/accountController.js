@@ -7,6 +7,7 @@ import {
   sendPasswordChangeConfirmationEmail,
   sendAccountDeletionConfirmationEmail,
 } from "../utils/emailServices.js";
+import { logAuthEvent, getClientIp } from "../repositories/UserActivityRepository.js";
 
 // Helper function to generate a secure token
 const generateEmailChangeToken = () => {
@@ -248,6 +249,12 @@ export const changePassword = async (req, res) => {
       // Continue anyway - password was changed successfully
     }
 
+    await logAuthEvent({
+      userId,
+      eventType: "password_change",
+      clientIp: getClientIp(req),
+    });
+
     res.status(200).json({
       success: true,
       message: "Password changed successfully. Please log in again with your new password.",
@@ -351,6 +358,112 @@ export const deleteAccount = async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Server error while processing account deletion",
+    });
+  }
+};
+
+/**
+ * Export all personal data (GDPR / CCPA data portability).
+ * GET /api/account/export
+ */
+export const exportAccountData = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const [
+      userResult,
+      startupResult,
+      investorResult,
+      connectionsResult,
+      sentMessagesResult,
+      receivedMessagesResult,
+      privacyResult,
+      notificationResult,
+      watchlistResult,
+      sessionsResult,
+    ] = await Promise.all([
+      pool.query(
+        `SELECT id, email, full_name, user_type, email_verified, created_at,
+                terms_accepted_at, terms_version, last_activity_at
+         FROM users WHERE id = $1`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT * FROM startup_profiles WHERE user_id = $1`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT * FROM investor_profiles WHERE user_id = $1`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT id, requester_id, recipient_id, status, created_at, updated_at
+         FROM connections
+         WHERE requester_id = $1 OR recipient_id = $1`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT id, conversation_id, sender_id, receiver_id, text, attachment_url, created_at, read_at
+         FROM messages WHERE sender_id = $1 ORDER BY created_at DESC LIMIT 500`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT id, conversation_id, sender_id, receiver_id, text, attachment_url, created_at, read_at
+         FROM messages WHERE receiver_id = $1 ORDER BY created_at DESC LIMIT 500`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT * FROM privacy_settings WHERE user_id = $1`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT * FROM notification_settings WHERE user_id = $1`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT startup_profile_id, added_at FROM investor_watchlist WHERE investor_user_id = $1`,
+        [userId],
+      ).catch(() => ({ rows: [] })),
+      pool.query(
+        `SELECT id, device_info, client_ip, created_at, last_used_at, expires_at
+         FROM sessions WHERE user_id = $1`,
+        [userId],
+      ),
+    ]);
+
+    const payload = {
+      exported_at: new Date().toISOString(),
+      format_version: "1.0",
+      user: userResult.rows[0] || null,
+      startup_profile: startupResult.rows[0] || null,
+      investor_profile: investorResult.rows[0] || null,
+      connections: connectionsResult.rows,
+      messages_sent: sentMessagesResult.rows,
+      messages_received: receivedMessagesResult.rows,
+      privacy_settings: privacyResult.rows[0] || null,
+      notification_settings: notificationResult.rows[0] || null,
+      watchlist: watchlistResult.rows,
+      active_sessions: sessionsResult.rows.map((s) => ({
+        id: s.id,
+        device_info: s.device_info,
+        created_at: s.created_at,
+        last_used_at: s.last_used_at,
+        expires_at: s.expires_at,
+      })),
+    };
+
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="account-export-${userId}.json"`,
+    );
+
+    res.status(200).json({ success: true, data: payload });
+  } catch (error) {
+    console.error("Export account data error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while exporting account data",
     });
   }
 };

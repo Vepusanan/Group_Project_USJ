@@ -4,7 +4,7 @@ import {
   isUsersConnected,
 } from "../repositories/ConnectionRepository.js";
 import { sendNewMessageEmail } from "../utils/emailServices.js";
-import { isUserOnline } from "../socketHandler.js";
+import { emitNewMessage, isUserOnline } from "../socketHandler.js";
 
 // Send a new message
 export const sendMessage = async (req, res) => {
@@ -68,6 +68,8 @@ export const sendMessage = async (req, res) => {
         }
       })();
     }
+
+    emitNewMessage(messageData);
 
     res.status(201).json({
       success: true,

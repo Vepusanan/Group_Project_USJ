@@ -24,6 +24,9 @@ import {
   profileIdentityTitleClass,
   profileIdentitySubtitleClass,
 } from "../styles/theme";
+import VerificationBadge from "../components/common/VerificationBadge";
+import CredibilitySignals from "../components/trust/CredibilitySignals";
+import ReportProfileButton from "../components/trust/ReportProfileButton";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,6 +109,7 @@ const InvestorProfilePage = () => {
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [connectionId, setConnectionId]     = useState(null);
   const [connectionRequesterId, setConnectionRequesterId] = useState(null);
+  const [connectionDeclinedAt, setConnectionDeclinedAt] = useState(null);
   const [showModal, setShowModal]           = useState(false);
   const [connectMsg, setConnectMsg]         = useState("");
   const [actionLoading, setActionLoading]   = useState(false);
@@ -125,6 +129,7 @@ const InvestorProfilePage = () => {
       setConnectionStatus(data.connection_status || null);
       setConnectionId(data.connection_id || null);
       setConnectionRequesterId(data.connection_requester_id || null);
+      setConnectionDeclinedAt(data.connection_declined_at || null);
       setLoading(false);
       // Ensure we're at the top after the new content paints.
       window.scrollTo({ top: 0, behavior: "auto" });
@@ -152,6 +157,7 @@ const InvestorProfilePage = () => {
     profileOwnerType: PROFILE_OWNER_TYPES.INVESTOR,
     connectionStatus,
     connectionRequesterId,
+    connectionDeclinedAt,
   });
 
   const isOwn = relationship.kind === "self";
@@ -182,14 +188,6 @@ const InvestorProfilePage = () => {
     setConnectionId(res.data?.data?.id || null);
     setShowModal(false);
     setConnectMsg("");
-  };
-
-  const cancelRequest = async () => {
-    if (!connectionId) return;
-    setActionLoading(true);
-    const res = await apiService.removeConnection(connectionId);
-    setActionLoading(false);
-    if (res.success) { setConnectionStatus(null); setConnectionId(null); setConnectionRequesterId(null); }
   };
 
   const acceptRequest = async () => {
@@ -241,7 +239,10 @@ const InvestorProfilePage = () => {
                   }
                 </div>
                 <div className={cardIdentityClass}>
-                  <h1 className={profileIdentityTitleClass}>{name}</h1>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className={profileIdentityTitleClass}>{name}</h1>
+                    <VerificationBadge tier={profile.verification_tier} size="lg" />
+                  </div>
                   {profile.investor_type && (
                     <p className={profileIdentitySubtitleClass}>{profile.investor_type}</p>
                   )}
@@ -253,6 +254,12 @@ const InvestorProfilePage = () => {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-line text-content-secondary text-xs hover:bg-surface-alt transition-colors">
                   <Share2 className="w-3.5 h-3.5" /> Share
                 </button>
+                {!isOwn && user && (
+                  <ReportProfileButton
+                    reportedUserId={profile.user_id}
+                    reportedName={name}
+                  />
+                )}
                 {isOwn && (
                   <Link to="/profile/edit"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-line text-content-secondary text-xs hover:bg-surface-alt transition-colors">
@@ -283,12 +290,17 @@ const InvestorProfilePage = () => {
                       </button>
                     </>
                   ) : isPending ? (
-                    <button type="button" onClick={cancelRequest} disabled={actionLoading}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-warning/40 bg-warning/15 text-warning text-sm font-medium hover:bg-warning/25 disabled:opacity-50 transition-colors"
-                      title="Click to cancel">
+                    <span className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-warning/40 bg-warning/15 text-warning text-sm font-medium">
                       <Clock className="w-4 h-4" />
-                      {actionLoading ? "Cancelling…" : "Pending · Cancel"}
-                    </button>
+                      Pending
+                    </span>
+                  ) : relationship.kind === "declined_cooling" ? (
+                    <span
+                      className="px-3 py-2 rounded-xl border border-line bg-surface-alt text-content-muted text-sm"
+                      title="30-day cooling period after a declined request"
+                    >
+                      Connect available {relationship.coolingEndsLabel ? `after ${relationship.coolingEndsLabel}` : "later"}
+                    </span>
                   ) : relationship.canInitiateConnection ? (
                     <button type="button" onClick={() => setShowModal(true)}
                       className="px-5 py-2 rounded-xl btn-connect-token bg-primary hover:bg-primary-dark text-sm !text-content-inverse font-medium transition-colors shadow-soft">
@@ -322,6 +334,13 @@ const InvestorProfilePage = () => {
               )}
             </div>
         </div>
+
+        {profile.credibility_signals && (
+          <CredibilitySignals
+            signals={profile.credibility_signals}
+            userType="investor"
+          />
+        )}
 
         {/* ── ABOUT ─────────────────────────────────────────────────────────── */}
         {(profile.professional_background || profile.bio || profile.background || profile.investment_thesis) && (

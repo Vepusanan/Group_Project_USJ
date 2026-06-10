@@ -7,11 +7,40 @@ const VALID_STATUSES = new Set([
   "connected",
 ]);
 
+export const CONNECTION_COOLING_DAYS = 30;
+const COOLING_MS = CONNECTION_COOLING_DAYS * 24 * 60 * 60 * 1000;
+
+let connectionColumnsEnsured = false;
+
+export const ensureConnectionColumns = async () => {
+  if (connectionColumnsEnsured) return;
+  await pool.query(`
+    ALTER TABLE public.connections
+      ADD COLUMN IF NOT EXISTS request_message VARCHAR(300),
+      ADD COLUMN IF NOT EXISTS declined_at TIMESTAMPTZ
+  `);
+  connectionColumnsEnsured = true;
+};
+
 const normalizeStatus = (status) => {
   const raw = String(status || "").toLowerCase();
   if (raw === "connected") return "accepted";
   if (VALID_STATUSES.has(raw)) return raw;
   return null;
+};
+
+export const isInConnectionCooling = (declinedAt, now = Date.now()) => {
+  if (!declinedAt) return false;
+  const declinedMs = new Date(declinedAt).getTime();
+  if (Number.isNaN(declinedMs)) return false;
+  return now - declinedMs < COOLING_MS;
+};
+
+const trimRequestMessage = (message) => {
+  if (message == null || message === "") return null;
+  const trimmed = String(message).trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, 300);
 };
 
 export const getUserById = async (userId) => {
@@ -20,6 +49,43 @@ export const getUserById = async (userId) => {
     [userId],
   );
   return result.rows[0] || null;
+};
+
+export const getUserProfileDetailsForConnection = async (userId) => {
+  const user = await getUserById(userId);
+  if (!user) return null;
+
+  if (user.user_type === "investor") {
+    const result = await pool.query(
+      `
+        SELECT investor_profile_id, photo_url
+        FROM public.investor_profiles
+        WHERE user_id = $1
+      `,
+      [userId],
+    );
+    const row = result.rows[0] || {};
+    return {
+      ...user,
+      profile_id: row.investor_profile_id || null,
+      photo_url: row.photo_url || null,
+    };
+  }
+
+  const result = await pool.query(
+    `
+      SELECT startup_profile_id, logo_url
+      FROM public.startup_profiles
+      WHERE user_id = $1
+    `,
+    [userId],
+  );
+  const row = result.rows[0] || {};
+  return {
+    ...user,
+    profile_id: row.startup_profile_id || null,
+    photo_url: row.logo_url || null,
+  };
 };
 
 const orderUsersForConnection = (userA, userB) => {
@@ -39,6 +105,8 @@ const orderUsersForConnection = (userA, userB) => {
 };
 
 export const getConnectionBetweenUsers = async (userIdA, userIdB) => {
+  await ensureConnectionColumns();
+
   const result = await pool.query(
     `
       SELECT *
@@ -70,7 +138,12 @@ export const isUsersConnected = async (userIdA, userIdB) => {
 export const createConnectionRequest = async ({
   requesterId,
   targetUserId,
+  message,
 }) => {
+  await ensureConnectionColumns();
+
+  const requestMessage = trimRequestMessage(message);
+
   const [requester, target] = await Promise.all([
     getUserById(requesterId),
     getUserById(targetUserId),
@@ -95,8 +168,6 @@ export const createConnectionRequest = async ({
     throw error;
   }
 
-  // Either side can initiate. We record who initiated in `requester_id` so
-  // updateConnectionStatus can verify that only the OTHER party accepts.
   const existing = await getConnectionBetweenUsers(
     ordered.investorId,
     ordered.startupId,
@@ -113,17 +184,34 @@ export const createConnectionRequest = async ({
     throw error;
   }
 
+  if (
+    existing?.normalized_status === "declined" &&
+    isInConnectionCooling(existing.declined_at)
+  ) {
+    const coolingEndsAt = new Date(
+      new Date(existing.declined_at).getTime() + COOLING_MS,
+    );
+    const error = new Error(
+      `You can send a new connection request after the 30-day cooling period ends on ${coolingEndsAt.toLocaleDateString()}`,
+    );
+    error.code = "COOLING_PERIOD";
+    error.coolingEndsAt = coolingEndsAt.toISOString();
+    throw error;
+  }
+
   if (existing) {
-    // Re-opening a previously-declined request: update the requester to the
-    // current user so the OTHER party becomes the responder.
     const updated = await pool.query(
       `
         UPDATE public.connections
-        SET status = 'pending', requester_id = $2, updated_at = NOW()
+        SET status = 'pending',
+            requester_id = $2,
+            request_message = $3,
+            declined_at = NULL,
+            updated_at = NOW()
         WHERE id = $1
         RETURNING *
       `,
-      [existing.id, requester.id],
+      [existing.id, requester.id, requestMessage],
     );
 
     return updated.rows[0];
@@ -131,17 +219,25 @@ export const createConnectionRequest = async ({
 
   const inserted = await pool.query(
     `
-      INSERT INTO public.connections (investor_id, startup_id, requester_id, status)
-      VALUES ($1, $2, $3, 'pending')
+      INSERT INTO public.connections (
+        investor_id,
+        startup_id,
+        requester_id,
+        status,
+        request_message
+      )
+      VALUES ($1, $2, $3, 'pending', $4)
       RETURNING *
     `,
-    [ordered.investorId, ordered.startupId, requester.id],
+    [ordered.investorId, ordered.startupId, requester.id, requestMessage],
   );
 
   return inserted.rows[0];
 };
 
 export const getConnectionsForUser = async (userId) => {
+  await ensureConnectionColumns();
+
   const result = await pool.query(
     `
       SELECT
@@ -153,7 +249,8 @@ export const getConnectionsForUser = async (userId) => {
         u.full_name AS other_user_name,
         u.user_type AS other_user_type,
         COALESCE(ip.photo_url, sp.logo_url) AS other_user_photo_url,
-        COALESCE(ip.investor_profile_id, sp.startup_profile_id) AS other_user_profile_id
+        COALESCE(ip.investor_profile_id, sp.startup_profile_id) AS other_user_profile_id,
+        COALESCE(u.verification_tier::text, 'UNVERIFIED') AS other_user_verification_tier
       FROM public.connections c
       JOIN public.users u
         ON u.id = CASE WHEN c.investor_id = $1 THEN c.startup_id ELSE c.investor_id END
@@ -172,6 +269,8 @@ export const getConnectionsForUser = async (userId) => {
 };
 
 export const getPendingRequestsForStartup = async (startupUserId) => {
+  await ensureConnectionColumns();
+
   const result = await pool.query(
     `
       SELECT
@@ -179,12 +278,20 @@ export const getPendingRequestsForStartup = async (startupUserId) => {
         c.status,
         c.created_at,
         c.updated_at,
-        c.investor_id AS requester_user_id,
+        c.requester_id AS requester_user_id,
         u.full_name AS requester_name,
-        u.email AS requester_email
+        u.user_type AS requester_user_type,
+        u.email AS requester_email,
+        c.request_message AS message,
+        COALESCE(ip.photo_url, sp.logo_url) AS other_user_photo_url,
+        COALESCE(ip.investor_profile_id, sp.startup_profile_id) AS requester_profile_id
       FROM public.connections c
-      JOIN public.users u ON u.id = c.investor_id
-      WHERE c.startup_id = $1 AND LOWER(c.status) = 'pending'
+      JOIN public.users u ON u.id = c.requester_id
+      LEFT JOIN investor_profiles ip ON ip.user_id = u.id AND u.user_type = 'investor'
+      LEFT JOIN startup_profiles sp ON sp.user_id = u.id AND u.user_type = 'startup'
+      WHERE c.startup_id = $1
+        AND LOWER(c.status) = 'pending'
+        AND c.requester_id <> $1
       ORDER BY c.created_at DESC
     `,
     [startupUserId],
@@ -194,6 +301,8 @@ export const getPendingRequestsForStartup = async (startupUserId) => {
 };
 
 export const getPendingSentRequestsForUser = async (userId) => {
+  await ensureConnectionColumns();
+
   const result = await pool.query(
     `
       SELECT
@@ -201,6 +310,7 @@ export const getPendingSentRequestsForUser = async (userId) => {
         c.status,
         c.created_at,
         c.updated_at,
+        c.request_message AS message,
         CASE WHEN c.investor_id = $1 THEN c.startup_id ELSE c.investor_id END AS target_user_id,
         u.full_name AS target_user_name,
         u.user_type AS target_user_type,
@@ -214,6 +324,7 @@ export const getPendingSentRequestsForUser = async (userId) => {
       LEFT JOIN startup_profiles sp ON sp.user_id = u.id AND u.user_type = 'startup'
       WHERE (c.investor_id = $1 OR c.startup_id = $1)
         AND LOWER(c.status) = 'pending'
+        AND c.requester_id = $1
       ORDER BY c.created_at DESC
     `,
     [userId],
@@ -223,15 +334,7 @@ export const getPendingSentRequestsForUser = async (userId) => {
 };
 
 export const getPendingReceivedRequestsForUser = async (userId) => {
-  const me = await getUserById(userId);
-  if (!me) {
-    return [];
-  }
-
-  // Investors always send requests; only startups receive them.
-  if (me.user_type !== "startup") {
-    return [];
-  }
+  await ensureConnectionColumns();
 
   const result = await pool.query(
     `
@@ -240,17 +343,20 @@ export const getPendingReceivedRequestsForUser = async (userId) => {
         c.status,
         c.created_at,
         c.updated_at,
-        c.investor_id AS requester_user_id,
+        c.requester_id AS requester_user_id,
         u.full_name AS requester_name,
         u.user_type AS requester_user_type,
         u.email AS requester_email,
-        ip.photo_url AS other_user_photo_url,
-        ip.investor_profile_id AS requester_profile_id
+        c.request_message AS message,
+        COALESCE(ip.photo_url, sp.logo_url) AS other_user_photo_url,
+        COALESCE(ip.investor_profile_id, sp.startup_profile_id) AS requester_profile_id
       FROM public.connections c
-      JOIN public.users u ON u.id = c.investor_id
-      LEFT JOIN investor_profiles ip ON ip.user_id = c.investor_id
-      WHERE c.startup_id = $1
+      JOIN public.users u ON u.id = c.requester_id
+      LEFT JOIN investor_profiles ip ON ip.user_id = u.id AND u.user_type = 'investor'
+      LEFT JOIN startup_profiles sp ON sp.user_id = u.id AND u.user_type = 'startup'
+      WHERE (c.investor_id = $1 OR c.startup_id = $1)
         AND LOWER(c.status) = 'pending'
+        AND c.requester_id <> $1
       ORDER BY c.created_at DESC
     `,
     [userId],
@@ -259,7 +365,40 @@ export const getPendingReceivedRequestsForUser = async (userId) => {
   return result.rows;
 };
 
+export const getRecentlyAcceptedConnectionsForUser = async (userId) => {
+  await ensureConnectionColumns();
+
+  const result = await pool.query(
+    `
+      SELECT
+        c.id,
+        c.updated_at,
+        c.requester_id,
+        CASE WHEN c.investor_id = $1 THEN c.startup_id ELSE c.investor_id END AS other_user_id,
+        u.full_name AS other_user_name,
+        u.user_type AS other_user_type,
+        COALESCE(ip.photo_url, sp.logo_url) AS other_user_photo_url,
+        COALESCE(ip.investor_profile_id, sp.startup_profile_id) AS other_user_profile_id
+      FROM public.connections c
+      JOIN public.users u
+        ON u.id = CASE WHEN c.investor_id = $1 THEN c.startup_id ELSE c.investor_id END
+      LEFT JOIN investor_profiles ip ON ip.user_id = u.id AND u.user_type = 'investor'
+      LEFT JOIN startup_profiles sp ON sp.user_id = u.id AND u.user_type = 'startup'
+      WHERE (c.investor_id = $1 OR c.startup_id = $1)
+        AND LOWER(c.status) IN ('accepted', 'connected')
+        AND c.updated_at >= NOW() - INTERVAL '30 days'
+      ORDER BY c.updated_at DESC
+      LIMIT 20
+    `,
+    [userId],
+  );
+
+  return result.rows;
+};
+
 export const removeConnectionById = async ({ connectionId, userId }) => {
+  await ensureConnectionColumns();
+
   const existing = await pool.query(
     "SELECT * FROM public.connections WHERE id = $1",
     [connectionId],
@@ -272,9 +411,20 @@ export const removeConnectionById = async ({ connectionId, userId }) => {
   }
 
   const connection = existing.rows[0];
-  if (String(connection.investor_id) !== String(userId) && String(connection.startup_id) !== String(userId)) {
+  if (
+    String(connection.investor_id) !== String(userId) &&
+    String(connection.startup_id) !== String(userId)
+  ) {
     const error = new Error("You are not allowed to remove this connection");
     error.code = "FORBIDDEN";
+    throw error;
+  }
+
+  if (normalizeStatus(connection.status) === "pending") {
+    const error = new Error(
+      "Pending connection requests cannot be cancelled. Wait for the recipient to accept or decline.",
+    );
+    error.code = "PENDING_CANNOT_DELETE";
     throw error;
   }
 
@@ -289,6 +439,8 @@ export const updateConnectionStatus = async ({
   userId,
   status,
 }) => {
+  await ensureConnectionColumns();
+
   const normalized = normalizeStatus(status);
   if (!normalized || !["accepted", "declined"].includes(normalized)) {
     const error = new Error(
@@ -311,7 +463,6 @@ export const updateConnectionStatus = async ({
 
   const connection = existing.rows[0];
 
-  // The responder is whichever party did NOT initiate the request.
   const isInvestor = String(connection.investor_id) === String(userId);
   const isStartup = String(connection.startup_id) === String(userId);
   if (!isInvestor && !isStartup) {
@@ -328,10 +479,13 @@ export const updateConnectionStatus = async ({
     throw error;
   }
 
+  const declinedAtClause =
+    normalized === "declined" ? ", declined_at = NOW()" : ", declined_at = NULL";
+
   const updated = await pool.query(
     `
       UPDATE public.connections
-      SET status = $1, updated_at = NOW()
+      SET status = $1, updated_at = NOW()${declinedAtClause}
       WHERE id = $2
       RETURNING *
     `,

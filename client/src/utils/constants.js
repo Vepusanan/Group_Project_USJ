@@ -39,7 +39,7 @@ export const USER_TYPES = {
  */
 export const REGEX_PATTERNS = {
   EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  PASSWORD: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/,
+  PASSWORD: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}$/,
   PHONE: /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/,
 };
 
@@ -52,7 +52,7 @@ export const APP_CONSTANTS = {
   TOKEN_KEY: "accessToken",
   USER_KEY: "user",
   DEBOUNCE_DELAY: 500,
-  MIN_PASSWORD_LENGTH: 8,
+  MIN_PASSWORD_LENGTH: 10,
   MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
   SUPPORTED_FILE_TYPES: [
     "image/jpeg",

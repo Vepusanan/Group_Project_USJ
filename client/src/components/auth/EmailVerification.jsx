@@ -29,7 +29,8 @@ const EmailVerification = () => {
       if (result?.success) {
         setStatus("verified");
         setFeedback(result.message || "Email verified successfully!");
-        setTimeout(() => navigate("/login?verified=success"), 2000);
+        const destination = result.redirectPath || "/login?verified=success";
+        setTimeout(() => navigate(destination, { replace: true }), 1200);
         return;
       }
       setStatus("error");

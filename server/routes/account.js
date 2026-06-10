@@ -4,6 +4,7 @@ import {
   verifyEmailChange,
   changePassword,
   deleteAccount,
+  exportAccountData,
 } from "../controllers/accountController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -14,5 +15,6 @@ router.put("/email", protect, changeEmail);
 router.get("/verify-email-change", verifyEmailChange);
 router.put("/password", protect, changePassword);
 router.delete("/", protect, deleteAccount);
+router.get("/export", protect, exportAccountData);
 
 export default router;

@@ -33,6 +33,69 @@ export const BUCKETS = {
   MESSAGE_ATTACHMENTS: "message-attachments",
 };
 
+export const DATA_ROOM_SIGNED_URL_SECONDS = 15 * 60;
+
+export async function downloadStorageObject(bucketName, objectPath) {
+  const { data, error } = await supabase.storage
+    .from(bucketName)
+    .download(objectPath);
+
+  if (error) {
+    throw new Error(`Storage download failed: ${error.message}`);
+  }
+
+  return Buffer.from(await data.arrayBuffer());
+}
+
+export async function createSignedStorageUrl(
+  bucketName,
+  objectPath,
+  expiresInSeconds = DATA_ROOM_SIGNED_URL_SECONDS,
+) {
+  const { data, error } = await supabase.storage
+    .from(bucketName)
+    .createSignedUrl(objectPath, expiresInSeconds);
+
+  if (error) {
+    throw new Error(`Signed URL generation failed: ${error.message}`);
+  }
+
+  return {
+    signedUrl: data.signedUrl,
+    expiresIn: expiresInSeconds,
+    expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString(),
+  };
+}
+
+export const parseLegacyStorageFromUrl = (fileUrl) => {
+  if (!fileUrl) return null;
+  if (fileUrl.startsWith("storage://")) {
+    const withoutScheme = fileUrl.slice("storage://".length);
+    const slash = withoutScheme.indexOf("/");
+    if (slash <= 0) return null;
+    return {
+      bucket: withoutScheme.slice(0, slash),
+      path: withoutScheme.slice(slash + 1),
+    };
+  }
+
+  try {
+    const url = new URL(fileUrl);
+    const marker = "/object/public/";
+    const idx = url.pathname.indexOf(marker);
+    if (idx === -1) return null;
+    const remainder = url.pathname.slice(idx + marker.length);
+    const slash = remainder.indexOf("/");
+    if (slash <= 0) return null;
+    return {
+      bucket: remainder.slice(0, slash),
+      path: decodeURIComponent(remainder.slice(slash + 1)),
+    };
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Upload a file to Supabase Storage
  * @param {string} bucketName - Name of the storage bucket
@@ -228,6 +291,126 @@ export async function uploadInvestorPhoto(filePath, investorId) {
  * @param {string} startupId - Startup profile ID for naming
  * @returns {Promise<Object>} Document info with public URL
  */
+export async function uploadVerificationDocument(file, userId) {
+  const filePath = file.path;
+  const originalName = file.originalname || "verification-document";
+  const timestamp = Date.now();
+  const ext = path.extname(originalName);
+  const baseName = path
+    .basename(originalName, ext)
+    .replace(/[^a-z0-9_-]/gi, "_");
+  const fileName = `verification/${userId}/doc_${timestamp}_${baseName}${ext}`;
+
+  const result = await uploadToSupabase(BUCKETS.DOCUMENTS, filePath, fileName);
+
+  try {
+    fs.unlinkSync(filePath);
+  } catch {
+    /* ignore */
+  }
+
+  return { url: result.publicUrl, name: originalName };
+}
+
+export async function uploadDataRoomDocument(
+  filePath,
+  originalName,
+  startupProfileId,
+) {
+  try {
+    const timestamp = Date.now();
+    const ext = path.extname(originalName);
+    const baseName = path
+      .basename(originalName, ext)
+      .replace(/[^a-z0-9_-]/gi, "_");
+    const fileName = `data-room/${startupProfileId}/doc_${timestamp}_${baseName}${ext}`;
+
+    const result = await uploadToSupabase(
+      BUCKETS.DOCUMENTS,
+      filePath,
+      fileName,
+    );
+
+    const fileSize = fs.statSync(filePath).size || null;
+    try {
+      fs.unlinkSync(filePath);
+    } catch (cleanupError) {
+      console.warn(
+        "Warning: Could not clean up temporary file:",
+        cleanupError.message,
+      );
+    }
+
+    return {
+      name: originalName,
+      bucket: BUCKETS.DOCUMENTS,
+      path: fileName,
+      size: fileSize,
+      internalUrl: `storage://${BUCKETS.DOCUMENTS}/${fileName}`,
+    };
+  } catch (error) {
+    console.error("Error uploading data room document:", error);
+    throw error;
+  }
+}
+
+export async function uploadFounderVideo(filePath, startupId) {
+  try {
+    const timestamp = Date.now();
+    const fileName = `founder-videos/${startupId}/video_${timestamp}.mp4`;
+
+    const result = await uploadToSupabase(
+      BUCKETS.DOCUMENTS,
+      filePath,
+      fileName,
+      { overwrite: true },
+    );
+
+    try {
+      fs.unlinkSync(filePath);
+    } catch {
+      /* ignore */
+    }
+
+    return result.publicUrl;
+  } catch (error) {
+    console.error("Error uploading founder video:", error);
+    throw error;
+  }
+}
+
+export async function uploadFounderVideoThumbnail(filePath, startupId) {
+  try {
+    const processedPath = filePath.replace(/(\.[^.]+)$/, "_processed$1");
+    await sharp(filePath)
+      .resize({ width: 640, height: 360, fit: "cover", withoutEnlargement: false })
+      .jpeg({ quality: 80 })
+      .toFile(processedPath);
+
+    const timestamp = Date.now();
+    const fileName = `founder-videos/${startupId}/thumb_${timestamp}.jpg`;
+
+    const result = await uploadToSupabase(
+      BUCKETS.DOCUMENTS,
+      processedPath,
+      fileName,
+      { overwrite: true },
+    );
+
+    try {
+      fs.unlinkSync(filePath);
+      fs.unlinkSync(processedPath);
+    } catch {
+      /* ignore */
+    }
+
+    return result.publicUrl;
+  } catch (error) {
+    console.error("Error uploading founder video thumbnail:", error);
+    throw error;
+  }
+}
+
 export async function uploadDocument(filePath, originalName, startupId) {
   try {
     const timestamp = Date.now();

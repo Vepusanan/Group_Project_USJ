@@ -1,7 +1,8 @@
 import React from "react";
-import { BadgeCheck, Building2, CalendarClock, Globe, Linkedin, MapPin } from "lucide-react";
+import { BadgeCheck, Building2, CalendarClock, Globe, Linkedin, MapPin, Upload } from "lucide-react";
 
 const MAX_BIO_WORDS = 500;
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
 const countWords = (text) =>
   (text || "").trim().split(/\s+/).filter(Boolean).length;
@@ -49,12 +50,47 @@ const Field = ({ label, required, error, hint, children }) => (
   </div>
 );
 
-const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
+const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => {
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_PHOTO_BYTES) {
+      e.target.value = "";
+      updateFormData({ photo_file: null, photo_preview: null });
+      return;
+    }
+    updateFormData({
+      photo_file: file,
+      photo_preview: URL.createObjectURL(file),
+    });
+  };
+
+  return (
   <div className="space-y-5">
     <div className="pb-2">
       <h2 className="text-xl font-semibold text-content">Your Identity</h2>
       <p className="text-sm text-content-muted mt-1">Tell startups who you are as an investor.</p>
     </div>
+
+    <Field label="Profile Photo or Firm Logo" hint="optional">
+      <div className="flex items-center gap-4">
+        <div className="w-20 h-20 rounded-xl border-2 border-dashed border-line flex items-center justify-center overflow-hidden bg-surface-alt shrink-0">
+          {formData.photo_preview ? (
+            <img src={formData.photo_preview} alt="Photo preview" className="w-full h-full object-cover" />
+          ) : (
+            <Upload className="w-6 h-6 text-content-muted" />
+          )}
+        </div>
+        <div>
+          <label className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-light border border-solid border-primary-light text-sm font-medium text-primary hover:bg-primary/20 hover:border-primary transition-all">
+            <Upload className="w-4 h-4" />
+            {formData.photo_preview ? "Change Photo" : "Upload Photo"}
+            <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+          </label>
+          <p className="text-xs text-content-muted mt-1.5">PNG, JPG or SVG — max 2 MB</p>
+        </div>
+      </div>
+    </Field>
 
     <Field label="Name or Firm" required error={errors.name_or_firm}>
       <div className="relative">
@@ -190,6 +226,7 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => (
       </div>
     </Field>
   </div>
-);
+  );
+};
 
 export default InvestorStep1BasicInfo;

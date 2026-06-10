@@ -15,6 +15,7 @@ export const profileService = {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: 120000,
       });
       return {
         success: true,
@@ -44,6 +45,7 @@ export const profileService = {
           headers: {
             "Content-Type": "multipart/form-data",
           },
+          timeout: 120000,
         },
       );
       return {
@@ -52,9 +54,20 @@ export const profileService = {
       };
     } catch (error) {
       console.error("Update profile error:", error);
+      const responseError =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        (Array.isArray(error.response?.data?.details)
+          ? error.response.data.details.join(", ")
+          : null);
+
       return {
         success: false,
-        error: error.response?.data?.error || "Failed to update profile",
+        error:
+          responseError ||
+          (error.code === "ECONNABORTED"
+            ? "Upload timed out. Please try a smaller file."
+            : "Failed to update profile"),
       };
     }
   },
@@ -102,6 +115,25 @@ export const profileService = {
       return {
         success: false,
         error: error.response?.data?.error || "Failed to get completion status",
+      };
+    }
+  },
+
+  getMatchExplanation: async (startupProfileId) => {
+    try {
+      const response = await api.get(
+        `/startups/profile/${startupProfileId}/match-explanation`,
+        { timeout: 60000 },
+      );
+      return {
+        success: true,
+        data: response.data.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error.response?.data?.error || "Failed to load match explanation",
       };
     }
   },

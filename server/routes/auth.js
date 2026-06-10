@@ -10,6 +10,7 @@ import {
   logout,
   logoutAll,
   getActiveSessions,
+  revokeSession,
   getCurrentUser,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/auth.js";
@@ -29,6 +30,7 @@ router.post("/reset-password", authLimiter, resetPassword);
 router.post("/logout", protect, logout);
 router.post("/logout-all", protect, logoutAll);
 router.get("/sessions", protect, getActiveSessions);
+router.delete("/sessions/:sessionId", protect, revokeSession);
 router.get("/me", protect, getCurrentUser);
 
 /* The Protected Test Route is a simple API endpoint you set up 

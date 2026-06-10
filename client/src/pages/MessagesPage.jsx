@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { ArrowLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiService } from "../services/apiService";
+import { connectSocket, disconnectSocket } from "../services/socketService";
 import { useAuth } from "../hooks/useAuth";
 import {
   cardIdentityClass,
@@ -10,7 +11,8 @@ import {
 } from "../styles/theme";
 
 const MAX_CHARS = 5000;
-const POLL_INTERVAL_MS = 5000;
+const POLL_INTERVAL_MS = 30000;
+const POLL_INTERVAL_SOCKET_MS = 120000;
 
 const formatTime = (dateStr) => {
   if (!dateStr) return "";
@@ -51,6 +53,7 @@ const MessagesPage = () => {
   const shouldScrollToBottomRef = useRef(false);
   const messagesEndRef = useRef(null);
   const pollTimerRef = useRef(null);
+  const [socketConnected, setSocketConnected] = useState(false);
   const fileInputRef = useRef(null);
 
   const selectedConversationId = selectedConversation?.conversation_id || null;
@@ -172,7 +175,47 @@ const MessagesPage = () => {
     loadMessages(selectedConversationId, false);
   }, [selectedConversationId]);
 
-  // Background poll — refresh conversations + active message thread
+  // Real-time delivery via WebSocket (falls back to slower poll if disconnected)
+  useEffect(() => {
+    if (!user?.id) return undefined;
+
+    const socket = connectSocket();
+
+    const onConnect = () => {
+      setSocketConnected(true);
+    };
+    const onDisconnect = () => {
+      setSocketConnected(false);
+    };
+    const onNewMessage = (messageData) => {
+      if (
+        selectedConversationId &&
+        String(messageData.conversation_id || messageData.conversationId) ===
+          String(selectedConversationId)
+      ) {
+        shouldScrollToBottomRef.current = true;
+        setMessages((prev) => {
+          if (prev.some((m) => String(m.id) === String(messageData.id))) {
+            return prev;
+          }
+          return [...prev, messageData];
+        });
+      }
+      loadConversations(true);
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("message:new", onNewMessage);
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("message:new", onNewMessage);
+      disconnectSocket();
+    };
+  }, [user?.id, selectedConversationId, loadConversations]);
+
   useEffect(() => {
     const poll = async () => {
       await loadConversations(true);
@@ -181,9 +224,13 @@ const MessagesPage = () => {
       }
     };
 
-    pollTimerRef.current = setInterval(poll, POLL_INTERVAL_MS);
+    const interval = socketConnected
+      ? POLL_INTERVAL_SOCKET_MS
+      : POLL_INTERVAL_MS;
+
+    pollTimerRef.current = setInterval(poll, interval);
     return () => clearInterval(pollTimerRef.current);
-  }, [selectedConversationId]);
+  }, [selectedConversationId, loadConversations, loadMessages, socketConnected]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {

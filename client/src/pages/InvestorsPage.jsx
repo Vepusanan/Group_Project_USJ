@@ -23,6 +23,10 @@ import {
   PROFILE_OWNER_TYPES,
 } from "../utils/profileRelationship";
 import {
+  formatCoolingEnd,
+  isInConnectionCooling,
+} from "../utils/connectionCooling";
+import {
   connectButtonClass,
   cardFieldClass,
   cardFieldLabelClass,
@@ -32,6 +36,13 @@ import {
   cardIdentityTitleClass,
   cardIdentitySubtitleClass,
 } from "../styles/theme";
+import {
+  INVESTOR_INDUSTRY_OPTIONS,
+  INVESTOR_STAGE_OPTIONS,
+  INVESTOR_TYPE_OPTIONS,
+} from "../utils/investorFilterOptions";
+import { buildInvestorApiParams } from "../utils/listingFilters";
+import VerificationBadge from "../components/common/VerificationBadge";
 
 const defaultFilters = {
   q: "",
@@ -43,54 +54,6 @@ const defaultFilters = {
   investment_max: "",
   sort: "newest",
 };
-
-const INVESTOR_TYPES = [
-  { value: "ANGEL", label: "Angel Investor" },
-  { value: "VC_FIRM", label: "VC Firm" },
-  { value: "CORPORATE_VC", label: "Corporate VC" },
-  { value: "FAMILY_OFFICE", label: "Family Office" },
-  { value: "ACCELERATOR", label: "Accelerator" },
-  { value: "INCUBATOR", label: "Incubator" },
-  { value: "PRIVATE_EQUITY", label: "Private Equity" },
-];
-
-const INDUSTRIES = [
-  "FinTech",
-  "HealthTech",
-  "EdTech",
-  "AgriTech",
-  "CleanTech",
-  "AI/ML",
-  "SaaS",
-  "E-commerce",
-  "Logistics",
-  "LegalTech",
-  "PropTech",
-  "InsurTech",
-  "FoodTech",
-  "TravelTech",
-  "Gaming",
-  "Cybersecurity",
-  "Blockchain",
-  "IoT",
-  "BioTech",
-  "SpaceTech",
-  "Other",
-];
-
-const INVESTMENT_STAGES = [
-  { value: "IDEA", label: "Idea Stage" },
-  { value: "MVP", label: "MVP" },
-  { value: "EARLY_REVENUE", label: "Early Revenue" },
-  { value: "GROWTH", label: "Growth" },
-  { value: "SCALING", label: "Scaling" },
-  { value: "PRE_SEED", label: "Pre-seed (Funding)" },
-  { value: "SEED", label: "Seed (Funding)" },
-  { value: "SERIES_A", label: "Series A" },
-  { value: "SERIES_B", label: "Series B" },
-  { value: "SERIES_C", label: "Series C" },
-  { value: "SERIES_D_PLUS", label: "Series D+" },
-];
 
 const statusBadgeClass = {
   self: "bg-surface-alt text-content-secondary border-line",
@@ -156,6 +119,9 @@ const InvestorCard = ({
   relationship,
 }) => {
   const connectionStatus = investor.connection_status || "not_connected";
+  const inDeclineCooling =
+    connectionStatus === "declined" &&
+    isInConnectionCooling(investor.connection_declined_at);
   const statusLabel =
     connectionStatus === "accepted"
       ? "Connected"
@@ -163,15 +129,17 @@ const InvestorCard = ({
         ? "Pending"
         : connectionStatus === "self"
           ? "You"
-          : "Connect";
+          : inDeclineCooling
+            ? `Available ${formatCoolingEnd(investor.connection_declined_at) || "later"}`
+            : "Connect";
   const description = truncateDescription(
     investor.investment_thesis ||
       investor.what_you_look_for ||
       investor.value_add,
   );
-  const canConnect = !["self", "pending", "accepted"].includes(
-    connectionStatus,
-  );
+  const canConnect =
+    !["self", "pending", "accepted"].includes(connectionStatus) &&
+    !inDeclineCooling;
   const industries = parseList(investor.industries_of_interest).slice(0, 3);
   const name = investor.name_or_firm || investor.name || "Unnamed Investor";
   const avatarInitial = name.charAt(0).toUpperCase();
@@ -225,7 +193,10 @@ const InvestorCard = ({
           {/* Info */}
           <div className="flex-1 min-w-0 flex flex-col">
             <div className={cardIdentityClass}>
-              <h3 className={cardIdentityTitleClass}>{name}</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className={cardIdentityTitleClass}>{name}</h3>
+                <VerificationBadge tier={investor.verification_tier} />
+              </div>
               <p className={cardIdentitySubtitleClass}>{investorTypeLabel}</p>
             </div>
 
@@ -337,7 +308,10 @@ const InvestorCard = ({
             )}
           </div>
           <div className={`flex-1 min-w-0 ${cardIdentityClass}`}>
-            <h3 className={cardIdentityTitleClass}>{name}</h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className={cardIdentityTitleClass}>{name}</h3>
+              <VerificationBadge tier={investor.verification_tier} />
+            </div>
             <p className={cardIdentitySubtitleClass}>{investorTypeLabel}</p>
           </div>
           <span
@@ -473,53 +447,34 @@ const InvestorsPage = () => {
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [connectingUserId, setConnectingUserId] = useState(null);
   const [isListView, setIsListView] = useState(false);
 
-  // Debounce free-text fields so we don't fetch on every keystroke.
-  // When a free-text input is cleared we want the empty state to apply
-  // immediately (otherwise the previous value lingers for the debounce
-  // window and the user sees stale/empty results).
+  // Debounce only free-text search fields (not dropdowns or check-size inputs).
   const debouncedQ = useDebounce(filters.q, 350);
   const debouncedLocation = useDebounce(filters.location, 350);
-  const debouncedInvestmentMin = useDebounce(filters.investment_min, 350);
-  const debouncedInvestmentMax = useDebounce(filters.investment_max, 350);
-  const effectiveQ = filters.q.trim() === "" ? "" : debouncedQ;
-  const effectiveLocation = filters.location.trim() === "" ? "" : debouncedLocation;
-  const effectiveInvestmentMin =
-    filters.investment_min.trim() === "" ? "" : debouncedInvestmentMin;
-  const effectiveInvestmentMax =
-    filters.investment_max.trim() === "" ? "" : debouncedInvestmentMax;
-  const effectiveFilters = useMemo(
+  const apiFilters = useMemo(
     () => ({
       ...filters,
-      q: effectiveQ,
-      location: effectiveLocation,
-      investment_min: effectiveInvestmentMin,
-      investment_max: effectiveInvestmentMax,
+      q: filters.q.trim() === "" ? "" : debouncedQ,
+      location: filters.location.trim() === "" ? "" : debouncedLocation,
     }),
-    [
-      filters,
-      effectiveQ,
-      effectiveLocation,
-      effectiveInvestmentMin,
-      effectiveInvestmentMax,
-    ],
+    [filters, debouncedQ, debouncedLocation],
   );
 
   const fetchInvestors = useCallback(async () => {
     setLoading(true);
     setError("");
 
-    const result = await apiService.getInvestors({
-      ...effectiveFilters,
-      page,
-      limit: 9,
-    });
+    const result = await apiService.getInvestors(
+      buildInvestorApiParams(apiFilters, { page, limit: 9 }),
+    );
 
     if (!result.success) {
       setError(result.error || "Failed to load investors");
       setInvestors([]);
+      setTotalCount(0);
       setLoading(false);
       return;
     }
@@ -527,12 +482,43 @@ const InvestorsPage = () => {
     const payload = result.data || {};
     setInvestors(Array.isArray(payload.data) ? payload.data : []);
     setTotalPages(payload.totalPages || 1);
+    setTotalCount(payload.total ?? 0);
     setLoading(false);
-  }, [effectiveFilters, page]);
+  }, [apiFilters, page]);
 
   useEffect(() => {
-    fetchInvestors();
-  }, [fetchInvestors]);
+    let active = true;
+
+    const load = async () => {
+      setLoading(true);
+      setError("");
+
+      const result = await apiService.getInvestors(
+        buildInvestorApiParams(apiFilters, { page, limit: 9 }),
+      );
+
+      if (!active) return;
+
+      if (!result.success) {
+        setError(result.error || "Failed to load investors");
+        setInvestors([]);
+        setTotalCount(0);
+        setLoading(false);
+        return;
+      }
+
+      const payload = result.data || {};
+      setInvestors(Array.isArray(payload.data) ? payload.data : []);
+      setTotalPages(payload.totalPages || 1);
+      setTotalCount(payload.total ?? 0);
+      setLoading(false);
+    };
+
+    load();
+    return () => {
+      active = false;
+    };
+  }, [apiFilters, page]);
 
   const handleFilterChange = (key, value) => {
     setPage(1);
@@ -647,7 +633,7 @@ const InvestorsPage = () => {
                 className="w-full h-10 appearance-none rounded-lg bg-surface-alt border border-line pl-3 pr-9 text-sm text-content focus:outline-none focus:border-primary-light/50 transition-colors"
               >
                 <option value="">All Investor Types</option>
-                {INVESTOR_TYPES.map((t) => (
+                {INVESTOR_TYPE_OPTIONS.map((t) => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
@@ -661,7 +647,7 @@ const InvestorsPage = () => {
                 className="w-full h-10 appearance-none rounded-lg bg-surface-alt border border-line pl-3 pr-9 text-sm text-content focus:outline-none focus:border-primary-light/50 transition-colors"
               >
                 <option value="">All Industries</option>
-                {INDUSTRIES.map((ind) => (
+                {INVESTOR_INDUSTRY_OPTIONS.map((ind) => (
                   <option key={ind} value={ind}>{ind}</option>
                 ))}
               </select>
@@ -675,7 +661,7 @@ const InvestorsPage = () => {
                 className="w-full h-10 appearance-none rounded-lg bg-surface-alt border border-line pl-3 pr-9 text-sm text-content focus:outline-none focus:border-primary-light/50 transition-colors"
               >
                 <option value="">All Stages</option>
-                {INVESTMENT_STAGES.map((s) => (
+                {INVESTOR_STAGE_OPTIONS.map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
               </select>
@@ -696,31 +682,39 @@ const InvestorsPage = () => {
 
           {/* Row 3: Check-size range + Sort + Clear (right-aligned) */}
           <div className="flex flex-col lg:flex-row lg:items-center gap-3 pt-1">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="text-xs text-content-muted font-medium whitespace-nowrap">Check size:</span>
-              <div className="relative flex-1 max-w-[140px]">
-                <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted pointer-events-none" />
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={filters.investment_min}
-                  onChange={(e) => handleFilterChange("investment_min", e.target.value)}
-                  className="w-full h-10 rounded-lg bg-surface-alt border border-line pl-7 pr-2 text-sm text-content placeholder:text-content-muted focus:outline-none focus:border-primary-light/50 transition-colors"
-                  min="0"
-                />
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-content-muted font-medium whitespace-nowrap">Check size:</span>
+                <div className="relative flex-1 max-w-[140px]">
+                  <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted pointer-events-none" />
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="2k"
+                    title="Minimum you need — e.g. 2000 or 2k"
+                    value={filters.investment_min}
+                    onChange={(e) => handleFilterChange("investment_min", e.target.value)}
+                    className="w-full h-10 rounded-lg bg-surface-alt border border-line pl-7 pr-2 text-sm text-content placeholder:text-content-muted focus:outline-none focus:border-primary-light/50 transition-colors"
+                  />
+                </div>
+                <span className="text-content-muted text-sm flex-shrink-0">–</span>
+                <div className="relative flex-1 max-w-[140px]">
+                  <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted pointer-events-none" />
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="1m"
+                    title="Maximum you need — e.g. 1000000, 1m, or 1000k"
+                    value={filters.investment_max}
+                    onChange={(e) => handleFilterChange("investment_max", e.target.value)}
+                    className="w-full h-10 rounded-lg bg-surface-alt border border-line pl-7 pr-2 text-sm text-content placeholder:text-content-muted focus:outline-none focus:border-primary-light/50 transition-colors"
+                  />
+                </div>
               </div>
-              <span className="text-content-muted text-sm flex-shrink-0">–</span>
-              <div className="relative flex-1 max-w-[140px]">
-                <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted pointer-events-none" />
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={filters.investment_max}
-                  onChange={(e) => handleFilterChange("investment_max", e.target.value)}
-                  className="w-full h-10 rounded-lg bg-surface-alt border border-line pl-7 pr-2 text-sm text-content placeholder:text-content-muted focus:outline-none focus:border-primary-light/50 transition-colors"
-                  min="0"
-                />
-              </div>
+              <p className="text-[11px] text-content-muted pl-[4.5rem] sm:pl-[5.25rem]">
+                Use 2000, 2k, or 1m ($2K = 2k). With min &amp; max set, only investors
+                whose check size fits within your range are shown.
+              </p>
             </div>
 
             <div className="flex items-center gap-2 lg:ml-auto">
@@ -756,6 +750,12 @@ const InvestorsPage = () => {
           </div>
         )}
 
+        {!loading && (
+          <p className="mt-4 text-sm text-content-secondary">
+            {totalCount === 1 ? "1 investor found" : `${totalCount} investors found`}
+          </p>
+        )}
+
         {loading ? (
           <div className="mt-8 text-content-secondary">Loading investors...</div>
         ) : (
@@ -783,6 +783,7 @@ const InvestorsPage = () => {
                     profileOwnerType: PROFILE_OWNER_TYPES.INVESTOR,
                     connectionStatus: investor.connection_status,
                     connectionRequesterId: investor.connection_requester_id,
+                    connectionDeclinedAt: investor.connection_declined_at,
                   })}
                 />
               ))}

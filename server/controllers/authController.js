@@ -12,6 +12,14 @@ import {
   sendPasswordChangeConfirmationEmail,
 } from "../utils/emailServices.js";
 import { UAParser } from "ua-parser-js";
+import { getStartupProfileByUserId } from "../repositories/StartupProfileRepository.js";
+import { getInvestorProfileByUserId } from "../repositories/InvestorProfileRepository.js";
+import { tryAwardIdentityVerification } from "../services/identityVerificationService.js";
+import {
+  getClientIp,
+  logAuthEvent,
+  touchUserActivity,
+} from "../repositories/UserActivityRepository.js";
 
 //auth business logic
 
@@ -76,12 +84,19 @@ const clearAuthCookies = (res) => {
 // Register new user
 export const register = async (req, res) => {
   try {
-    const { email, password, fullName, userType } = req.body; // Validation
+    const { email, password, fullName, userType, agreedToTerms } = req.body;
 
     if (!email || !password || !fullName || !userType) {
       return res.status(400).json({
         success: false,
         error: "All fields are required",
+      });
+    }
+
+    if (!agreedToTerms) {
+      return res.status(400).json({
+        success: false,
+        error: "You must accept the terms and conditions",
       });
     }
 
@@ -109,10 +124,11 @@ export const register = async (req, res) => {
     const verificationToken = jwt.sign(
       { email: email.toLowerCase() },
       process.env.JWT_VERIFY_SECRET, // Use a separate secret for verification
-      { expiresIn: "24h" },
+      { expiresIn: "1h" },
     );
 
-    const tokenExpiration = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now // 2. Insert user with token and set email_verified to false
+    const tokenExpiration = new Date(Date.now() + 60 * 60 * 1000);
+    const termsVersion = process.env.TERMS_VERSION || "2026-06";
 
     const result = await pool.query(
       `INSERT INTO users (
@@ -122,9 +138,11 @@ export const register = async (req, res) => {
      user_type, 
      email_verified, 
      email_verification_token, 
-     email_verification_token_expires
+     email_verification_token_expires,
+     terms_accepted_at,
+     terms_version
    )
-   VALUES ($1, $2, $3, $4, false, $5, $6)
+   VALUES ($1, $2, $3, $4, false, $5, $6, NOW(), $7)
    RETURNING id, email, full_name, user_type, created_at, email_verification_token, email_verification_token_expires`,
       [
         email.toLowerCase(),
@@ -133,6 +151,7 @@ export const register = async (req, res) => {
         userType,
         verificationToken,
         tokenExpiration,
+        termsVersion,
       ],
     );
 
@@ -161,54 +180,159 @@ export const register = async (req, res) => {
   }
 };
 
+const serializeAuthUser = (user) => ({
+  id: user.id,
+  email: user.email,
+  fullName: user.full_name,
+  userType: user.user_type,
+  emailVerified: user.email_verified,
+  createdAt: user.created_at,
+});
+
+const resolvePostVerificationPath = async (user) => {
+  const profile =
+    user.user_type === "investor"
+      ? await getInvestorProfileByUserId(user.id)
+      : await getStartupProfileByUserId(user.id);
+
+  if (profile) return "/dashboard";
+  return user.user_type === "investor" ? "/investor-onboarding" : "/onboarding";
+};
+
+const createVerifiedUserSession = async (user, req, res) => {
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken();
+  const expiresAt = new Date(Date.now() + LONG_REFRESH_MAX_AGE_MS);
+
+  let deviceInfo = "Email verification";
+  const userAgent = req.headers["user-agent"];
+  if (userAgent) {
+    const parser = new UAParser(userAgent);
+    const browser = parser.getBrowser();
+    const os = parser.getOS();
+    deviceInfo = `${browser.name || "Unknown Browser"} on ${
+      os.name || "Unknown OS"
+    } ${os.version || ""}`.trim();
+  }
+
+  await pool.query(
+    `INSERT INTO sessions (user_id, refresh_token, is_remembered, expires_at, client_ip, device_info)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      user.id,
+      refreshToken,
+      true,
+      expiresAt,
+      req.ip || req.connection?.remoteAddress || null,
+      deviceInfo,
+    ],
+  );
+
+  setAuthCookies(res, {
+    accessToken,
+    refreshToken,
+    isRemembered: true,
+  });
+
+  await touchUserActivity(user.id);
+  await logAuthEvent({
+    userId: user.id,
+    eventType: "session_created",
+    clientIp: getClientIp(req),
+  });
+
+  return {
+    user: serializeAuthUser(user),
+    sessionExpires: expiresAt.toISOString(),
+    redirectPath: await resolvePostVerificationPath(user),
+  };
+};
+
 // Verify email address
 export const verifyEmail = async (req, res) => {
+  const loginUrl = `${getFrontendBaseUrl()}/login`;
+  const wantsJson = req.query.format === "json";
+
+  const fail = (reason, status = 400, message) => {
+    if (wantsJson) {
+      return res.status(status).json({
+        success: false,
+        error: message || "Email verification failed",
+        reason,
+      });
+    }
+    return res.redirect(`${loginUrl}?verified=failed&reason=${reason}`);
+  };
+
   try {
     const { token } = req.query;
-    const loginUrl = `${getFrontendBaseUrl()}/login`;
 
     if (!token) {
-      return res.redirect(`${loginUrl}?verified=failed&reason=missing_token`);
-    } // 1. Verify the token's signature and expiration
+      return fail("missing_token");
+    }
 
     const decoded = jwt.verify(token, process.env.JWT_VERIFY_SECRET);
-    const userEmail = decoded.email; // 2. Find the user by token and ensure it's not expired
+    const userEmail = decoded.email;
 
     const result = await pool.query(
       `SELECT * FROM users
- WHERE email = $1
-   AND email_verification_token = $2
-   AND email_verification_token_expires > NOW()`,
+       WHERE email = $1
+         AND email_verification_token = $2
+         AND email_verification_token_expires > NOW()`,
       [userEmail, token],
     );
 
     if (result.rows.length === 0) {
-      // The token is either invalid, already used, or expired
-      return res.redirect(
-        `${loginUrl}?verified=failed&reason=invalid_or_expired`,
-      );
-    } // 3. Update the user record: set email_verified to true and clear token fields
+      return fail("invalid_or_expired");
+    }
+
+    const userId = result.rows[0].id;
 
     await pool.query(
       `UPDATE users
- SET email_verified = true,
-     email_verification_token = NULL,
-     email_verification_token_expires = NULL
- WHERE id = $1`,
-      [result.rows[0].id],
-    ); // Redirect or send a success message (redirect is common for verification links)
+       SET email_verified = true,
+           email_verification_token = NULL,
+           email_verification_token_expires = NULL
+       WHERE id = $1`,
+      [userId],
+    );
 
-    return res.redirect(`${loginUrl}?verified=success`);
+    const freshUserResult = await pool.query(
+      `SELECT id, email, full_name, user_type, email_verified, created_at
+       FROM users WHERE id = $1`,
+      [userId],
+    );
+    const user = freshUserResult.rows[0];
+    await logAuthEvent({
+      userId: user.id,
+      eventType: "email_verified",
+      clientIp: getClientIp(req),
+    });
+    tryAwardIdentityVerification(userId).catch(() => undefined);
+    const session = await createVerifiedUserSession(user, req, res);
+
+    if (wantsJson) {
+      return res.json({
+        success: true,
+        message: "Email verified successfully",
+        user: session.user,
+        redirectPath: session.redirectPath,
+        sessionExpires: session.sessionExpires,
+      });
+    }
+
+    return res.redirect(
+      `${getFrontendBaseUrl()}${session.redirectPath}?verified=success`,
+    );
   } catch (error) {
     console.error("Email verification error:", error);
-    const loginUrl = `${getFrontendBaseUrl()}/login`;
     if (error.name === "TokenExpiredError") {
-      return res.redirect(`${loginUrl}?verified=failed&reason=expired`);
+      return fail("expired");
     }
     if (error.name === "JsonWebTokenError") {
-      return res.redirect(`${loginUrl}?verified=failed&reason=invalid_token`);
+      return fail("invalid_token");
     }
-    return res.redirect(`${loginUrl}?verified=failed&reason=server_error`);
+    return fail("server_error", 500);
   }
 };
 
@@ -250,10 +374,10 @@ export const resendVerification = async (req, res) => {
     const newVerificationToken = jwt.sign(
       { email: email.toLowerCase() },
       process.env.JWT_VERIFY_SECRET,
-      { expiresIn: "24h" }, // Reset expiration to 24 hours from now
+      { expiresIn: "1h" }, // Reset expiration to 1 hour from now
     );
 
-    const tokenExpiration = new Date(Date.now() + 24 * 60 * 60 * 1000); // 5. Update user with new token and expiration
+    const tokenExpiration = new Date(Date.now() + 60 * 60 * 1000); // 5. Update user with new token and expiration
 
     await pool.query(
       `UPDATE users
@@ -296,7 +420,7 @@ export const login = async (req, res) => {
     const userAgent = req.headers["user-agent"] || null;
 
     const result = await pool.query(
-      "SELECT id, email, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until, created_at FROM users WHERE email = $1",
+      "SELECT id, email, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until, created_at, deleted_at FROM users WHERE email = $1",
       [email.toLowerCase()],
     );
 
@@ -366,6 +490,13 @@ export const login = async (req, res) => {
       );
     }
 
+    if (user.deleted_at) {
+      await pool.query(
+        `UPDATE users SET deleted_at = NULL, deletion_scheduled_at = NULL WHERE id = $1`,
+        [user.id],
+      );
+    }
+
     if (!user.email_verified) {
       return res.status(403).json({
         success: false,
@@ -400,6 +531,12 @@ export const login = async (req, res) => {
       [user.id, refreshToken, isRemembered, expiresAt, clientIp, deviceInfo],
     );
     setAuthCookies(res, { accessToken, refreshToken, isRemembered });
+    await touchUserActivity(user.id);
+    await logAuthEvent({
+      userId: user.id,
+      eventType: "login_success",
+      clientIp,
+    });
     res.json({
       success: true,
       message: "Login successful",
@@ -525,6 +662,12 @@ export const forgotPassword = async (req, res) => {
     // 4. Send reset email (Await is safe here, but can be non-blocking in production)
     await sendPasswordResetEmail(email.toLowerCase(), resetToken);
 
+    await logAuthEvent({
+      userId,
+      eventType: "password_reset_requested",
+      clientIp: getClientIp(req),
+    });
+
     // 5. Final success response (same as above)
     res.status(200).json({
       success: true,
@@ -623,6 +766,12 @@ export const resetPassword = async (req, res) => {
     // 7. Send confirmation email
     await sendPasswordChangeConfirmationEmail(userEmail);
 
+    await logAuthEvent({
+      userId,
+      eventType: "password_reset",
+      clientIp: getClientIp(req),
+    });
+
     res.status(200).json({
       success: true,
       message: "Password reset successful. You can now log in.",
@@ -654,6 +803,12 @@ export const logout = async (req, res) => {
       );
     }
 
+    await logAuthEvent({
+      userId,
+      eventType: "logout",
+      clientIp: getClientIp(req),
+    });
+
     res.status(200).json({
       success: true,
       message: "Logged out successfully from current device.",
@@ -678,6 +833,12 @@ export const logoutAll = async (req, res) => {
       "DELETE FROM sessions WHERE user_id = $1 RETURNING id",
       [userId],
     );
+
+    await logAuthEvent({
+      userId,
+      eventType: "logout_all",
+      clientIp: getClientIp(req),
+    });
 
     res.status(200).json({
       success: true,
@@ -726,6 +887,42 @@ export const getActiveSessions = async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Server error while retrieving sessions.",
+    });
+  }
+};
+
+export const revokeSession = async (req, res) => {
+  const userId = req.user.id;
+  const sessionId = req.params.sessionId;
+
+  try {
+    const result = await pool.query(
+      `DELETE FROM sessions WHERE id = $1 AND user_id = $2 RETURNING id`,
+      [sessionId, userId],
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Session not found",
+      });
+    }
+
+    await logAuthEvent({
+      userId,
+      eventType: "session_revoked",
+      clientIp: getClientIp(req),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Session revoked successfully",
+    });
+  } catch (error) {
+    console.error("Revoke session error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while revoking session.",
     });
   }
 };

@@ -117,9 +117,9 @@ export const validatePassword = (password) => {
     errors: [],
   };
 
-  if (password.length < 8) {
+  if (password.length < 10) {
     result.isValid = false;
-    result.errors.push('Password must be at least 8 characters long');
+    result.errors.push('Password must be at least 10 characters long');
   }
 
   if (!/[a-z]/.test(password)) {

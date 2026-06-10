@@ -1,6 +1,13 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiService } from "../services/apiService";
+import { useAuth } from "../hooks/useAuth";
+import IntentLevelControl from "../components/investor/IntentLevelControl";
+import ConnectionNotesPanel from "../components/connections/ConnectionNotesPanel";
+import ConnectionMeetingsPanel from "../components/connections/ConnectionMeetingsPanel";
+import ConnectionDdChecklistPanel from "../components/connections/ConnectionDdChecklistPanel";
+import ConnectionQaPanel from "../components/connections/ConnectionQaPanel";
+import VerificationBadge from "../components/common/VerificationBadge";
 import {
   cardIdentityClass,
   cardIdentitySubtitleMutedClass,
@@ -9,6 +16,9 @@ import {
 
 const ConnectionsPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  const isInvestor = user?.userType === "investor";
   const [activeTab, setActiveTab] = useState("connected");
   const [connections, setConnections] = useState([]);
   const [pendingSent, setPendingSent] = useState([]);
@@ -16,6 +26,10 @@ const ConnectionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [notesConnection, setNotesConnection] = useState(null);
+  const [meetingsConnection, setMeetingsConnection] = useState(null);
+  const [ddConnection, setDdConnection] = useState(null);
+  const [qaConnection, setQaConnection] = useState(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -53,6 +67,23 @@ const ConnectionsPage = () => {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    const panel = searchParams.get("open");
+    const connectionId = searchParams.get("connectionId");
+    if (panel !== "meetings" || !connectionId || loading) return;
+
+    const connection = connections.find(
+      (item) => String(item.id) === String(connectionId),
+    );
+    if (!connection) return;
+
+    setMeetingsConnection({
+      ...connection,
+      openRequestForm: false,
+    });
+    setSearchParams({}, { replace: true });
+  }, [connections, loading, searchParams, setSearchParams]);
+
   const handleRespond = async (connectionId, status) => {
     setActionLoadingId(connectionId);
     const result = await apiService.respondToConnection(connectionId, status);
@@ -78,19 +109,6 @@ const ConnectionsPage = () => {
 
     if (!result.success) {
       setError(result.error || "Failed to remove connection");
-      return;
-    }
-
-    await loadData();
-  };
-
-  const handleCancelRequest = async (connectionId) => {
-    setActionLoadingId(connectionId);
-    const result = await apiService.removeConnection(connectionId);
-    setActionLoadingId(null);
-
-    if (!result.success) {
-      setError(result.error || "Failed to cancel request");
       return;
     }
 
@@ -230,9 +248,31 @@ const ConnectionsPage = () => {
                                 {connection.other_user_name || "User"}
                               </p>
                             )}
-                            <p className={`${cardIdentitySubtitleMutedClass} capitalize`}>
-                              {connection.other_user_type || "member"}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className={`${cardIdentitySubtitleMutedClass} capitalize`}>
+                                {connection.other_user_type || "member"}
+                              </p>
+                              {connection.other_user_verification_tier && (
+                                <VerificationBadge tier={connection.other_user_verification_tier} />
+                              )}
+                            </div>
+                            {isInvestor && connection.other_user_type === "startup" && (
+                              <div className="mt-2 max-w-xs">
+                                <IntentLevelControl
+                                  connectionId={connection.id}
+                                  value={connection.intent_level}
+                                  onChange={(level) => {
+                                    setConnections((prev) =>
+                                      prev.map((item) =>
+                                        item.id === connection.id
+                                          ? { ...item, intent_level: level }
+                                          : item,
+                                      ),
+                                    );
+                                  }}
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -246,6 +286,39 @@ const ConnectionsPage = () => {
                               View Profile
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => setNotesConnection(connection)}
+                            className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm"
+                          >
+                            Notes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setMeetingsConnection({
+                                ...connection,
+                                openRequestForm: isInvestor,
+                              })
+                            }
+                            className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm"
+                          >
+                            {isInvestor ? "Request Meeting" : "Meetings"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDdConnection(connection)}
+                            className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm"
+                          >
+                            DD Checklist
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQaConnection(connection)}
+                            className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm"
+                          >
+                            Q&A
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleMessage(connection)}
@@ -311,6 +384,11 @@ const ConnectionsPage = () => {
                             <p className={`${cardIdentitySubtitleMutedClass} capitalize`}>
                               {request.target_user_type || "member"}
                             </p>
+                            {request.message && (
+                              <p className="text-sm text-content-secondary mt-1 italic">
+                                "{request.message}"
+                              </p>
+                            )}
                           </div>
                         </div>
 
@@ -327,14 +405,6 @@ const ConnectionsPage = () => {
                           <span className="px-2.5 py-1 text-xs border border-warning/30 bg-warning/15 text-warning rounded-full">
                             Pending
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => handleCancelRequest(request.id)}
-                            disabled={actionLoadingId === request.id}
-                            className="px-3 py-1.5 rounded-lg border border-line text-content-muted hover:text-content text-sm disabled:opacity-50 transition-colors"
-                          >
-                            {actionLoadingId === request.id ? "…" : "Cancel"}
-                          </button>
                         </div>
                       </div>
                     );
@@ -434,6 +504,53 @@ const ConnectionsPage = () => {
           </section>
         )}
       </div>
+
+      {notesConnection && (
+        <ConnectionNotesPanel
+          connectionId={notesConnection.id}
+          title={`Notes — ${notesConnection.other_user_name || "connection"}`}
+          onClose={() => setNotesConnection(null)}
+        />
+      )}
+      {meetingsConnection && (
+        <ConnectionMeetingsPanel
+          connectionId={meetingsConnection.id}
+          otherUserName={meetingsConnection.other_user_name}
+          initialShowRequestForm={Boolean(meetingsConnection.openRequestForm)}
+          onClose={() => setMeetingsConnection(null)}
+        />
+      )}
+      {ddConnection && (
+        <ConnectionDdChecklistPanel
+          connectionId={ddConnection.id}
+          otherUserName={ddConnection.other_user_name}
+          startupProfileId={
+            isInvestor && ddConnection.other_user_type === "startup"
+              ? ddConnection.other_user_profile_id
+              : null
+          }
+          onClose={() => setDdConnection(null)}
+          onAskAboutItem={(item) => {
+            const connection = ddConnection;
+            setDdConnection(null);
+            setQaConnection({
+              id: connection.id,
+              other_user_name: connection.other_user_name,
+              checklistItemId: item.id,
+              checklistItemDescription: item.description,
+            });
+          }}
+        />
+      )}
+      {qaConnection && (
+        <ConnectionQaPanel
+          connectionId={qaConnection.id}
+          otherUserName={qaConnection.other_user_name}
+          checklistItemId={qaConnection.checklistItemId}
+          checklistItemDescription={qaConnection.checklistItemDescription}
+          onClose={() => setQaConnection(null)}
+        />
+      )}
     </div>
   );
 };

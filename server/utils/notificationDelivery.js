@@ -1,15 +1,12 @@
 import { getNotificationSettingsByUserId } from "../repositories/NotificationSettingsRepository.js";
-import nodemailer from 'nodemailer';
 import pool from "../config/database.js";
+import {
+  createEmailTransporter,
+  getEmailFromAddress,
+} from "./emailTransport.js";
 
-// Use environment variables for secure configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const transporter = createEmailTransporter();
+const emailFrom = () => `"Startup Connect" <${getEmailFromAddress()}>`;
 
 /**
  * Notification types enum
@@ -217,7 +214,7 @@ async function sendNotificationEmail(userId, notificationType, data) {
     switch (notificationType) {
       case NotificationType.CONNECTION_REQUEST:
         mailOptions = {
-          from: `"Startup Connect" <${process.env.EMAIL_USER}>`,
+          from: emailFrom(),
           to: email,
           subject: 'New Connection Request',
           html: `
@@ -231,7 +228,7 @@ async function sendNotificationEmail(userId, notificationType, data) {
         
       case NotificationType.MESSAGE:
         mailOptions = {
-          from: `"Startup Connect" <${process.env.EMAIL_USER}>`,
+          from: emailFrom(),
           to: email,
           subject: 'New Message',
           html: `
@@ -245,7 +242,7 @@ async function sendNotificationEmail(userId, notificationType, data) {
         
       case NotificationType.PROFILE_VIEW:
         mailOptions = {
-          from: `"Startup Connect" <${process.env.EMAIL_USER}>`,
+          from: emailFrom(),
           to: email,
           subject: 'Someone Viewed Your Profile',
           html: `
@@ -416,7 +413,7 @@ async function sendBatchedDigest(userId, email, fullName, frequency) {
     `;
     
     const mailOptions = {
-      from: `"Startup Connect" <${process.env.EMAIL_USER}>`,
+      from: emailFrom(),
       to: email,
       subject: `Your ${frequency.charAt(0).toUpperCase() + frequency.slice(1)} Digest`,
       html: digestHtml,

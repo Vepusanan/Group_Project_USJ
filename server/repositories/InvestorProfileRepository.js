@@ -1,4 +1,5 @@
 import pool from "../config/database.js";
+import { normalizeFilterToken, normalizeFilterTokenList } from "../utils/filterNormalize.js";
 
 const safeStringify = (value) => {
   if (value === undefined || value === null) return null;
@@ -205,28 +206,56 @@ const buildListInvestorsQuery = ({
   }
 
   if (industries.length > 0) {
-    const normalized = industries.map((i) => i.trim().toLowerCase());
+    const normalized = normalizeFilterTokenList(industries);
     const ref = addValue(normalized);
     clauses.push(
-      `EXISTS (SELECT 1 FROM jsonb_array_elements_text(ip.industries_of_interest) AS ind WHERE LOWER(ind) = ANY(${ref}))`,
+      `EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements_text(
+          CASE jsonb_typeof(ip.industries_of_interest)
+            WHEN 'array' THEN ip.industries_of_interest
+            ELSE '[]'::jsonb
+          END
+        ) AS ind
+        WHERE regexp_replace(LOWER(ind), '[^a-z0-9]', '', 'g') = ANY(${ref})
+      )`,
     );
   }
 
   if (investmentStage) {
-    // stage_preference values are stored uppercase (e.g. "SEED", "SERIES_A").
-    // Compare case-insensitively so the lowercased query input still matches.
-    const ref = addValue(investmentStage.trim().toLowerCase());
+    const stageToken = normalizeFilterToken(investmentStage);
+    const ref = addValue(stageToken);
     clauses.push(
-      `EXISTS (SELECT 1 FROM jsonb_array_elements_text(ip.stage_preference) AS stage WHERE LOWER(stage) = ${ref})`,
+      `EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements_text(
+          CASE jsonb_typeof(ip.stage_preference)
+            WHEN 'array' THEN ip.stage_preference
+            ELSE '[]'::jsonb
+          END
+        ) AS stage
+        WHERE regexp_replace(LOWER(stage), '[^a-z0-9]', '', 'g') = ${ref}
+      )`,
     );
   }
 
-  if (investmentMin != null) {
+  // Check-size filter (amounts in whole USD, same scale as profile cards):
+  // - min only  → investor can write at least that much
+  // - max only  → investor's minimum ticket fits a raise up to that size
+  // - both set  → investor can participate in [min,max] AND their max check ≤ your max
+  //   (excludes e.g. $25K–$2M when you filter up to $100K)
+  if (investmentMin != null && investmentMax != null) {
+    const minRef = addValue(investmentMin);
+    const maxRef = addValue(investmentMax);
+    clauses.push(
+      `(ip.min_investment_size <= ${maxRef}
+        AND ip.max_investment_size >= ${minRef}
+        AND ip.max_investment_size <= ${maxRef})`,
+    );
+  } else if (investmentMin != null) {
     const ref = addValue(investmentMin);
     clauses.push(`ip.max_investment_size >= ${ref}`);
-  }
-
-  if (investmentMax != null) {
+  } else if (investmentMax != null) {
     const ref = addValue(investmentMax);
     clauses.push(`ip.min_investment_size <= ${ref}`);
   }
@@ -246,14 +275,20 @@ const buildListInvestorsQuery = ({
   return { whereClause, values };
 };
 
+const investorVerificationRankSql = `CASE COALESCE(u.verification_tier::text, 'UNVERIFIED')
+  WHEN 'BUSINESS_VERIFIED' THEN 2
+  WHEN 'IDENTITY_VERIFIED' THEN 1
+  ELSE 0
+END DESC`;
+
 const getInvestorSortClause = (sort) => {
   switch (sort) {
     case "alphabetical":
-      return "ORDER BY ip.name_or_firm ASC NULLS LAST";
+      return `ORDER BY ${investorVerificationRankSql}, ip.name_or_firm ASC NULLS LAST`;
     case "most_experienced":
-      return "ORDER BY ip.years_of_experience DESC NULLS LAST";
+      return `ORDER BY ${investorVerificationRankSql}, ip.years_of_experience DESC NULLS LAST`;
     default:
-      return "ORDER BY ip.investor_profile_id DESC";
+      return `ORDER BY ${investorVerificationRankSql}, ip.investor_profile_id DESC`;
   }
 };
 
@@ -424,9 +459,10 @@ export async function listInvestors(options = {}) {
   const offsetRef = `$${paginationValues.length}`;
 
   const selectSql = `
-    SELECT ip.*
+    SELECT ip.*, COALESCE(u.verification_tier::text, 'UNVERIFIED') AS verification_tier
     FROM investor_profiles ip
     LEFT JOIN privacy_settings ps ON ps.user_id = ip.user_id
+    LEFT JOIN users u ON u.id = ip.user_id
     ${whereClause}
     ${getInvestorSortClause(sort)}
     LIMIT ${limitRef} OFFSET ${offsetRef}
@@ -436,6 +472,7 @@ export async function listInvestors(options = {}) {
     SELECT COUNT(*)::int AS total
     FROM investor_profiles ip
     LEFT JOIN privacy_settings ps ON ps.user_id = ip.user_id
+    LEFT JOIN users u ON u.id = ip.user_id
     ${whereClause}
   `;
 
@@ -480,7 +517,11 @@ export async function getConnectionStatusesForInvestors(
 
   const connectionsResult = await pool.query(
     `
-      SELECT c.id::text AS connection_id, c.investor_id::text AS investor_user_id, c.requester_id::text AS requester_id, c.status
+      SELECT c.id::text AS connection_id,
+             c.investor_id::text AS investor_user_id,
+             c.requester_id::text AS requester_id,
+             c.status,
+             c.declined_at
       FROM public.connections c
       WHERE c.startup_id::text = $1
         AND c.investor_id::text = ANY($2::text[])
@@ -493,7 +534,15 @@ export async function getConnectionStatusesForInvestors(
       .map((row) => {
         const status = normalizeConnectionStatus(row.status);
         if (!status) return null;
-        return [row.investor_user_id, { status, connection_id: row.connection_id, requester_id: row.requester_id }];
+        return [
+          row.investor_user_id,
+          {
+            status,
+            connection_id: row.connection_id,
+            requester_id: row.requester_id,
+            declined_at: row.declined_at || null,
+          },
+        ];
       })
       .filter(Boolean),
   );

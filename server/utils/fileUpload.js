@@ -2,8 +2,11 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import sharp from "sharp";
+import { fileURLToPath } from "url";
 
-const uploadDir = path.join(process.cwd(), "server", "uploads");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadDir = path.join(__dirname, "..", "uploads");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -40,6 +43,20 @@ export const upload = multer({
   storage,
   fileFilter,
   limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB per file
+});
+
+const videoFilter = (req, file, cb) => {
+  if (file.mimetype === "video/mp4") {
+    cb(null, true);
+  } else {
+    cb(new Error("Founder video must be an MP4 file"));
+  }
+};
+
+export const videoUpload = multer({
+  storage,
+  fileFilter: videoFilter,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB for founder video
 });
 
 export async function processImage(filePath) {

@@ -2,14 +2,13 @@ import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import OnboardingWizard from "../components/onboarding/OnboardingWizard";
 import { useProfileExistence } from "../hooks/useProfileCache";
-
 const OnboardingPage = () => {
   const navigate = useNavigate();
   const { isReady, hasProfile } = useProfileExistence();
 
   useEffect(() => {
     if (isReady && hasProfile) {
-      navigate("/investors", { replace: true });
+      navigate("/profile", { replace: true });
     }
   }, [isReady, hasProfile, navigate]);
 

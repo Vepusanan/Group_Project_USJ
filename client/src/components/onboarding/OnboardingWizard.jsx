@@ -47,7 +47,9 @@ const OnboardingWizard = () => {
     previous_funding: "0",
     use_of_funds: "",
     revenue_status: "",
+    pitch_deck_file: null,
     pitch_deck_url: "",
+    business_plan_file: null,
     business_plan_url: "",
     product_demo_url: "",
     primary_contact_name: "",
@@ -131,9 +133,15 @@ const OnboardingWizard = () => {
       if (formData.logo_file) {
         fd.append("logo", formData.logo_file);
       }
+      if (formData.pitch_deck_file) {
+        fd.append("pitch_deck", formData.pitch_deck_file);
+      }
+      if (formData.business_plan_file) {
+        fd.append("business_plan", formData.business_plan_file);
+      }
 
       for (const [key, value] of Object.entries(formData)) {
-        if (key === "logo_file" || key === "logo_preview") continue;
+        if (key === "logo_file" || key === "logo_preview" || key === "pitch_deck_file" || key === "business_plan_file") continue;
         if (value === undefined || value === null) continue;
         if (key === "founder_names") {
           const filtered = (Array.isArray(value) ? value : [value]).map((n) => n.trim()).filter(Boolean);
@@ -152,7 +160,7 @@ const OnboardingWizard = () => {
         // Mark profile as created so OnboardingGuard skips the API check on
         // the next navigation.
         markComplete(user?.id);
-        navigate("/investors", { state: { message: "Profile created successfully!" } });
+        navigate("/profile", { state: { message: "Profile created successfully!" } });
       } else {
         setSubmitError(result.error || "Failed to create profile");
       }

@@ -29,6 +29,12 @@ const Header = () => {
   const navItems = [
     { to: "/startups", label: "Startups" },
     { to: "/investors", label: "Investors" },
+    ...(isInvestor
+      ? [
+          { to: "/pipeline", label: "Pipeline" },
+          { to: "/watchlist", label: "Watchlist" },
+        ]
+      : [{ to: "/analytics", label: "Analytics" }]),
     { to: "/connections", label: "My Connections" },
     { to: "/messages", label: "Messages" },
   ];
@@ -79,12 +85,45 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [showNotifications]);
 
-  const handleMarkNotificationRead = async (notificationKey) => {
-    const result = await apiService.markNotificationRead(notificationKey);
-    if (!result.success) return;
-    setNotifications((prev) =>
-      prev.filter((item) => item.key !== notificationKey),
-    );
+  const handleNotificationClick = async (notification) => {
+    const result = await apiService.markNotificationRead(notification.key);
+    if (result.success) {
+      setNotifications((prev) =>
+        prev.filter((item) => item.key !== notification.key),
+      );
+    }
+
+    if (notification.type === "data_room_access" && notification.data?.startupProfileId) {
+      setShowNotifications(false);
+      navigate(`/startups/${notification.data.startupProfileId}/data-room`);
+      return;
+    }
+
+    if (
+      notification.type === "meeting_request" ||
+      notification.type === "meeting_confirmed" ||
+      notification.type === "meeting_declined"
+    ) {
+      setShowNotifications(false);
+      const connectionId = notification.data?.connectionId;
+      if (connectionId) {
+        navigate(`/connections?open=meetings&connectionId=${connectionId}`);
+      } else {
+        navigate("/connections");
+      }
+      return;
+    }
+
+    if (
+      notification.type === "connection_request" ||
+      notification.type === "dd_checklist_shared" ||
+      notification.type === "dd_checklist_response" ||
+      notification.type === "qa_question" ||
+      notification.type === "qa_answer"
+    ) {
+      setShowNotifications(false);
+      navigate("/connections");
+    }
   };
 
   return (
@@ -177,9 +216,7 @@ const Header = () => {
                                   key={notification.key}
                                   type="button"
                                   onClick={() =>
-                                    handleMarkNotificationRead(
-                                      notification.key,
-                                    )
+                                    handleNotificationClick(notification)
                                   }
                                   className="w-full text-left rounded-lg border border-line bg-surface-alt p-3 hover:bg-primary-light transition-colors"
                                 >

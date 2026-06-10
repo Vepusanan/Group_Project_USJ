@@ -19,9 +19,30 @@ import {
   isUsersConnected,
 } from "../repositories/ConnectionRepository.js";
 import {
+  ensureInvestorMatchScores,
+  invalidateInvestorMatchScores,
+  invalidateStartupMatchScores,
+} from "../services/compatibilityMatchService.js";
+import { getMatchScoresForInvestor } from "../repositories/CompatibilityMatchScoreRepository.js";
+import { getProfileIntent } from "../repositories/InvestorProfileIntentRepository.js";
+import { getIntentMapForInvestor } from "../repositories/InvestorIntentRepository.js";
+import { calculateCompatibilityScore } from "../utils/compatibilityScore.js";
+import { buildMatchExplanationAsync } from "../utils/matchExplanation.js";
+import { recordStartupProfileView } from "../repositories/StartupProfileViewRepository.js";
+import { notifyProfileView } from "../utils/notificationDelivery.js";
+import { getUserVerification } from "../repositories/VerificationRepository.js";
+import { getCredibilitySignals } from "../services/credibilityService.js";
+import { tryAwardIdentityVerification } from "../services/identityVerificationService.js";
+import { touchUserActivity } from "../repositories/UserActivityRepository.js";
+import { resolveFundingRoundVisibility } from "./fundingRoundController.js";
+import { serializeFundingRoundForViewer } from "../repositories/FundingRoundRepository.js";
+import {
   uploadStartupLogo,
   uploadInvestorPhoto,
   uploadMultipleDocuments,
+  uploadDocument,
+  uploadFounderVideo,
+  uploadFounderVideoThumbnail,
 } from "../utils/supabaseStorage.js";
 
 const cleanupFiles = (files) => {
@@ -44,14 +65,83 @@ async function processStartupUploads(req) {
     }
   }
 
+  if (files.pitch_deck?.length) {
+    const deckFile = files.pitch_deck[0];
+    if (deckFile.mimetype !== "application/pdf") {
+      cleanupFiles([deckFile]);
+      throw new Error("Pitch deck must be a PDF file");
+    }
+    try {
+      const startupId = req.body?.startup_profile_id || req.params?.id || "tmp";
+      const doc = await uploadDocument(
+        deckFile.path,
+        deckFile.originalname,
+        startupId,
+      );
+      uploads.pitch_deck_url = doc.url;
+    } catch (err) {
+      cleanupFiles([deckFile]);
+      throw new Error(`Pitch deck upload failed: ${err.message}`);
+    }
+  }
+
+  if (files.business_plan?.length) {
+    const planFile = files.business_plan[0];
+    try {
+      const startupId = req.body?.startup_profile_id || req.params?.id || "tmp";
+      const doc = await uploadDocument(
+        planFile.path,
+        planFile.originalname,
+        startupId,
+      );
+      uploads.business_plan_url = doc.url;
+    } catch (err) {
+      cleanupFiles([planFile]);
+      throw new Error(`Business plan upload failed: ${err.message}`);
+    }
+  }
+
   if (files.documents?.length) {
     try {
-      const docs = await uploadMultipleDocuments(files.documents, "tmp");
+      const startupId = req.body?.startup_profile_id || req.params?.id || "tmp";
+      const docs = await uploadMultipleDocuments(files.documents, startupId);
       if (docs[0]) uploads.pitch_deck_url = uploads.pitch_deck_url || docs[0].url;
       if (docs[1]) uploads.business_plan_url = uploads.business_plan_url || docs[1].url;
     } catch (err) {
       cleanupFiles(files.documents || []);
       throw new Error(`Document upload failed: ${err.message}`);
+    }
+  }
+
+  if (files.founder_video?.length) {
+    const videoFile = files.founder_video[0];
+    if (videoFile.mimetype !== "video/mp4") {
+      cleanupFiles([videoFile]);
+      throw new Error("Founder video must be an MP4 file");
+    }
+    try {
+      const startupId = req.body?.startup_profile_id || req.params?.id || "tmp";
+      uploads.founder_video_url = await uploadFounderVideo(
+        videoFile.path,
+        startupId,
+      );
+    } catch (err) {
+      cleanupFiles([videoFile]);
+      throw new Error(`Founder video upload failed: ${err.message}`);
+    }
+  }
+
+  if (files.founder_video_thumbnail?.length) {
+    const thumbFile = files.founder_video_thumbnail[0];
+    try {
+      const startupId = req.body?.startup_profile_id || req.params?.id || "tmp";
+      uploads.founder_video_thumbnail_url = await uploadFounderVideoThumbnail(
+        thumbFile.path,
+        startupId,
+      );
+    } catch (err) {
+      cleanupFiles([thumbFile]);
+      throw new Error(`Video thumbnail upload failed: ${err.message}`);
     }
   }
 
@@ -317,8 +407,20 @@ export const updateProfile = async (req, res, next) => {
         .json({ error: "Profile not found or not owned by user" });
     }
 
+    invalidateStartupMatchScores(profileId).catch((invalidateError) => {
+      console.error(
+        "Failed to invalidate match scores after profile update:",
+        invalidateError.message,
+      );
+    });
+
+    tryAwardIdentityVerification(req.user.id).catch(() => undefined);
+
     res.json({ success: true, data: updated });
   } catch (err) {
+    if (err.message?.includes("upload failed") || err.message?.includes("Pitch deck")) {
+      return res.status(400).json({ error: err.message });
+    }
     next(err);
   }
 };
@@ -346,6 +448,7 @@ export const getProfile = async (req, res, next) => {
     let connectionStatus = null;
     let connectionId = null;
     let connectionRequesterId = null;
+    let connectionDeclinedAt = null;
     if (requestingUserId && !isOwner) {
       const connection = await getConnectionBetweenUsers(
         profile.user_id,
@@ -354,7 +457,29 @@ export const getProfile = async (req, res, next) => {
       connectionStatus = connection?.normalized_status || null;
       connectionId = connection?.id || null;
       connectionRequesterId = connection?.requester_id || null;
+      connectionDeclinedAt = connection?.declined_at || null;
     }
+
+    const ownerVerification = await getUserVerification(profile.user_id);
+    const verificationTier =
+      ownerVerification?.verification_tier || "UNVERIFIED";
+
+    const canViewPrivateDocs =
+      isOwner ||
+      (requestingUserId &&
+        req.user?.user_type === "investor" &&
+        connectionStatus === "accepted");
+
+    const { round: fundingRound, canViewFinancials } =
+      await resolveFundingRoundVisibility({
+        profile,
+        requestingUserId,
+        requestingUserType: req.user?.user_type,
+      });
+
+    const fundingRoundPayload = serializeFundingRoundForViewer(fundingRound, {
+      canViewFinancials,
+    });
 
     const publicFields = {
       startup_profile_id: profile.startup_profile_id,
@@ -378,8 +503,18 @@ export const getProfile = async (req, res, next) => {
       key_metrics: profile.key_metrics,
       major_achievements: profile.major_achievements,
       customer_testimonials: profile.customer_testimonials,
-      pitch_deck_url: profile.pitch_deck_url,
-      business_plan_url: profile.business_plan_url,
+      has_pitch_deck: Boolean(profile.pitch_deck_url),
+      can_view_pitch_deck:
+        Boolean(profile.pitch_deck_url) &&
+        (canViewPrivateDocs ||
+          (req.user?.user_type === "investor" && !isOwner)),
+      has_founder_video: Boolean(profile.founder_video_url),
+      can_view_founder_video:
+        canViewPrivateDocs && Boolean(profile.founder_video_url),
+      founder_video_url: canViewPrivateDocs ? profile.founder_video_url : null,
+      founder_video_thumbnail_url: profile.founder_video_thumbnail_url || null,
+      has_business_plan: Boolean(profile.business_plan_url),
+      business_plan_url: canViewPrivateDocs ? profile.business_plan_url : null,
       product_demo_url: profile.product_demo_url,
       primary_contact_name: profile.primary_contact_name,
       contact_email: profile.contact_email,
@@ -394,13 +529,86 @@ export const getProfile = async (req, res, next) => {
       connection_status: connectionStatus,
       connection_id: connectionId,
       connection_requester_id: connectionRequesterId,
+      connection_declined_at: connectionDeclinedAt,
+      funding_round: fundingRoundPayload,
+      verification_tier: verificationTier,
       created_at: profile.created_at,
       updated_at: profile.updated_at,
     };
 
+    try {
+      publicFields.credibility_signals = await getCredibilitySignals(
+        profile.user_id,
+        "startup",
+      );
+    } catch (credErr) {
+      console.error("Failed to load credibility signals:", credErr.message);
+    }
+
+    if (
+      requestingUserId &&
+      !isOwner &&
+      req.user?.user_type === "investor"
+    ) {
+      try {
+        await recordStartupProfileView(
+          profile.startup_profile_id,
+          requestingUserId,
+        );
+        await touchUserActivity(requestingUserId);
+        await notifyProfileView(
+          profile.user_id,
+          req.user.full_name || "An investor",
+        );
+      } catch (viewErr) {
+        console.error("Failed to record profile view:", viewErr.message);
+      }
+    }
+
+    if (
+      requestingUserId &&
+      !isOwner &&
+      req.user?.user_type === "investor"
+    ) {
+      try {
+        await ensureInvestorMatchScores(req.user.id);
+        const scoreMap = await getMatchScoresForInvestor(req.user.id, [
+          profile.startup_profile_id,
+        ]);
+        const investorProfile = await getInvestorProfileByUserId(req.user.id);
+        const entry = scoreMap.get(String(profile.startup_profile_id));
+        if (entry) {
+          publicFields.match_score = entry.match_score;
+        } else if (investorProfile) {
+          const computed = calculateCompatibilityScore(profile, investorProfile);
+          publicFields.match_score = computed.match_score;
+        }
+      } catch (matchErr) {
+        console.error("Failed to attach match compatibility:", matchErr.message);
+      }
+
+      try {
+        if (connectionId) {
+          const intentMap = await getIntentMapForInvestor(req.user.id);
+          const intent = intentMap.get(String(connectionId));
+          publicFields.intent_level = intent?.intent_level || null;
+        } else {
+          const profileIntent = await getProfileIntent(
+            req.user.id,
+            profile.startup_profile_id,
+          );
+          publicFields.profile_intent_level = profileIntent?.intent_level || null;
+        }
+      } catch (intentErr) {
+        console.error("Failed to attach profile intent:", intentErr.message);
+      }
+    }
+
     if (isOwner) {
       const full = { ...profile };
       full.social_media_links = parseJsonValue(full.social_media_links);
+      full.funding_round = fundingRoundPayload;
+      full.verification_tier = verificationTier;
       return res.json({ success: true, data: full });
     }
 
@@ -525,6 +733,9 @@ export const updateInvestorProfileController = async (req, res, next) => {
         .json({ error: "Profile not found or not owned by user" });
     }
 
+    await invalidateInvestorMatchScores(req.user.id);
+    tryAwardIdentityVerification(req.user.id).catch(() => undefined);
+
     res.json({ success: true, data: updated });
   } catch (err) {
     next(err);
@@ -554,6 +765,7 @@ export const getInvestorProfileController = async (req, res, next) => {
     let connectionStatus = null;
     let connectionId = null;
     let connectionRequesterId = null;
+    let connectionDeclinedAt = null;
     if (requestingUserId && !isOwner) {
       const connection = await getConnectionBetweenUsers(
         profile.user_id,
@@ -562,7 +774,12 @@ export const getInvestorProfileController = async (req, res, next) => {
       connectionStatus = connection?.normalized_status || null;
       connectionId = connection?.id ? String(connection.id) : null;
       connectionRequesterId = connection?.requester_id ? String(connection.requester_id) : null;
+      connectionDeclinedAt = connection?.declined_at || null;
     }
+
+    const ownerVerification = await getUserVerification(profile.user_id);
+    const verificationTier =
+      ownerVerification?.verification_tier || "UNVERIFIED";
 
     const publicFields = {
       investor_profile_id: profile.investor_profile_id,
@@ -592,9 +809,20 @@ export const getInvestorProfileController = async (req, res, next) => {
       connection_status: connectionStatus,
       connection_id: connectionId,
       connection_requester_id: connectionRequesterId,
+      connection_declined_at: connectionDeclinedAt,
+      verification_tier: verificationTier,
       created_at: profile.created_at,
       updated_at: profile.updated_at,
     };
+
+    try {
+      publicFields.credibility_signals = await getCredibilitySignals(
+        profile.user_id,
+        "investor",
+      );
+    } catch (credErr) {
+      console.error("Failed to load investor credibility signals:", credErr.message);
+    }
 
     if (isOwner) {
       const full = { ...profile };
@@ -607,6 +835,7 @@ export const getInvestorProfileController = async (req, res, next) => {
       ]) {
         full[key] = parseJsonValue(full[key]);
       }
+      full.verification_tier = verificationTier;
       return res.json({ success: true, data: full });
     }
 
@@ -711,6 +940,60 @@ export const getProfileCompletion = async (req, res, next) => {
     return res.status(400).json({
       error: "Invalid user type",
       message: "User must be either startup or investor",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getStartupMatchExplanation = async (req, res, next) => {
+  try {
+    if (req.user.user_type !== "investor") {
+      return res.status(403).json({
+        success: false,
+        error: "Only investors can request match explanations",
+      });
+    }
+
+    const profile = await getStartupProfileById(req.params.id);
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        error: "Startup profile not found",
+      });
+    }
+
+    const investorProfile = await getInvestorProfileByUserId(req.user.id);
+    if (!investorProfile) {
+      return res.status(400).json({
+        success: false,
+        error: "Complete your investor profile to view match explanations",
+      });
+    }
+
+    await ensureInvestorMatchScores(req.user.id);
+    const scoreMap = await getMatchScoresForInvestor(req.user.id, [
+      profile.startup_profile_id,
+    ]);
+    const entry =
+      scoreMap.get(String(profile.startup_profile_id)) ||
+      calculateCompatibilityScore(profile, investorProfile);
+
+    const explanation = await buildMatchExplanationAsync({
+      matchScore: entry.match_score,
+      dimensionScores: entry.dimension_scores,
+      startup: profile,
+      investor: investorProfile,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        startup_profile_id: profile.startup_profile_id,
+        match_score: entry.match_score,
+        explanation,
+        source: process.env.GEMINI_API_KEY ? "gemini" : "rule_based",
+      },
     });
   } catch (err) {
     next(err);

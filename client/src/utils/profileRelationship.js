@@ -1,3 +1,8 @@
+import {
+  formatCoolingEnd,
+  isInConnectionCooling,
+} from "./connectionCooling.js";
+
 /**
  * Relationship validity rules for profile interactions.
  * Mirrors server-side connection rules (investor ↔ startup only).
@@ -21,6 +26,7 @@ export const RELATIONSHIP_KIND = {
   PENDING_SENT: "pending_sent",
   PENDING_RECEIVED: "pending_received",
   CONNECTED: "connected",
+  DECLINED_COOLING: "declined_cooling",
 };
 
 /**
@@ -41,6 +47,7 @@ export function getProfileRelationship({
   profileOwnerType,
   connectionStatus = null,
   connectionRequesterId = null,
+  connectionDeclinedAt = null,
 }) {
   const normalizedStatus = connectionStatus || null;
   const isAuthenticated = Boolean(viewerUserId);
@@ -98,10 +105,29 @@ export function getProfileRelationship({
 
   const isConnected = normalizedStatus === "accepted";
   const isPending = normalizedStatus === "pending";
+  const isDeclined = normalizedStatus === "declined";
+  const inDeclineCooling =
+    isDeclined && isInConnectionCooling(connectionDeclinedAt);
   const isReceivedRequest =
     isPending &&
     connectionRequesterId &&
     String(connectionRequesterId) !== String(viewerUserId);
+
+  if (inDeclineCooling) {
+    return {
+      kind: RELATIONSHIP_KIND.DECLINED_COOLING,
+      isValid: true,
+      canViewPrivate: false,
+      showPrivateLock: true,
+      showInteractionActions: true,
+      canInitiateConnection: false,
+      canRespondToConnection: false,
+      canCancelPending: false,
+      canMessage: false,
+      showPrivateBadge: true,
+      coolingEndsLabel: formatCoolingEnd(connectionDeclinedAt),
+    };
+  }
 
   if (isConnected) {
     return {
@@ -129,7 +155,7 @@ export function getProfileRelationship({
       showInteractionActions: true,
       canInitiateConnection: false,
       canRespondToConnection: isReceivedRequest,
-      canCancelPending: !isReceivedRequest,
+      canCancelPending: false,
       canMessage: false,
       showPrivateBadge: true,
     };

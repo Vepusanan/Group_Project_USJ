@@ -32,6 +32,8 @@ export class StartupProfile {
     this.pitch_deck_url = data.pitch_deck_url;
     this.business_plan_url = data.business_plan_url;
     this.product_demo_url = data.product_demo_url;
+    this.founder_video_url = data.founder_video_url;
+    this.founder_video_thumbnail_url = data.founder_video_thumbnail_url;
 
     this.primary_contact_name = data.primary_contact_name;
     this.contact_email = data.contact_email;
@@ -116,9 +118,11 @@ export class StartupProfile {
       key_metrics: this.key_metrics,
       major_achievements: this.major_achievements,
       customer_testimonials: this.customer_testimonials,
-      pitch_deck_url: this.pitch_deck_url,
-      business_plan_url: this.business_plan_url,
+      has_pitch_deck: Boolean(this.pitch_deck_url),
+      has_business_plan: Boolean(this.business_plan_url),
       product_demo_url: this.product_demo_url,
+      has_founder_video: Boolean(this.founder_video_url),
+      founder_video_thumbnail_url: this.founder_video_thumbnail_url,
       primary_contact_name: this.primary_contact_name,
       contact_email: this.contact_email,
       contact_phone: this.phone_number,
@@ -184,6 +188,7 @@ export class StartupProfile {
           "pitch_deck_url",
           "business_plan_url",
           "product_demo_url",
+          "founder_video_url",
           "phone_number",
           "social_media_links",
         ],

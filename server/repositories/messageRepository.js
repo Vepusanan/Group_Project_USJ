@@ -83,7 +83,8 @@ export async function createAndStoreMessage({
 
     return {
       ...messageResult.rows[0],
-      conversationId: conversationId,
+      conversation_id: conversationId,
+      conversationId,
     };
   } catch (error) {
     if (client) await client.query("ROLLBACK");

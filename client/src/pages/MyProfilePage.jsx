@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import profileService from "../services/profileService";
 import { Link } from "react-router-dom";
 import {
   cardIdentityClass,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useProfileData } from "../hooks/useProfileCache";
+import MilestoneManageSection from "../components/milestones/MilestoneManageSection";
 
 const parseJson = (value, fallback = null) => {
   if (value == null) return fallback;
@@ -111,6 +113,16 @@ const SocialLinks = ({ links, platform }) => {
 const MyProfilePage = () => {
   const { user } = useAuth();
   const { profile, isReady, error, invalidate } = useProfileData();
+  const [completion, setCompletion] = useState(null);
+
+  useEffect(() => {
+    if (user?.userType !== "startup" || !profile) return;
+    profileService.getProfileCompletion().then((result) => {
+      if (result.success) {
+        setCompletion(result.data?.data || result.data);
+      }
+    });
+  }, [user?.userType, profile]);
 
   if (!isReady && !error) return (
     <div className="flex items-center justify-center min-h-screen">
@@ -260,6 +272,28 @@ const MyProfilePage = () => {
           </div>
         </div>
 
+        {completion && (
+          <div className="rounded-xl border border-line bg-surface-alt p-5 flex flex-wrap items-center gap-6">
+            <div>
+              <p className="text-xs text-content-muted uppercase tracking-wide">Profile completeness</p>
+              <p className="text-2xl font-bold text-content mt-1">{completion.completionPercentage}%</p>
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <div className="h-2 rounded-full bg-surface overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all"
+                  style={{ width: `${completion.completionPercentage}%` }}
+                />
+              </div>
+            </div>
+            {completion.incompleteSections?.length > 0 && (
+              <p className="text-xs text-content-muted w-full">
+                Consider completing: {completion.incompleteSections.join(", ")}
+              </p>
+            )}
+          </div>
+        )}
+
         <Section title="Company Overview">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Detailed Description" value={profile.detailed_description} wide />
@@ -290,14 +324,48 @@ const MyProfilePage = () => {
           </div>
         </Section>
 
+        {!isInvestor && (
+          <Section title="Funding Round Tracker">
+            <p className="text-sm text-content-secondary mb-3">
+              Publish your target raise and commitment progress to build investor momentum.
+            </p>
+            <Link
+              to="/funding-round"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-warning/30 bg-warning/10 text-sm text-warning hover:bg-warning/15 transition-all"
+            >
+              <ExternalLink className="w-4 h-4" /> Manage Funding Round
+            </Link>
+          </Section>
+        )}
+
+        {!isInvestor && profile.startup_profile_id && (
+          <MilestoneManageSection startupProfileId={profile.startup_profile_id} />
+        )}
+
+        {!isInvestor && (
+          <Section title="Private Data Room">
+            <p className="text-sm text-content-secondary mb-3">
+              Upload confidential documents and grant access to connected investors for due diligence.
+            </p>
+            <Link
+              to="/data-room"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-light bg-primary-light/10 text-sm text-primary hover:bg-primary-light/20 transition-all"
+            >
+              <ExternalLink className="w-4 h-4" /> Manage Data Room
+            </Link>
+          </Section>
+        )}
+
         {(profile.pitch_deck_url || profile.business_plan_url || profile.product_demo_url) && (
           <Section title="Investor Materials">
             <div className="flex flex-wrap gap-3">
               {profile.pitch_deck_url && (
-                <a href={profile.pitch_deck_url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line bg-surface-alt text-sm text-content-secondary hover:bg-surface-alt hover:border-line transition-all">
-                  <ExternalLink className="w-4 h-4" /> Pitch Deck
-                </a>
+                <Link
+                  to={`/startups/${profile.startup_profile_id}/pitch-deck`}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line bg-surface-alt text-sm text-content-secondary hover:bg-surface-alt hover:border-line transition-all"
+                >
+                  <ExternalLink className="w-4 h-4" /> View Pitch Deck
+                </Link>
               )}
               {profile.business_plan_url && (
                 <a href={profile.business_plan_url} target="_blank" rel="noopener noreferrer"

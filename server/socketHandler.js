@@ -3,10 +3,21 @@ import jwt from "jsonwebtoken";
 // Map to store connected users: { userId: socketId }
 const onlineUsers = new Map();
 
+const parseCookieValue = (cookieHeader, name) => {
+  if (!cookieHeader) return null;
+  const match = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`));
+  if (!match) return null;
+  return decodeURIComponent(match.slice(name.length + 1));
+};
+
 // JWT Authentication Middleware (similar to protect, but for sockets)
 const socketAuthMiddleware = (socket, next) => {
-  // 1. Get token from connection header (must be sent by the client)
-  const token = socket.handshake.auth.token;
+  const token =
+    socket.handshake.auth.token ||
+    parseCookieValue(socket.handshake.headers.cookie, "access_token");
 
   if (!token) {
     return next(new Error("Authentication error: No token provided."));

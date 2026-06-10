@@ -323,10 +323,19 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: response.error };
       }
 
-      dispatch({
-        type: AUTH_ACTIONS.VERIFY_EMAIL_SUCCESS,
-      });
-      return { success: true };
+      if (response.user) {
+        dispatch({
+          type: AUTH_ACTIONS.LOGIN_SUCCESS,
+          payload: { user: response.user },
+        });
+      } else {
+        dispatch({ type: AUTH_ACTIONS.VERIFY_EMAIL_SUCCESS });
+      }
+      return {
+        success: true,
+        redirectPath: response.redirectPath,
+        user: response.user,
+      };
     } catch (error) {
       const errorMsg = error?.message || "Failed to verify email";
       dispatch({

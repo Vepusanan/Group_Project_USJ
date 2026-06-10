@@ -29,8 +29,8 @@ const appendIfPresent = (fd, key, value) => {
 };
 
 /* ─── shared section wrapper ────────────────────────────────────────────────── */
-const Section = ({ title, children }) => (
-  <div className="rounded-xl border border-line bg-surface-alt p-6 space-y-5">
+const Section = ({ title, id, children }) => (
+  <div id={id} className="rounded-xl border border-line bg-surface-alt p-6 space-y-5">
     <h2 className="text-xs font-semibold text-content-muted uppercase tracking-widest pb-1 border-b border-line">{title}</h2>
     {children}
   </div>
@@ -112,6 +112,12 @@ const EditProfilePage = () => {
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [currentLogoUrl, setCurrentLogoUrl] = useState(null);
+  const [pitchDeckFile, setPitchDeckFile] = useState(null);
+  const [currentPitchDeckUrl, setCurrentPitchDeckUrl] = useState(null);
+  const [founderVideoFile, setFounderVideoFile] = useState(null);
+  const [founderVideoThumbnailFile, setFounderVideoThumbnailFile] = useState(null);
+  const [currentFounderVideoUrl, setCurrentFounderVideoUrl] = useState(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
 
   /* ── investor form ── */
   const [inv, setInv] = useState({
@@ -199,6 +205,8 @@ const EditProfilePage = () => {
         const founders = parseJson(p.founder_names, null);
         const founderStr = Array.isArray(founders) ? founders.join(", ") : founders || p.founder_names || "";
         setCurrentLogoUrl(p.logo_url || null);
+        setCurrentPitchDeckUrl(p.pitch_deck_url || null);
+        setCurrentFounderVideoUrl(p.founder_video_url || null);
         setSf({
           company_name: p.company_name || "",
           tagline: p.tagline || "",
@@ -243,6 +251,72 @@ const EditProfilePage = () => {
   const handlePhotoChange = (file) => {
     setPhotoFile(file);
     setPhotoPreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  const captureVideoThumbnail = (file) =>
+    new Promise((resolve, reject) => {
+      const video = document.createElement("video");
+      const url = URL.createObjectURL(file);
+      video.preload = "metadata";
+      video.muted = true;
+      video.playsInline = true;
+      video.onloadedmetadata = () => {
+        if (video.duration > 180) {
+          URL.revokeObjectURL(url);
+          reject(new Error("Founder video must be 3 minutes or shorter"));
+          return;
+        }
+        video.currentTime = Math.min(1, video.duration / 2);
+      };
+      video.onseeked = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 640;
+        canvas.height = 360;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(url);
+            if (!blob) {
+              reject(new Error("Could not generate video thumbnail"));
+              return;
+            }
+            resolve(new File([blob], "founder-video-thumb.jpg", { type: "image/jpeg" }));
+          },
+          "image/jpeg",
+          0.85,
+        );
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Could not read video file"));
+      };
+      video.src = url;
+    });
+
+  const handleFounderVideoChange = async (file) => {
+    setError("");
+    if (!file) {
+      setFounderVideoFile(null);
+      setFounderVideoThumbnailFile(null);
+      setVideoPreviewUrl(null);
+      return;
+    }
+    if (file.type !== "video/mp4") {
+      setError("Founder video must be an MP4 file");
+      return;
+    }
+    try {
+      const thumb = await captureVideoThumbnail(file);
+      setFounderVideoFile(file);
+      setFounderVideoThumbnailFile(thumb);
+      setVideoPreviewUrl(URL.createObjectURL(file));
+    } catch (err) {
+      setError(err.message || "Invalid video file");
+      setFounderVideoFile(null);
+      setFounderVideoThumbnailFile(null);
+      setVideoPreviewUrl(null);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -295,6 +369,11 @@ const EditProfilePage = () => {
       } else {
         if (!sf.company_name.trim()) { setError("Company name is required"); setSaving(false); return; }
         if (logoFile) fd.append("logo", logoFile);
+        if (pitchDeckFile) fd.append("pitch_deck", pitchDeckFile);
+        if (founderVideoFile) fd.append("founder_video", founderVideoFile);
+        if (founderVideoThumbnailFile) {
+          fd.append("founder_video_thumbnail", founderVideoThumbnailFile);
+        }
         appendIfPresent(fd, "company_name", sf.company_name);
         appendIfPresent(fd, "tagline", sf.tagline);
         appendIfPresent(fd, "detailed_description", sf.detailed_description);
@@ -582,16 +661,57 @@ const EditProfilePage = () => {
                 </Field>
               </Section>
 
-              <Section title="Investor Materials">
+              <Section title="Investor Materials" id="investor-materials">
                 <div className="grid grid-cols-1 gap-4">
-                  <Field label="Pitch Deck URL">
-                    <input type="url" value={sf.pitch_deck_url} onChange={sf2("pitch_deck_url")} placeholder="https://drive.google.com/..." className={inputCls} />
+                  <Field label="Pitch Deck (PDF)" hint="— in-platform viewer">
+                    <div className="space-y-2">
+                      <input
+                        type="file"
+                        accept="application/pdf,.pdf"
+                        onChange={(e) => setPitchDeckFile(e.target.files?.[0] || null)}
+                        className="block w-full text-sm text-content-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border file:border-line file:bg-surface-alt file:text-content-secondary hover:file:bg-surface"
+                      />
+                      <p className="text-xs text-content-muted">
+                        {pitchDeckFile
+                          ? `Selected: ${pitchDeckFile.name}`
+                          : currentPitchDeckUrl
+                            ? "A pitch deck is already uploaded. Upload a new PDF to replace it."
+                            : "Upload a PDF for the secure in-platform viewer."}
+                      </p>
+                    </div>
+                  </Field>
+                  <Field label="Pitch Deck URL (optional fallback)">
+                    <input type="url" value={sf.pitch_deck_url} onChange={sf2("pitch_deck_url")} placeholder="https://..." className={inputCls} />
                   </Field>
                   <Field label="Business Plan URL">
                     <input type="url" value={sf.business_plan_url} onChange={sf2("business_plan_url")} placeholder="https://..." className={inputCls} />
                   </Field>
                   <Field label="Product Demo URL">
                     <input type="url" value={sf.product_demo_url} onChange={sf2("product_demo_url")} placeholder="https://loom.com/..." className={inputCls} />
+                  </Field>
+                  <Field label="Founder Video Introduction" hint="— max 3 min, MP4">
+                    <div className="space-y-2">
+                      <input
+                        type="file"
+                        accept="video/mp4,.mp4"
+                        onChange={(e) => handleFounderVideoChange(e.target.files?.[0] || null)}
+                        className="block w-full text-sm text-content-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border file:border-line file:bg-surface-alt file:text-content-secondary hover:file:bg-surface"
+                      />
+                      <p className="text-xs text-content-muted">
+                        {founderVideoFile
+                          ? `Selected: ${founderVideoFile.name}`
+                          : currentFounderVideoUrl
+                            ? "A founder video is uploaded. Choose a new MP4 to replace it."
+                            : "Upload a short founder introduction (visible to connected investors)."}
+                      </p>
+                      {videoPreviewUrl && (
+                        <video
+                          src={videoPreviewUrl}
+                          controls
+                          className="w-full max-w-md rounded-lg border border-line"
+                        />
+                      )}
+                    </div>
                   </Field>
                 </div>
               </Section>

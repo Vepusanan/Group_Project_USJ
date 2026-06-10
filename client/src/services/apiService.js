@@ -8,6 +8,17 @@ const cleanQueryParams = (params = {}) =>
     ),
   );
 
+const getRequestErrorMessage = (error, fallback) => {
+  if (error.response?.data?.error) return error.response.data.error;
+  if (error.code === "ECONNABORTED") {
+    return "Request timed out. Please try again.";
+  }
+  if (!error.response) {
+    return "Unable to reach the server. Check that the backend is running.";
+  }
+  return fallback;
+};
+
 export const apiService = {
   getCurrentUser: async () => {
     try {
@@ -43,7 +54,28 @@ export const apiService = {
       console.error("getStartups error:", error);
       return {
         success: false,
-        error: error.response?.data?.error || "Failed to get startups",
+        error: getRequestErrorMessage(error, "Failed to get startups"),
+      };
+    }
+  },
+
+  parseNaturalLanguageSearch: async (phrase) => {
+    try {
+      const response = await api.post(
+        "/startups/natural-language",
+        { phrase },
+        { timeout: 60000 },
+      );
+      return {
+        success: true,
+        data: response.data.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error.response?.data?.error ||
+          getRequestErrorMessage(error, "Failed to parse search"),
       };
     }
   },
@@ -66,7 +98,7 @@ export const apiService = {
       console.error("getInvestors error:", error);
       return {
         success: false,
-        error: error.response?.data?.error || "Failed to get investors",
+        error: getRequestErrorMessage(error, "Failed to get investors"),
       };
     }
   },
@@ -389,6 +421,18 @@ export const apiService = {
     }
   },
 
+  exportAccountData: async () => {
+    try {
+      const response = await api.get("/account/export");
+      return { success: true, data: response.data?.data || response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || "Failed to export account data",
+      };
+    }
+  },
+
   deleteAccount: async (password) => {
     try {
       const response = await api.delete("/account", { data: { password } });
@@ -421,6 +465,18 @@ export const apiService = {
       return {
         success: false,
         error: error.response?.data?.error || "Failed to logout all devices",
+      };
+    }
+  },
+
+  revokeSession: async (sessionId) => {
+    try {
+      const response = await api.delete(`/auth/sessions/${sessionId}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || "Failed to revoke session",
       };
     }
   },
