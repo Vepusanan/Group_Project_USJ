@@ -51,7 +51,7 @@ const getFrontendBaseUrl = () => {
 const cookieBase = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "strict",
+  sameSite: process.env.AUTH_COOKIE_SAME_SITE || "strict",
   path: "/",
 });
 
