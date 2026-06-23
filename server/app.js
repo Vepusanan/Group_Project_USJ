@@ -34,6 +34,7 @@ import { generalLimiter } from "./middleware/rateLimiter.js";
 import { requestTiming } from "./middleware/requestTiming.js";
 import { hasEmailCredentials } from "./utils/emailTransport.js";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 
 dotenv.config({ quiet: true });
@@ -48,6 +49,10 @@ const localhostRegex = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
 export function createApp() {
   const app = express();
+
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
 
   app.use(helmet());
   app.use(
@@ -133,7 +138,32 @@ export function createApp() {
   app.use("/api/connection-qa", connectionQaRoutes);
   app.use("/api/profile-reports", profileReportsRoutes);
 
+  const clientDist = path.join(__dirname, "../client/dist");
+  const serveFrontend =
+    process.env.SERVE_FRONTEND !== "false" &&
+    fs.existsSync(path.join(clientDist, "index.html"));
+
+  if (serveFrontend) {
+    app.use(express.static(clientDist, { index: false, maxAge: "1d" }));
+
+    app.use((req, res, next) => {
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        return next();
+      }
+      if (req.path.startsWith("/api") || req.path.startsWith("/startups")) {
+        return next();
+      }
+      res.sendFile(path.join(clientDist, "index.html"), (err) => {
+        if (err) next(err);
+      });
+    });
+  }
+
   app.use((req, res) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/startups")) {
+      res.status(404).json({ error: "Route not found" });
+      return;
+    }
     res.status(404).json({ error: "Route not found" });
   });
 

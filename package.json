@@ -6,9 +6,15 @@
     "server"
   ],
   "scripts": {
-    "build": "npm run build --workspace=client",
+    "build": "VITE_API_URL=/api npm run build --workspace=client",
+    "build:production": "npm ci --prefix client && npm ci --prefix server && VITE_API_URL=/api npm run build --prefix client",
+    "start": "node server/server.js",
     "test": "npm test --workspace=server",
     "dev:client": "npm run dev --workspace=client",
-    "dev:server": "npm run dev --workspace=server"
+    "dev:server": "npm run dev --workspace=server",
+    "ci": "npm ci --prefix client && npm ci --prefix server && VITE_API_URL=/api npm run build --prefix client && npm test --prefix server"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

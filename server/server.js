@@ -63,6 +63,8 @@ httpServer.on("error", (error) => {
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV}`);
+  const mode =
+    process.env.NODE_ENV === "production" ? "production" : "development";
+  console.log(`🚀 Server running on port ${PORT} (${mode})`);
+  console.log(`📝 Environment: ${process.env.NODE_ENV || "development"}`);
 });

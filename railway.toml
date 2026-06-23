@@ -1,0 +1,9 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm ci --prefix client && npm ci --prefix server && VITE_API_URL=/api npm run build --prefix client"
+
+[deploy]
+startCommand = "npm start --prefix server"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"

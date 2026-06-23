@@ -2,9 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "installCommand": "npm ci --prefix client && npm ci --prefix server",
-  "buildCommand": "npm run build --prefix client",
+  "buildCommand": "VITE_API_URL=/api npm run build --prefix client",
   "outputDirectory": "client/dist",
   "framework": null,
+  "env": {
+    "VITE_API_URL": "/api"
+  },
   "rewrites": [
     {
       "source": "/api/:path*",

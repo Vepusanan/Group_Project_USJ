@@ -1,0 +1,236 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main, master, develop, Vepusanan]
+  pull_request:
+    branches: [main, master, develop, Vepusanan]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy to Vercel after CI passes
+        required: true
+        default: false
+        type: boolean
+      environment:
+        description: Vercel deployment target (when deploy is enabled)
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - preview
+
+concurrency:
+  group: cicd-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  build-and-test:
+    name: Build client and test server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --prefix client && npm ci --prefix server
+
+      - name: Build client
+        run: npm run build --prefix client
+        env:
+          VITE_API_URL: /api
+
+      - name: Run server tests
+        run: npm test --prefix server
+
+  validate-vercel:
+    name: Validate Vercel monorepo config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate vercel.json
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const path = require("path");
+
+          const configPath = path.join(process.cwd(), "vercel.json");
+          const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+
+          const requiredFiles = [
+            "api/index.js",
+            "api/cron/cleanup.js",
+            "client/package.json",
+            "server/package.json",
+            "server/app.js",
+          ];
+
+          for (const file of requiredFiles) {
+            if (!fs.existsSync(path.join(process.cwd(), file))) {
+              throw new Error(`Missing required deployment file: ${file}`);
+            }
+          }
+
+          if (!config.outputDirectory?.includes("client/dist")) {
+            throw new Error("outputDirectory must point at client/dist");
+          }
+
+          if (!config.functions?.["api/index.js"]) {
+            throw new Error("api/index.js must be configured as a serverless function");
+          }
+
+          if (!config.rewrites?.some((rule) => rule.source.includes("/api/"))) {
+            throw new Error("API rewrite rule is missing from vercel.json");
+          }
+
+          console.log("Vercel monorepo config looks valid.");
+          NODE
+
+  deploy-production:
+    name: Deploy production (Vercel)
+    runs-on: ubuntu-latest
+    needs: [build-and-test, validate-vercel]
+    environment: production
+    if: |
+      (
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/main'
+      ) || (
+        github.event_name == 'workflow_dispatch' &&
+        inputs.deploy == 'true' &&
+        inputs.environment == 'production'
+      )
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@41.6.0
+
+      - name: Pull Vercel production environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build production artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VITE_API_URL: /api
+
+      - name: Deploy to Vercel production
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed to $url"
+
+      - name: Smoke test API health
+        run: |
+          curl --fail --retry 5 --retry-delay 5 --retry-all-errors \
+            "${{ steps.deploy.outputs.url }}/api/health"
+
+  deploy-preview:
+    name: Deploy preview (Vercel)
+    runs-on: ubuntu-latest
+    needs: [build-and-test, validate-vercel]
+    environment: preview
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository && (
+        github.event_name == 'pull_request' || (
+          github.event_name == 'workflow_dispatch' &&
+          inputs.deploy == 'true' &&
+          inputs.environment == 'preview'
+        )
+      )
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@41.6.0
+
+      - name: Pull Vercel preview environment
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build preview artifacts
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VITE_API_URL: /api
+
+      - name: Deploy preview to Vercel
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Preview deployed to $url"
+
+      - name: Comment preview URL on pull request
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewUrl = '${{ steps.deploy.outputs.url }}';
+            const body = [
+              '### Vercel preview deployment',
+              '',
+              `**URL:** ${previewUrl}`,
+              '',
+              `**Commit:** \`${context.sha.slice(0, 7)}\``,
+              '',
+              '_Deployed by GitHub Actions._',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const marker = '<!-- vercel-preview-comment -->';
+            const existing = comments.find((comment) => comment.body?.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: `${marker}\n${body}`,
+              });
+              return;
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `${marker}\n${body}`,
+            });

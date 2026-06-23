@@ -1,0 +1,50 @@
+# Render Blueprint — full-stack web service (free tier)
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy: Render Dashboard → New → Blueprint → connect this repo.
+# Or: New Web Service → point at repo root and use the build/start commands below.
+
+services:
+  - type: web
+    name: starthub-capital
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: >-
+      npm ci --prefix client &&
+      npm ci --prefix server &&
+      VITE_API_URL=/api npm run build --prefix client
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        value: /api
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_VERIFY_SECRET
+        generateValue: true
+      - key: BASE_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: EMAIL_SMTP_HOST
+        sync: false
+      - key: EMAIL_SMTP_PORT
+        value: "587"
+      - key: EMAIL_SMTP_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
