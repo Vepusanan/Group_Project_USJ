@@ -2,7 +2,10 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { ArrowLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiService } from "../services/apiService";
-import { connectSocket, disconnectSocket } from "../services/socketService";
+import {
+  subscribeToMessages,
+  unsubscribeFromMessages,
+} from "../services/realtimeService";
 import { useAuth } from "../hooks/useAuth";
 import {
   cardIdentityClass,
@@ -16,7 +19,7 @@ import {
 
 const MAX_CHARS = 5000;
 const POLL_INTERVAL_MS = 30000;
-const POLL_INTERVAL_SOCKET_MS = 120000;
+const POLL_INTERVAL_REALTIME_MS = 120000;
 
 const formatTime = (dateStr) => {
   if (!dateStr) return "";
@@ -57,7 +60,7 @@ const MessagesPage = () => {
   const shouldScrollToBottomRef = useRef(false);
   const messagesEndRef = useRef(null);
   const pollTimerRef = useRef(null);
-  const [socketConnected, setSocketConnected] = useState(false);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
   const fileInputRef = useRef(null);
 
   const selectedConversationId = selectedConversation?.conversation_id || null;
@@ -179,18 +182,10 @@ const MessagesPage = () => {
     loadMessages(selectedConversationId, false);
   }, [selectedConversationId]);
 
-  // Real-time delivery via WebSocket (falls back to slower poll if disconnected)
+  // Real-time delivery via Supabase Realtime (falls back to poll if disconnected)
   useEffect(() => {
     if (!user?.id) return undefined;
 
-    const socket = connectSocket();
-
-    const onConnect = () => {
-      setSocketConnected(true);
-    };
-    const onDisconnect = () => {
-      setSocketConnected(false);
-    };
     const onNewMessage = (messageData) => {
       if (
         selectedConversationId &&
@@ -208,15 +203,13 @@ const MessagesPage = () => {
       loadConversations(true);
     };
 
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    socket.on("message:new", onNewMessage);
+    subscribeToMessages(user.id, {
+      onMessage: onNewMessage,
+      onStatusChange: setRealtimeConnected,
+    });
 
     return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.off("message:new", onNewMessage);
-      disconnectSocket();
+      unsubscribeFromMessages();
     };
   }, [user?.id, selectedConversationId, loadConversations]);
 
@@ -228,13 +221,13 @@ const MessagesPage = () => {
       }
     };
 
-    const interval = socketConnected
-      ? POLL_INTERVAL_SOCKET_MS
+    const interval = realtimeConnected
+      ? POLL_INTERVAL_REALTIME_MS
       : POLL_INTERVAL_MS;
 
     pollTimerRef.current = setInterval(poll, interval);
     return () => clearInterval(pollTimerRef.current);
-  }, [selectedConversationId, loadConversations, loadMessages, socketConnected]);
+  }, [selectedConversationId, loadConversations, loadMessages, realtimeConnected]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {

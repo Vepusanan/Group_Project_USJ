@@ -12,8 +12,10 @@ const matchesSignature = (buffer, signature) => {
   return signature.bytes.every((byte, index) => buffer[index] === byte);
 };
 
-export const validateFileMagicBytes = (filePath, declaredMime) => {
-  const buffer = fs.readFileSync(filePath);
+export const validateFileMagicBytes = (filePathOrBuffer, declaredMime) => {
+  const buffer = Buffer.isBuffer(filePathOrBuffer)
+    ? filePathOrBuffer
+    : fs.readFileSync(filePathOrBuffer);
   if (!buffer.length) {
     return { ok: false, error: "Empty file" };
   }
@@ -41,7 +43,10 @@ export const validateFileMagicBytes = (filePath, declaredMime) => {
   return { ok: true };
 };
 
-export const scanUploadedFile = async (filePath, { userId = null, context = "upload" } = {}) => {
+export const scanUploadedFile = async (
+  filePathOrBuffer,
+  { userId = null, context = "upload" } = {},
+) => {
   if (process.env.ENABLE_MALWARE_SCAN === "true") {
     // Hook for external scanner integration (ClamAV, etc.)
     console.warn(

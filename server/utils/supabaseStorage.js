@@ -35,6 +35,14 @@ export const BUCKETS = {
 
 export const DATA_ROOM_SIGNED_URL_SECONDS = 15 * 60;
 
+function readFileSource(source) {
+  if (Buffer.isBuffer(source)) return source;
+  if (source?.buffer) return source.buffer;
+  if (typeof source === "string") return fs.readFileSync(source);
+  if (source?.path) return fs.readFileSync(source.path);
+  throw new Error("Invalid file source for upload");
+}
+
 export async function downloadStorageObject(bucketName, objectPath) {
   const { data, error } = await supabase.storage
     .from(bucketName)
@@ -99,20 +107,19 @@ export const parseLegacyStorageFromUrl = (fileUrl) => {
 /**
  * Upload a file to Supabase Storage
  * @param {string} bucketName - Name of the storage bucket
- * @param {string} filePath - Local file path to upload
+ * @param {Buffer|string|{ buffer?: Buffer, path?: string }} source - File buffer or Multer file
  * @param {string} fileName - Name to store the file as
  * @param {Object} options - Additional options
  * @returns {Promise<Object>} Upload result with public URL
  */
 export async function uploadToSupabase(
   bucketName,
-  filePath,
+  source,
   fileName,
   options = {}
 ) {
   try {
-    // Read the file
-    const fileBuffer = fs.readFileSync(filePath); // Get file extension and set content type
+    const fileBuffer = readFileSource(source);
     const ext = path.extname(fileName).toLowerCase();
     let contentType = "application/octet-stream";
     if ([".jpg", ".jpeg"].includes(ext)) contentType = "image/jpeg";
@@ -194,15 +201,13 @@ export async function uploadMessageAttachmentBuffer(
 
 /**
  * Upload and process startup logo
- * @param {string} filePath - Local file path
+ * @param {{ buffer: Buffer, path?: string }|Buffer|string} file - Multer file or buffer
  * @param {string} startupId - Startup profile ID for naming
  * @returns {Promise<string>} Public URL of uploaded logo
  */
-export async function uploadStartupLogo(filePath, startupId) {
+export async function uploadStartupLogo(file, startupId) {
   try {
-    // Process image with sharp to ensure consistent size
-    const processedPath = filePath.replace(/(\.[^.]+)$/, "_processed$1");
-    await sharp(filePath)
+    const processedBuffer = await sharp(readFileSource(file))
       .resize({
         width: 400,
         height: 400,
@@ -210,26 +215,14 @@ export async function uploadStartupLogo(filePath, startupId) {
         withoutEnlargement: false,
       })
       .jpeg({ quality: 85 })
-      .toFile(processedPath); // Generate unique filename
+      .toBuffer();
 
-    const timestamp = Date.now();
-    const fileName = `logo_${startupId}_${timestamp}.jpg`; // Upload to startup_logos bucket
-
+    const fileName = `logo_${startupId}_${Date.now()}.jpg`;
     const result = await uploadToSupabase(
       BUCKETS.STARTUP_LOGOS,
-      processedPath,
-      fileName
-    ); // Clean up temporary files
-
-    try {
-      fs.unlinkSync(filePath);
-      fs.unlinkSync(processedPath);
-    } catch (cleanupError) {
-      console.warn(
-        "Warning: Could not clean up temporary files:",
-        cleanupError.message
-      );
-    }
+      processedBuffer,
+      fileName,
+    );
 
     return result.publicUrl;
   } catch (error) {
@@ -240,15 +233,13 @@ export async function uploadStartupLogo(filePath, startupId) {
 
 /**
  * Upload and process investor photo
- * @param {string} filePath - Local file path
+ * @param {{ buffer: Buffer, path?: string }|Buffer|string} file - Multer file or buffer
  * @param {string} investorId - Investor profile ID for naming
  * @returns {Promise<string>} Public URL of uploaded photo
  */
-export async function uploadInvestorPhoto(filePath, investorId) {
+export async function uploadInvestorPhoto(file, investorId) {
   try {
-    // Process image with sharp to ensure consistent size
-    const processedPath = filePath.replace(/(\.[^.]+)$/, "_processed$1");
-    await sharp(filePath)
+    const processedBuffer = await sharp(readFileSource(file))
       .resize({
         width: 400,
         height: 400,
@@ -256,26 +247,14 @@ export async function uploadInvestorPhoto(filePath, investorId) {
         withoutEnlargement: false,
       })
       .jpeg({ quality: 85 })
-      .toFile(processedPath); // Generate unique filename
+      .toBuffer();
 
-    const timestamp = Date.now();
-    const fileName = `photo_${investorId}_${timestamp}.jpg`; // Upload to investor_photos bucket
-
+    const fileName = `photo_${investorId}_${Date.now()}.jpg`;
     const result = await uploadToSupabase(
       BUCKETS.INVESTOR_PHOTOS,
-      processedPath,
-      fileName
-    ); // Clean up temporary files
-
-    try {
-      fs.unlinkSync(filePath);
-      fs.unlinkSync(processedPath);
-    } catch (cleanupError) {
-      console.warn(
-        "Warning: Could not clean up temporary files:",
-        cleanupError.message
-      );
-    }
+      processedBuffer,
+      fileName,
+    );
 
     return result.publicUrl;
   } catch (error) {
@@ -292,7 +271,6 @@ export async function uploadInvestorPhoto(filePath, investorId) {
  * @returns {Promise<Object>} Document info with public URL
  */
 export async function uploadVerificationDocument(file, userId) {
-  const filePath = file.path;
   const originalName = file.originalname || "verification-document";
   const timestamp = Date.now();
   const ext = path.extname(originalName);
@@ -301,23 +279,18 @@ export async function uploadVerificationDocument(file, userId) {
     .replace(/[^a-z0-9_-]/gi, "_");
   const fileName = `verification/${userId}/doc_${timestamp}_${baseName}${ext}`;
 
-  const result = await uploadToSupabase(BUCKETS.DOCUMENTS, filePath, fileName);
-
-  try {
-    fs.unlinkSync(filePath);
-  } catch {
-    /* ignore */
-  }
+  const result = await uploadToSupabase(BUCKETS.DOCUMENTS, file, fileName);
 
   return { url: result.publicUrl, name: originalName };
 }
 
 export async function uploadDataRoomDocument(
-  filePath,
+  file,
   originalName,
   startupProfileId,
 ) {
   try {
+    const fileBuffer = readFileSource(file);
     const timestamp = Date.now();
     const ext = path.extname(originalName);
     const baseName = path
@@ -327,25 +300,15 @@ export async function uploadDataRoomDocument(
 
     const result = await uploadToSupabase(
       BUCKETS.DOCUMENTS,
-      filePath,
+      fileBuffer,
       fileName,
     );
-
-    const fileSize = fs.statSync(filePath).size || null;
-    try {
-      fs.unlinkSync(filePath);
-    } catch (cleanupError) {
-      console.warn(
-        "Warning: Could not clean up temporary file:",
-        cleanupError.message,
-      );
-    }
 
     return {
       name: originalName,
       bucket: BUCKETS.DOCUMENTS,
       path: fileName,
-      size: fileSize,
+      size: fileBuffer.length,
       internalUrl: `storage://${BUCKETS.DOCUMENTS}/${fileName}`,
     };
   } catch (error) {
@@ -354,23 +317,16 @@ export async function uploadDataRoomDocument(
   }
 }
 
-export async function uploadFounderVideo(filePath, startupId) {
+export async function uploadFounderVideo(file, startupId) {
   try {
-    const timestamp = Date.now();
-    const fileName = `founder-videos/${startupId}/video_${timestamp}.mp4`;
+    const fileName = `founder-videos/${startupId}/video_${Date.now()}.mp4`;
 
     const result = await uploadToSupabase(
       BUCKETS.DOCUMENTS,
-      filePath,
+      file,
       fileName,
       { overwrite: true },
     );
-
-    try {
-      fs.unlinkSync(filePath);
-    } catch {
-      /* ignore */
-    }
 
     return result.publicUrl;
   } catch (error) {
@@ -379,30 +335,21 @@ export async function uploadFounderVideo(filePath, startupId) {
   }
 }
 
-export async function uploadFounderVideoThumbnail(filePath, startupId) {
+export async function uploadFounderVideoThumbnail(file, startupId) {
   try {
-    const processedPath = filePath.replace(/(\.[^.]+)$/, "_processed$1");
-    await sharp(filePath)
+    const processedBuffer = await sharp(readFileSource(file))
       .resize({ width: 640, height: 360, fit: "cover", withoutEnlargement: false })
       .jpeg({ quality: 80 })
-      .toFile(processedPath);
+      .toBuffer();
 
-    const timestamp = Date.now();
-    const fileName = `founder-videos/${startupId}/thumb_${timestamp}.jpg`;
+    const fileName = `founder-videos/${startupId}/thumb_${Date.now()}.jpg`;
 
     const result = await uploadToSupabase(
       BUCKETS.DOCUMENTS,
-      processedPath,
+      processedBuffer,
       fileName,
       { overwrite: true },
     );
-
-    try {
-      fs.unlinkSync(filePath);
-      fs.unlinkSync(processedPath);
-    } catch {
-      /* ignore */
-    }
 
     return result.publicUrl;
   } catch (error) {
@@ -411,35 +358,26 @@ export async function uploadFounderVideoThumbnail(filePath, startupId) {
   }
 }
 
-export async function uploadDocument(filePath, originalName, startupId) {
+export async function uploadDocument(file, originalName, startupId) {
   try {
+    const fileBuffer = readFileSource(file);
     const timestamp = Date.now();
     const ext = path.extname(originalName);
     const baseName = path
       .basename(originalName, ext)
       .replace(/[^a-z0-9_-]/gi, "_");
-    const fileName = `doc_${startupId}_${timestamp}_${baseName}${ext}`; // Upload to documents bucket
+    const fileName = `doc_${startupId}_${timestamp}_${baseName}${ext}`;
 
     const result = await uploadToSupabase(
       BUCKETS.DOCUMENTS,
-      filePath,
-      fileName
-    ); // Get file size before cleanup
-
-    const fileSize = fs.statSync(filePath).size || null; // Clean up temporary file
-    try {
-      fs.unlinkSync(filePath);
-    } catch (cleanupError) {
-      console.warn(
-        "Warning: Could not clean up temporary file:",
-        cleanupError.message
-      );
-    }
+      fileBuffer,
+      fileName,
+    );
 
     return {
       name: originalName,
       url: result.publicUrl,
-      size: fileSize,
+      size: fileBuffer.length,
     };
   } catch (error) {
     console.error("Error uploading document:", error);
@@ -499,7 +437,7 @@ export function extractFilePathFromUrl(publicUrl, bucketName) {
  */
 export async function uploadMultipleDocuments(files, startupId) {
   const uploadPromises = files.map((file) =>
-    uploadDocument(file.path, file.originalname, startupId)
+    uploadDocument(file, file.originalname, startupId),
   );
   try {
     const results = await Promise.all(uploadPromises);

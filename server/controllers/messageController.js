@@ -4,7 +4,7 @@ import {
   isUsersConnected,
 } from "../repositories/ConnectionRepository.js";
 import { sendNewMessageEmail } from "../utils/emailServices.js";
-import { emitNewMessage, isUserOnline } from "../socketHandler.js";
+import { isUserRecentlyActive } from "../utils/userPresence.js";
 
 // Send a new message
 export const sendMessage = async (req, res) => {
@@ -42,10 +42,8 @@ export const sendMessage = async (req, res) => {
       attachmentUrl,
     });
 
-    // Fire-and-forget: email the recipient only when they aren't actively
-    // connected via socket. Keeps real-time conversations email-quiet while
-    // ensuring offline users still get notified.
-    if (!isUserOnline(receiverId)) {
+    // Email the recipient when they have not been active recently (Realtime presence).
+    if (!(await isUserRecentlyActive(receiverId))) {
       (async () => {
         try {
           const [sender, receiver] = await Promise.all([
@@ -68,8 +66,6 @@ export const sendMessage = async (req, res) => {
         }
       })();
     }
-
-    emitNewMessage(messageData);
 
     res.status(201).json({
       success: true,

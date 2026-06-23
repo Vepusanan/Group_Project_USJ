@@ -1,4 +1,3 @@
-import fs from "fs";
 import {
   createStartupProfile,
   getStartupProfileById,
@@ -45,12 +44,6 @@ import {
   uploadFounderVideoThumbnail,
 } from "../utils/supabaseStorage.js";
 
-const cleanupFiles = (files) => {
-  for (const file of files) {
-    try { fs.unlinkSync(file.path); } catch {}
-  }
-};
-
 async function processStartupUploads(req) {
   const uploads = {};
   const files = req.files || {};
@@ -58,9 +51,8 @@ async function processStartupUploads(req) {
   if (files.logo?.length) {
     const logoFile = files.logo[0];
     try {
-      uploads.logo_url = await uploadStartupLogo(logoFile.path, "tmp");
+      uploads.logo_url = await uploadStartupLogo(logoFile, "tmp");
     } catch (err) {
-      cleanupFiles([logoFile]);
       throw new Error(`Logo upload failed: ${err.message}`);
     }
   }
@@ -68,19 +60,17 @@ async function processStartupUploads(req) {
   if (files.pitch_deck?.length) {
     const deckFile = files.pitch_deck[0];
     if (deckFile.mimetype !== "application/pdf") {
-      cleanupFiles([deckFile]);
       throw new Error("Pitch deck must be a PDF file");
     }
     try {
       const startupId = req.body?.startup_profile_id || req.params?.id || "tmp";
       const doc = await uploadDocument(
-        deckFile.path,
+        deckFile,
         deckFile.originalname,
         startupId,
       );
       uploads.pitch_deck_url = doc.url;
     } catch (err) {
-      cleanupFiles([deckFile]);
       throw new Error(`Pitch deck upload failed: ${err.message}`);
     }
   }
@@ -90,13 +80,12 @@ async function processStartupUploads(req) {
     try {
       const startupId = req.body?.startup_profile_id || req.params?.id || "tmp";
       const doc = await uploadDocument(
-        planFile.path,
+        planFile,
         planFile.originalname,
         startupId,
       );
       uploads.business_plan_url = doc.url;
     } catch (err) {
-      cleanupFiles([planFile]);
       throw new Error(`Business plan upload failed: ${err.message}`);
     }
   }
@@ -108,7 +97,6 @@ async function processStartupUploads(req) {
       if (docs[0]) uploads.pitch_deck_url = uploads.pitch_deck_url || docs[0].url;
       if (docs[1]) uploads.business_plan_url = uploads.business_plan_url || docs[1].url;
     } catch (err) {
-      cleanupFiles(files.documents || []);
       throw new Error(`Document upload failed: ${err.message}`);
     }
   }
@@ -116,17 +104,15 @@ async function processStartupUploads(req) {
   if (files.founder_video?.length) {
     const videoFile = files.founder_video[0];
     if (videoFile.mimetype !== "video/mp4") {
-      cleanupFiles([videoFile]);
       throw new Error("Founder video must be an MP4 file");
     }
     try {
       const startupId = req.body?.startup_profile_id || req.params?.id || "tmp";
       uploads.founder_video_url = await uploadFounderVideo(
-        videoFile.path,
+        videoFile,
         startupId,
       );
     } catch (err) {
-      cleanupFiles([videoFile]);
       throw new Error(`Founder video upload failed: ${err.message}`);
     }
   }
@@ -136,11 +122,10 @@ async function processStartupUploads(req) {
     try {
       const startupId = req.body?.startup_profile_id || req.params?.id || "tmp";
       uploads.founder_video_thumbnail_url = await uploadFounderVideoThumbnail(
-        thumbFile.path,
+        thumbFile,
         startupId,
       );
     } catch (err) {
-      cleanupFiles([thumbFile]);
       throw new Error(`Video thumbnail upload failed: ${err.message}`);
     }
   }
@@ -155,9 +140,8 @@ async function processInvestorUploads(req) {
   if (files.photo?.length) {
     const photoFile = files.photo[0];
     try {
-      uploads.photo_url = await uploadInvestorPhoto(photoFile.path, "tmp");
+      uploads.photo_url = await uploadInvestorPhoto(photoFile, "tmp");
     } catch (err) {
-      cleanupFiles([photoFile]);
       throw new Error(`Photo upload failed: ${err.message}`);
     }
   }

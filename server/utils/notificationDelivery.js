@@ -142,8 +142,7 @@ async function deliverInstantNotification(userId, notificationType, notification
     const shouldInApp = await shouldSendInAppNotification(userId, notificationType);
     
     if (shouldInApp) {
-      // TODO: Integrate with Socket.IO to send real-time in-app notification
-      // This would typically emit an event to the user's socket connection
+      // In-app notifications use polling until a Realtime channel is added.
       console.log(`In-app notification would be sent to user ${userId}`);
     }
   } catch (error) {

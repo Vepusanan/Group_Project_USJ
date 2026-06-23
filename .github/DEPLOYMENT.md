@@ -1,114 +1,101 @@
-# Vercel deployment (full stack)
+# Vercel deployment
 
-This repo deploys as a **single Vercel project** from the repository root:
+Production hosting for **StartHub Capital** — React SPA + Express API + Supabase Realtime.
 
-- **Frontend:** Vite build → `client/dist` (static SPA)
-- **Backend:** Express app → `api/index.js` (serverless)
-- **Cron:** nightly cleanup → `api/cron/cleanup.js`
+## Architecture
 
-Do **not** point Vercel at `client/` or `server/` alone — use the root `vercel.json`.
+```text
+https://your-app.vercel.app
+├── /              → React SPA (client/dist)
+├── /api/*         → Express serverless (api/index.js → server/app.js)
+├── /api/cron/*    → Scheduled cleanup
+└── Realtime       → Browser → Supabase (messages)
+```
+
+**Root config:** `vercel.json` at repository root. Do not deploy `client/` or `server/` as separate projects.
 
 ## 1. Create the Vercel project
 
-1. Import the GitHub repo in [Vercel](https://vercel.com/new).
-2. **Root Directory:** `.` (repository root)
-3. **Framework Preset:** Other (settings come from `vercel.json`)
-4. **Node.js Version:** 20
+1. [vercel.com/new](https://vercel.com/new) → import GitHub repo
+2. **Root Directory:** `.`
+3. **Framework:** Other (uses `vercel.json`)
+4. **Node.js:** 20
 
-Link the project locally (optional):
+## 2. Environment variables
+
+Set in **Vercel → Settings → Environment Variables** for **Production** and **Preview**.
+
+### Server (runtime)
+
+| Variable | Required | Notes |
+|----------|----------|--------|
+| `NODE_ENV` | Yes | `production` |
+| `DATABASE_URL` | Yes | Supabase pooler URL |
+| `SUPABASE_URL` | Yes | |
+| `SUPABASE_ANON_KEY` | Yes | Or `SUPABASE_SERVICE_KEY` for uploads |
+| `SUPABASE_JWT_SECRET` | Yes | Supabase → Settings → API → JWT Secret |
+| `JWT_SECRET` | Yes | App auth |
+| `JWT_VERIFY_SECRET` | Yes | Email verification |
+| `BASE_URL` | Yes | `https://your-app.vercel.app` |
+| `FRONTEND_URL` | Yes | Same as `BASE_URL` |
+| `CRON_SECRET` | Yes | Random string for `/api/cron/cleanup` |
+| `ADMIN_EMAILS` | Yes | Comma-separated |
+| `EMAIL_SMTP_*` / `EMAIL_FROM` | Recommended | Auth emails |
+
+### Frontend (build-time)
+
+| Variable | Required | Value |
+|----------|----------|--------|
+| `VITE_API_URL` | Yes | `/api` |
+| `VITE_SUPABASE_URL` | Yes | `https://xxx.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | Yes | Anon key |
+
+`VITE_API_URL` is also set in `vercel.json`; Supabase vars must be in the Vercel dashboard.
+
+## 3. Supabase setup
+
+1. Run `supabase/migrations/20260623_messages_realtime_presence.sql` in the SQL editor
+2. Confirm `messages` is in the `supabase_realtime` publication
+3. Copy **JWT Secret** → `SUPABASE_JWT_SECRET` on Vercel
+
+## 4. CI/CD
+
+Workflow: `.github/workflows/ci-cd.yml`
+
+| Trigger | Action |
+|---------|--------|
+| Push / PR | Build, test, validate `vercel.json` |
+| Push to `main` | Deploy production + `/api/health` smoke test |
+| Pull request | Preview deploy + PR comment |
+
+**GitHub secrets:** `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+
+## 5. Local commands
 
 ```bash
-npx vercel link
+npm run ci          # install, build, test
+npm run dev:client  # Vite on :3000 (proxies /api)
+npm run dev:server  # Express on :5001
 ```
 
-Note `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` from `.vercel/project.json` for GitHub secrets.
-
-## 2. GitHub Actions secrets
-
-In **Settings → Secrets and variables → Actions**, add:
-
-| Secret | Description |
-|--------|-------------|
-| `VERCEL_TOKEN` | [Vercel account token](https://vercel.com/account/tokens) |
-| `VERCEL_ORG_ID` | Team/user ID from `.vercel/project.json` |
-| `VERCEL_PROJECT_ID` | Project ID from `.vercel/project.json` |
-
-### GitHub environments (recommended)
-
-Create **production** and **preview** environments under **Settings → Environments** so deploy jobs can be protected with required reviewers.
-
-## 3. CI/CD pipeline
-
-Workflow: [`.github/workflows/ci-cd.yml`](workflows/ci-cd.yml)
-
-| Trigger | What runs |
-|---------|-----------|
-| Push / PR to `main`, `master`, `develop`, `Vepusanan` | Install → build client → server tests → validate `vercel.json` |
-| Push to `main` | Above + **production deploy** + `/api/health` smoke test |
-| Pull request | Above + **preview deploy** + PR comment with preview URL |
-| Manual `workflow_dispatch` | CI only, or CI + deploy when **Deploy** is enabled |
-
-Run CI locally:
+Production smoke test locally:
 
 ```bash
-npm run ci
+npm run build:production
+NODE_ENV=production npm run dev:server
 ```
 
-## 4. Vercel environment variables
-
-Set these in **Vercel → Project → Settings → Environment Variables** for **Production** and **Preview** (see `server/.env.example` for full list).
-
-### Required
-
-| Variable | Example | Notes |
-|----------|---------|--------|
-| `NODE_ENV` | `production` | |
-| `DATABASE_URL` | Supabase pooler URL | PostgreSQL connection |
-| `SUPABASE_URL` | `https://xxx.supabase.co` | Storage |
-| `SUPABASE_ANON_KEY` | | Or `SUPABASE_SERVICE_KEY` for uploads |
-| `JWT_SECRET` | long random string | Auth |
-| `JWT_VERIFY_SECRET` | long random string | Email verification |
-| `BASE_URL` | `https://your-app.vercel.app` | API public URL |
-| `FRONTEND_URL` | `https://your-app.vercel.app` | CORS + cookies |
-| `CRON_SECRET` | long random string | Secures `/api/cron/cleanup` |
-| `ADMIN_EMAILS` | `you@example.com` | Comma-separated |
-
-### Build-time (frontend)
-
-| Variable | Value |
-|----------|--------|
-| `VITE_API_URL` | `/api` |
-
-Already set in `vercel.json`; you can mirror it in the Vercel dashboard for clarity.
-
-### Email (recommended)
-
-| Variable | Notes |
-|----------|--------|
-| `EMAIL_SMTP_HOST` | e.g. Brevo |
-| `EMAIL_SMTP_PORT` | `587` |
-| `EMAIL_SMTP_USER` | |
-| `EMAIL_PASS` | |
-| `EMAIL_FROM` | Verified sender |
-
-### Optional
-
-`GEMINI_API_KEY`, `AUTH_COOKIE_SAME_SITE`, `CONNECTION_NOTES_ENCRYPTION_KEY`, etc. — see `server/.env.example`.
-
-## 5. Cron job
-
-`vercel.json` schedules `/api/cron/cleanup` daily at 02:00 UTC. Vercel sends `Authorization: Bearer <CRON_SECRET>` when `CRON_SECRET` is set in the project.
-
-## 6. Known limitations on Vercel
-
-- **WebSockets / Socket.io** (`server/server.js`) do not run in serverless. Real-time messaging needs a separate long-running host, or polling-only mode without `VITE_SOCKET_URL`.
-- **Local uploads** (`server/uploads/`) are ephemeral on serverless. Production file storage should use Supabase (already integrated).
-- **Cold starts:** first API request after idle may be slower; `maxDuration` is 60s in `vercel.json`.
-
-## 7. Verify after deploy
+## 6. Verify after deploy
 
 ```bash
 curl https://your-app.vercel.app/api/health
 ```
 
-Expect `status: "ok"` and `database: "connected"` when env vars and Supabase are configured.
+Test: login, messaging (instant via Realtime), file uploads (Supabase storage).
+
+## 7. Notes
+
+- **File uploads** use in-memory multer → Supabase (Vercel-compatible)
+- **Messaging** uses Supabase Realtime, not Socket.io
+- **`server/server.js`** is for local dev only; Vercel uses `api/index.js`
+- **Cron** runs via Vercel cron + `CRON_SECRET`, not `node-cron`

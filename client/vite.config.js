@@ -35,8 +35,8 @@ export default defineConfig({
           if (id.includes('react-pdf') || id.includes('pdfjs-dist')) {
             return 'pdf-vendor';
           }
-          if (id.includes('socket.io-client')) {
-            return 'socket-vendor';
+          if (id.includes('@supabase/supabase-js')) {
+            return 'supabase-vendor';
           }
           if (id.includes('react-router') || id.includes('react-dom') || id.includes('/react/')) {
             return 'react-vendor';

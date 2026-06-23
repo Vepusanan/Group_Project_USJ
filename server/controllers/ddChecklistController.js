@@ -474,7 +474,7 @@ export const respondToChecklistItem = async (req, res, next) => {
     }
 
     const uploaded = await uploadDataRoomDocument(
-      file.path,
+      file,
       file.originalname,
       startupProfile.startup_profile_id,
     );

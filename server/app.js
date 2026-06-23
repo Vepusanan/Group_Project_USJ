@@ -30,6 +30,7 @@ import ddChecklistsRoutes from "./routes/ddChecklists.js";
 import comparisonsRoutes from "./routes/comparisons.js";
 import connectionQaRoutes from "./routes/connectionQa.js";
 import profileReportsRoutes from "./routes/profileReports.js";
+import realtimeRoutes from "./routes/realtime.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
 import { requestTiming } from "./middleware/requestTiming.js";
 import { hasEmailCredentials } from "./utils/emailTransport.js";
@@ -118,6 +119,7 @@ export function createApp() {
   app.use("/api/investors", investorSearchRoutes);
   app.use("/api/uploads", uploadsRoutes);
   app.use("/api/messages", messagesRoutes);
+  app.use("/api/realtime", realtimeRoutes);
   app.use("/startups", searchRoutes);
   app.use("/api/startups", searchRoutes);
   app.use("/api/connections", connectionsRoutes);
@@ -140,6 +142,7 @@ export function createApp() {
 
   const clientDist = path.join(__dirname, "../client/dist");
   const serveFrontend =
+    !process.env.VERCEL &&
     process.env.SERVE_FRONTEND !== "false" &&
     fs.existsSync(path.join(clientDist, "index.html"));
 

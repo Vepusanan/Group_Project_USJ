@@ -379,12 +379,12 @@ export const uploadDataRoomDocumentHandler = async (req, res, next) => {
       }
     }
 
-    const magic = validateFileMagicBytes(req.file.path, req.file.mimetype);
+    const magic = validateFileMagicBytes(req.file.buffer, req.file.mimetype);
     if (!magic.ok) {
       return res.status(400).json({ success: false, error: magic.error });
     }
 
-    const scan = await scanUploadedFile(req.file.path, {
+    const scan = await scanUploadedFile(req.file.buffer, {
       userId: req.user.id,
       context: "data_room_upload",
     });
@@ -396,7 +396,7 @@ export const uploadDataRoomDocumentHandler = async (req, res, next) => {
     }
 
     const uploadResult = await uploadDataRoomDocument(
-      req.file.path,
+      req.file,
       req.file.originalname,
       profile.startup_profile_id,
     );
