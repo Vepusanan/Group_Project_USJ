@@ -2,16 +2,22 @@ name: Deploy (Vercel)
 
 on:
   push:
-    branches: [main, master]
+    branches: [Vepusanan]
   workflow_dispatch:
+
+concurrency:
+  group: vercel-production-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    name: Production deploy
+    name: Production deploy (Vepusanan)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: Vepusanan
 
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
