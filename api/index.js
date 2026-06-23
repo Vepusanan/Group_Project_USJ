@@ -1,4 +1,4 @@
 import app from "../server/app.js";
 
-// Explicit handler for Vercel serverless (Express default export).
+// Vercel Node.js runtime: default export must be the Express app (no app.listen).
 export default app;

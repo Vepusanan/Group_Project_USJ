@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "installCommand": "npm ci --prefix client && npm ci --prefix server",
-  "buildCommand": "VITE_API_URL=/api npm run build --prefix client",
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "client/dist",
   "framework": null,
   "env": {
@@ -18,11 +18,15 @@
   ],
   "rewrites": [
     {
+      "source": "/api/cron/cleanup",
+      "destination": "/api/cron/cleanup"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|assets/|images/|favicon\\.ico|pdf\\.worker|pdfjs-wasm/|manifest\\.json).*)",
       "destination": "/index.html"
     }
   ],

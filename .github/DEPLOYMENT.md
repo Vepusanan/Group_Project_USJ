@@ -17,9 +17,22 @@ https://your-app.vercel.app
 ## 1. Create the Vercel project
 
 1. [vercel.com/new](https://vercel.com/new) → import GitHub repo
-2. **Root Directory:** `.`
+2. **Root Directory:** `.` (repository root — **not** `client/`)
 3. **Framework:** Other (uses `vercel.json`)
 4. **Node.js:** 20
+
+### Critical dashboard settings
+
+Confirm these in **Vercel → Project → Settings → General**:
+
+| Setting | Must be |
+|---------|---------|
+| Root Directory | `.` |
+| Output Directory | `client/dist` |
+| Install Command | `npm ci --prefix client && npm ci --prefix server` |
+| Build Command | `npm run vercel-build` |
+
+Wrong **Output Directory** (`dist` instead of `client/dist`) is the most common cause of a **white screen**.
 
 ## 2. Environment variables
 
@@ -85,7 +98,15 @@ npm run build:production
 NODE_ENV=production npm run dev:server
 ```
 
-## 6. Verify after deploy
+## 6. Troubleshooting white screen
+
+1. **Output Directory** must be `client/dist` (not `dist`)
+2. **Build logs** should end with `Vercel build verified`
+3. **DevTools → Network** — `/assets/*.js` must return `200` + `application/javascript` (not HTML)
+4. **DevTools → Console** — check for chunk load or env errors
+5. **API check:** `curl https://your-app.vercel.app/api/health`
+
+## 7. Verify after deploy
 
 ```bash
 curl https://your-app.vercel.app/api/health
@@ -93,7 +114,7 @@ curl https://your-app.vercel.app/api/health
 
 Test: login, messaging (instant via Realtime), file uploads (Supabase storage).
 
-## 7. Notes
+## 8. Notes
 
 - **File uploads** use in-memory multer → Supabase (Vercel-compatible)
 - **Messaging** uses Supabase Realtime, not Socket.io

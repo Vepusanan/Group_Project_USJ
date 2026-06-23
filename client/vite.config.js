@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+  base: "/",
   plugins: [react()],
   resolve: {
     // react-pdf bundles pdfjs-dist@5.4.x — force a single copy so the

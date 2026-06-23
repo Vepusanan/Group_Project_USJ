@@ -7,6 +7,7 @@
   ],
   "scripts": {
     "build": "VITE_API_URL=/api npm run build --workspace=client",
+    "vercel-build": "VITE_API_URL=/api npm run build --prefix client && node scripts/verify-vercel-build.mjs",
     "build:production": "npm ci --prefix client && npm ci --prefix server && VITE_API_URL=/api npm run build --prefix client",
     "start": "node server/server.js",
     "test": "npm test --workspace=server",
