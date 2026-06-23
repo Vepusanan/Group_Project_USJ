@@ -7,23 +7,35 @@ import dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
-// Initialize Supabase client for storage operations
-const supabaseUrl = process.env.SUPABASE_URL;
-// Use service role key for storage operations, fallback to anon key
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+let supabaseClient = null;
 
-const projectRef = supabaseUrl?.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
-const storageEndpoint =
-  process.env.SUPABASE_STORAGE_ENDPOINT ||
-  (projectRef ? `https://${projectRef}.storage.supabase.co` : undefined);
+export function getSupabase() {
+  if (supabaseClient) return supabaseClient;
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  storage: {
-    region: process.env.SUPABASE_STORAGE_REGION || "ap-southeast-2",
-    ...(storageEndpoint ? { endpoint: storageEndpoint } : {}),
-  },
-});
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error(
+      "Supabase storage is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_SERVICE_KEY).",
+    );
+  }
+
+  const projectRef = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
+  const storageEndpoint =
+    process.env.SUPABASE_STORAGE_ENDPOINT ||
+    (projectRef ? `https://${projectRef}.storage.supabase.co` : undefined);
+
+  supabaseClient = createClient(supabaseUrl, supabaseKey, {
+    storage: {
+      region: process.env.SUPABASE_STORAGE_REGION || "ap-southeast-2",
+      ...(storageEndpoint ? { endpoint: storageEndpoint } : {}),
+    },
+  });
+
+  return supabaseClient;
+}
 
 // Storage bucket names (using your existing bucket names)
 export const BUCKETS = {
@@ -44,7 +56,7 @@ function readFileSource(source) {
 }
 
 export async function downloadStorageObject(bucketName, objectPath) {
-  const { data, error } = await supabase.storage
+  const { data, error } = await getSupabase().storage
     .from(bucketName)
     .download(objectPath);
 
@@ -60,7 +72,7 @@ export async function createSignedStorageUrl(
   objectPath,
   expiresInSeconds = DATA_ROOM_SIGNED_URL_SECONDS,
 ) {
-  const { data, error } = await supabase.storage
+  const { data, error } = await getSupabase().storage
     .from(bucketName)
     .createSignedUrl(objectPath, expiresInSeconds);
 
@@ -133,7 +145,7 @@ export async function uploadToSupabase(
     else if (ext === ".mp4") contentType = "video/mp4";
     else if (ext === ".txt") contentType = "text/plain"; // Upload to Supabase Storage
 
-    const { data, error } = await supabase.storage
+    const { data, error } = await getSupabase().storage
       .from(bucketName)
       .upload(fileName, fileBuffer, {
         contentType,
@@ -145,7 +157,7 @@ export async function uploadToSupabase(
       throw new Error(`Supabase upload error: ${error.message}`);
     } // Get the public URL
 
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = getSupabase().storage
       .from(bucketName)
       .getPublicUrl(fileName);
 
@@ -177,7 +189,7 @@ export async function uploadMessageAttachmentBuffer(
   const filePath = `messages/${fileName}`; // Subfolder within the bucket
 
   // Upload to Supabase Storage
-  const { error } = await supabase.storage
+  const { error } = await getSupabase().storage
     .from(BUCKETS.MESSAGE_ATTACHMENTS)
     .upload(filePath, fileBuffer, {
       contentType: mimeType, // Use the detected MIME type
@@ -192,7 +204,7 @@ export async function uploadMessageAttachmentBuffer(
   }
 
   // Get the public URL
-  const { data: urlData } = supabase.storage
+  const { data: urlData } = getSupabase().storage
     .from(BUCKETS.MESSAGE_ATTACHMENTS)
     .getPublicUrl(filePath);
 
@@ -393,7 +405,7 @@ export async function uploadDocument(file, originalName, startupId) {
  */
 export async function deleteFromSupabase(bucketName, filePath) {
   try {
-    const { error } = await supabase.storage
+    const { error } = await getSupabase().storage
       .from(bucketName)
       .remove([filePath]);
 

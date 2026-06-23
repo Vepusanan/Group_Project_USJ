@@ -29,7 +29,7 @@ Confirm these in **Vercel → Project → Settings → General**:
 |---------|---------|
 | Root Directory | `.` |
 | Output Directory | `client/dist` |
-| Install Command | `npm ci --prefix client && npm ci --prefix server` |
+| Install Command | `npm ci` |
 | Build Command | `npm run vercel-build` |
 
 Wrong **Output Directory** (`dist` instead of `client/dist`) is the most common cause of a **white screen**.
@@ -98,7 +98,23 @@ npm run build:production
 NODE_ENV=production npm run dev:server
 ```
 
-## 6. Troubleshooting white screen
+## 6. Troubleshooting white screen / API errors
+
+### `FUNCTION_INVOCATION_FAILED` on `/api/health`
+
+The serverless function is crashing at startup — almost always **missing environment variables on Vercel**.
+
+1. Open **Vercel → Project → Settings → Environment Variables**
+2. Copy values from your local `server/.env` (at minimum):
+   - `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET`
+   - `JWT_SECRET`, `JWT_VERIFY_SECRET`, `BASE_URL`, `FRONTEND_URL`
+   - `ADMIN_EMAILS`, `CRON_SECRET`
+3. Set build-time vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL=/api`
+4. **Redeploy** (env changes do not apply to past deployments)
+
+After redeploy, `/api/health` should return JSON (503 with a clear message if something is still missing, or 200 when connected).
+
+### White screen (frontend)
 
 1. **Output Directory** must be `client/dist` (not `dist`)
 2. **Build logs** should end with `Vercel build verified`

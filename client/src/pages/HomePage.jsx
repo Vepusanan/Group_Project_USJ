@@ -7,6 +7,9 @@ import {
   Network,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import step01Image from "../assets/home/pipeline/step-01-create-profile.png";
+import step02Image from "../assets/home/pipeline/step-02-discover-connect.png";
+import step03Image from "../assets/home/pipeline/step-03-collaborate-grow.png";
 
 const STATS = [
   { value: "500+", label: "Startups" },
@@ -21,7 +24,7 @@ const PIPELINE_STEPS = [
     title: "Create Your Profile",
     description:
       "Build a comprehensive data-rich presence. Highlighting your KPIs, vision, and institutional-ready metrics for potential partners.",
-    image: "/images/home/pipeline/step-01-create-profile.png",
+    image: step01Image,
     imageAlt: "Professional founder building a polished institutional profile",
     imageClass: "object-cover object-top",
   },
@@ -30,7 +33,7 @@ const PIPELINE_STEPS = [
     title: "Discover & Connect",
     description:
       "Leverage our proprietary matching to identify the perfect partner. Filter by industry, stage, and strategic alignment in real-time.",
-    image: "/images/home/pipeline/step-02-discover-connect.png",
+    image: step02Image,
     imageAlt: "Investor surveying opportunities to discover the right match",
     imageClass: "object-cover object-top",
     featured: true,
@@ -40,7 +43,7 @@ const PIPELINE_STEPS = [
     title: "Collaborate & Grow",
     description:
       "Finalize terms within secure data rooms. Access legal toolkits and post-funding support to scale your horizons.",
-    image: "/images/home/pipeline/step-03-collaborate-grow.png",
+    image: step03Image,
     imageAlt: "Founders and investors collaborating on a growth partnership",
     imageClass: "object-cover object-top",
   },

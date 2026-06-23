@@ -85,11 +85,25 @@ export function createApp() {
 
   app.get("/api/health", async (req, res) => {
     const checks = {
-      database: "unknown",
+      database: process.env.DATABASE_URL
+        ? "configured"
+        : process.env.SUPABASE_URL && process.env.DB_PASSWORD
+          ? "configured"
+          : "not_configured",
       email: hasEmailCredentials() ? "configured" : "not_configured",
       gemini: process.env.GEMINI_API_KEY ? "configured" : "not_configured",
       storage: process.env.SUPABASE_URL ? "configured" : "not_configured",
+      jwt: process.env.JWT_SECRET ? "configured" : "not_configured",
     };
+
+    if (checks.database === "not_configured") {
+      return res.status(503).json({
+        status: "error",
+        checks,
+        error:
+          "DATABASE_URL is not set. Add it in Vercel → Settings → Environment Variables, then redeploy.",
+      });
+    }
 
     try {
       const result = await pool.query("SELECT NOW()");

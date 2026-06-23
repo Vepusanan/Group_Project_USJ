@@ -62,26 +62,50 @@ function buildPoolConfig() {
   };
 }
 
-const pool = new Pool(buildPoolConfig());
+let pool = null;
+let startupProbeDone = false;
 
-pool.on("error", (err) => {
-  console.error("❌ Unexpected error on idle client", err);
-});
+function runStartupProbe(activePool) {
+  if (startupProbeDone) return;
+  startupProbeDone = true;
 
-pool.query("SELECT NOW()", (err) => {
-  if (err) {
-    console.error("❌ Database connection failed:", err.message);
-    if (err.message.includes("ENOTFOUND") || err.message.includes("tenant/user")) {
-      console.error(
-        "   Check server/.env: the Supabase project may be paused, deleted, or the connection string is outdated.",
-      );
-      console.error(
-        "   Get a fresh connection string from Supabase → Project Settings → Database → Session pooler.",
-      );
+  activePool.query("SELECT NOW()", (err) => {
+    if (err) {
+      console.error("❌ Database connection failed:", err.message);
+      if (err.message.includes("ENOTFOUND") || err.message.includes("tenant/user")) {
+        console.error(
+          "   Check server/.env: the Supabase project may be paused, deleted, or the connection string is outdated.",
+        );
+        console.error(
+          "   Get a fresh connection string from Supabase → Project Settings → Database → Session pooler.",
+        );
+      }
+    } else {
+      console.log("✅ Database connected successfully!");
     }
-  } else {
-    console.log("✅ Database connected successfully!");
-  }
-});
+  });
+}
 
-export default pool;
+export function getPool() {
+  if (!pool) {
+    pool = new Pool(buildPoolConfig());
+    pool.on("error", (err) => {
+      console.error("❌ Unexpected error on idle client", err);
+    });
+    runStartupProbe(pool);
+  }
+  return pool;
+}
+
+const poolProxy = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      const activePool = getPool();
+      const value = activePool[prop];
+      return typeof value === "function" ? value.bind(activePool) : value;
+    },
+  },
+);
+
+export default poolProxy;
