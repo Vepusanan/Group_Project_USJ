@@ -34,16 +34,14 @@ import realtimeRoutes from "./routes/realtime.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
 import { requestTiming } from "./middleware/requestTiming.js";
 import { hasEmailCredentials } from "./utils/emailTransport.js";
+import { getCorsOrigins } from "./utils/corsOrigins.js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
 dotenv.config({ quiet: true });
 
-const corsOriginEnv = process.env.FRONTEND_URL;
-export const corsWhitelist = corsOriginEnv
-  ? corsOriginEnv.split(",").map((o) => o.trim()).filter(Boolean)
-  : [];
+export const corsWhitelist = getCorsOrigins();
 
 export const isDev = process.env.NODE_ENV !== "production";
 const localhostRegex = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;

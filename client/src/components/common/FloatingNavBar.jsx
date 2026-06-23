@@ -19,7 +19,7 @@ const updateSlider = (container, activeEl, setSliderStyle) => {
 const FloatingNavBar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, isLoading } = useAuth();
   const { profile } = useProfileData();
   const containerRef = useRef(null);
   const itemRefs = useRef({});
@@ -28,7 +28,7 @@ const FloatingNavBar = () => {
 
   const isInvestor = user?.userType === "investor";
   const profileImageUrl = isInvestor ? profile?.photo_url : profile?.logo_url;
-  const isLoggedIn = isAuthenticated && user;
+  const isLoggedIn = !isLoading && isAuthenticated && user;
 
   const publicItems = useMemo(
     () => [

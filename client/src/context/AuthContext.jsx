@@ -38,6 +38,7 @@ const AUTH_ACTIONS = {
   CLEAR_ERROR: "CLEAR_ERROR",
   SET_LOADING: "SET_LOADING",
   SET_USER: "SET_USER",
+  SET_CACHED_USER: "SET_CACHED_USER",
 };
 
 const authReducer = (state, action) => {
@@ -111,6 +112,12 @@ const authReducer = (state, action) => {
         isLoading: action.payload ?? true,
       };
 
+    case AUTH_ACTIONS.SET_CACHED_USER:
+      return {
+        ...state,
+        user: action.payload,
+      };
+
     case AUTH_ACTIONS.SET_USER:
       return {
         ...state,
@@ -150,7 +157,7 @@ export const AuthProvider = ({ children }) => {
       if (userDataStr) {
         try {
           const cachedUser = JSON.parse(userDataStr);
-          dispatch({ type: AUTH_ACTIONS.SET_USER, payload: cachedUser });
+          dispatch({ type: AUTH_ACTIONS.SET_CACHED_USER, payload: cachedUser });
         } catch (parseError) {
           console.error("Failed to parse user data:", parseError);
           localStorage.removeItem("userData");
