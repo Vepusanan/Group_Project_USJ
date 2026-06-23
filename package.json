@@ -1,0 +1,14 @@
+{
+  "name": "group-project-usj",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=client",
+    "test": "npm test --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "short_name": "StartHub",
+  "name": "StartHub Capital",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#9F7AEA",
+  "background_color": "#000000"
+}
