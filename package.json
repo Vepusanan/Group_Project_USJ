@@ -18,5 +18,9 @@
   "engines": {
     "node": "20.x"
   },
-  "type": "module"
+  "type": "module",
+  "overrides": {
+    "esbuild": "^0.25.0",
+    "nodemailer": "^9.0.1"
+  }
 }
