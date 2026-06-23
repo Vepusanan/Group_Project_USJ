@@ -8,6 +8,10 @@ import {
   cardIdentityClass,
   cardIdentitySubtitleMutedClass,
   cardIdentityTitleClass,
+  pageContainerClass,
+  pageContentClass,
+  pageEyebrowClass,
+  pageHeadingClass,
 } from "../styles/theme";
 
 const MAX_CHARS = 5000;
@@ -329,37 +333,37 @@ const MessagesPage = () => {
   const charsLeft = MAX_CHARS - text.length;
 
   return (
-    <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-      <div className="mx-auto max-w-7xl">
-        <h1 className="text-3xl md:text-4xl font-bold text-content mb-6">Messages</h1>
+    <div className={pageContainerClass}>
+      <div className={pageContentClass}>
+        <span className={pageEyebrowClass}>Messaging</span>
+        <h1 className={`${pageHeadingClass} mb-6`}>Messages</h1>
 
         {error && (
-          <div className="mb-4 rounded-lg border border-error/40 bg-error/10 px-4 py-3 text-error text-sm flex items-center justify-between">
+          <div className="mb-4 rounded-xl border border-error/40 bg-error/10 px-4 py-3 text-error text-sm flex items-center justify-between">
             <span>{error}</span>
             <button type="button" onClick={() => setError("")} className="text-error hover:text-error-dark ml-4">✕</button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4">
-          {/* ── SIDEBAR ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
           <aside
-            className={`rounded-xl border border-line bg-surface shadow-sm overflow-hidden flex-col lg:max-h-[calc(100vh-180px)] ${
+            className={`rounded-2xl border border-outline-variant/40 bg-surface-container-lowest shadow-soft overflow-hidden flex-col lg:max-h-[calc(100vh-220px)] ${
               hasActiveChat ? "hidden lg:flex" : "flex"
             }`}
           >
-            <div className="p-3 border-b border-line space-y-2">
-              <h2 className="text-content font-semibold text-sm">Conversations</h2>
+            <div className="p-4 border-b border-outline-variant/40 space-y-3">
+              <h2 className="font-headline text-headline-md text-on-surface">Conversations</h2>
               <input
                 type="text"
                 value={conversationSearch}
                 onChange={(e) => setConversationSearch(e.target.value)}
                 placeholder="Search by name…"
-                className="w-full rounded-md bg-surface-alt border border-line px-2 py-1.5 text-sm text-content placeholder:text-content-muted"
+                className="w-full rounded-xl bg-surface-container-low border border-outline-variant px-3 py-2.5 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
               <select
                 value={conversationSort}
                 onChange={(e) => setConversationSort(e.target.value)}
-                className="w-full rounded-md bg-surface-alt border border-line px-2 py-1.5 text-sm text-content"
+                className="w-full rounded-xl bg-surface-container-low border border-outline-variant px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary"
               >
                 <option value="recent">Recent</option>
                 <option value="unread">Unread only</option>
@@ -475,18 +479,17 @@ const MessagesPage = () => {
 
           {/* ── CHAT PANEL ── */}
           <section
-            className={`rounded-xl border border-line bg-surface shadow-sm flex-col h-[calc(100dvh-12rem)] min-h-[320px] max-h-[760px] lg:h-[70vh] lg:min-h-[520px] ${
+            className={`rounded-2xl border border-outline-variant/40 bg-surface-container-lowest shadow-soft flex-col h-[calc(100dvh-12rem)] min-h-[320px] max-h-[760px] lg:h-[70vh] lg:min-h-[520px] overflow-hidden ${
               hasActiveChat ? "flex" : "hidden lg:flex"
             }`}
           >
             {!selectedConversation && !composeTarget ? (
-              <div className="flex-1 flex items-center justify-center text-content-muted text-sm">
+              <div className="flex-1 flex items-center justify-center text-outline text-sm">
                 Select a conversation to start messaging.
               </div>
             ) : (
               <>
-                {/* Chat header */}
-                <div className="px-4 sm:px-5 py-3 border-b border-line flex items-center gap-3">
+                <div className="px-4 sm:px-5 py-4 border-b border-outline-variant/40 flex items-center gap-3 bg-surface-container-lowest">
                   <button
                     type="button"
                     onClick={handleBackToList}
@@ -502,7 +505,7 @@ const MessagesPage = () => {
                     }
                   </div>
                   <div>
-                    <h3 className="text-content font-semibold leading-tight">
+                    <h3 className="font-headline text-headline-md text-on-surface leading-tight">
                       {selectedConversation?.other_user_name || composeTarget?.other_user_name || "User"}
                     </h3>
                   </div>
@@ -551,8 +554,8 @@ const MessagesPage = () => {
                           )}
                           <div className={`px-4 py-2.5 text-sm break-words ${
                             isMine
-                              ? `bg-gradient-to-br from-primary to-primary-dark text-content ${isFirstInGroup ? "rounded-t-2xl" : "rounded-t-lg"} rounded-bl-2xl ${isLastInGroup ? "rounded-br-sm" : "rounded-br-lg"}`
-                              : `bg-surface-alt border border-line text-content-secondary ${isFirstInGroup ? "rounded-t-2xl" : "rounded-t-lg"} rounded-br-2xl ${isLastInGroup ? "rounded-bl-sm" : "rounded-bl-lg"}`
+                              ? "bg-primary text-on-primary chat-bubble-out"
+                              : "bg-surface-container text-on-surface-variant border border-outline-variant/40 chat-bubble-in"
                           }`}>
                             {message.text && (
                               <p className="whitespace-pre-wrap">{message.text}</p>
@@ -587,7 +590,7 @@ const MessagesPage = () => {
                 </div>
 
                 {/* Compose area */}
-                <form onSubmit={handleSend} className="px-4 py-3 border-t border-line">
+                <form onSubmit={handleSend} className="px-4 py-4 border-t border-outline-variant/40 bg-surface-container-low">
                   {/* Upload progress */}
                   {sending && attachmentProgress > 0 && attachmentProgress < 100 && (
                     <div className="h-1 bg-surface-alt rounded-full overflow-hidden mb-2">
@@ -641,7 +644,7 @@ const MessagesPage = () => {
                       onKeyDown={handleKeyDown}
                       rows={1}
                       placeholder="Type a message…"
-                      className="flex-1 rounded-xl bg-surface-alt border border-line px-4 py-2.5 text-content placeholder:text-content-muted text-sm resize-none focus:outline-none focus:border-primary-light/50 transition-colors leading-5"
+                      className="flex-1 rounded-xl bg-surface-container-lowest border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-outline text-sm resize-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors leading-5"
                       style={{ height: "42px", maxHeight: "120px", overflowY: "auto" }}
                     />
 

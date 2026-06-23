@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Bookmark, Columns3, MapPin, Sparkles, Tag } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import VerificationBadge from "../components/common/VerificationBadge";
-import { useAuth } from "../hooks/useAuth";
 import engagementService from "../services/engagementService";
 import MatchExplanationBlock from "../components/investor/MatchExplanationBlock";
 
@@ -19,7 +18,6 @@ const getMatchScoreBadgeClass = (score) => {
 };
 
 const WatchlistPage = () => {
-  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -49,13 +47,9 @@ const WatchlistPage = () => {
     await load();
   };
 
-  if (user?.userType !== "investor") {
-    return <Navigate to="/startups" replace />;
-  }
-
   return (
     <PageLayout>
-      <div className="max-w-4xl mx-auto space-y-6 pb-12">
+      <div className="space-y-6 pb-12">
         <div>
           <div className="flex items-center gap-2 text-primary mb-1">
             <Bookmark className="w-5 h-5" />

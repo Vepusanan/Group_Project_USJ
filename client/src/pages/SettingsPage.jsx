@@ -22,6 +22,7 @@ import NotificationSettingsTab from "../components/settings/NotificationSettings
 import SecuritySettingsTab from "../components/settings/SecuritySettingsTab";
 import VerificationSettingsTab from "../components/settings/VerificationSettingsTab";
 import ProfileDocumentsTab from "../components/settings/ProfileDocumentsTab";
+import { pageContainerClass, pageContentClass } from "../styles/theme";
 
 const BASE_NAV_ITEMS = [
   { key: "account", label: "Account Settings", icon: Settings2 },
@@ -381,15 +382,18 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-content">Settings</h1>
+    <div className={pageContainerClass}>
+      <div className={pageContentClass}>
+        <div className="mb-8">
+          <span className="font-label text-label-caps uppercase tracking-widest text-primary mb-2 block">
+            Account
+          </span>
+          <h1 className="font-display text-headline-lg text-on-surface">Settings</h1>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          <nav className="lg:w-56 flex-shrink-0">
-            <ul className="space-y-1">
+          <nav className="lg:w-60 flex-shrink-0">
+            <ul className="space-y-1 rounded-2xl border border-outline-variant/40 bg-surface-container-lowest p-2">
               {navItems.map(({ key, label, icon: Icon }) => (
                 <li key={key}>
                   <button
@@ -398,10 +402,10 @@ const SettingsPage = () => {
                       settings.setActiveTab(key);
                       settings.clearFb(key);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left transition-colors ${
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left transition-colors ${
                       settings.activeTab === key
-                        ? "bg-primary-light border border-primary-light/30 text-content"
-                        : "text-content-muted hover:bg-surface-alt hover:text-content"
+                        ? "bg-primary-fixed text-primary font-semibold"
+                        : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface"
                     }`}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
@@ -412,7 +416,7 @@ const SettingsPage = () => {
             </ul>
           </nav>
 
-          <main className="flex-1 min-w-0 rounded-xl border border-line bg-surface shadow-sm p-6">
+          <main className="flex-1 min-w-0 surface-card p-6 md:p-8">
             {settings.tabLoading ? (
               <div className="flex items-center gap-2 text-content-muted text-sm py-8">
                 <Loader2 className="w-5 h-5 animate-spin" />

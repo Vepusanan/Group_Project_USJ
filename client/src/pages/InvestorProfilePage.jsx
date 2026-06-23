@@ -21,6 +21,8 @@ import {
 } from "../components/common/SectionCard";
 import {
   cardIdentityClass,
+  pageContainerClass,
+  pageContentClass,
   profileIdentityTitleClass,
   profileIdentitySubtitleClass,
 } from "../styles/theme";
@@ -143,8 +145,8 @@ const InvestorProfilePage = () => {
   );
 
   if (error || !profile) return (
-    <div className="px-6 py-10">
-      <div className="max-w-4xl mx-auto rounded-2xl border border-error/30 bg-error/10 p-6 text-error">
+    <div className={pageContainerClass}>
+      <div className={`${pageContentClass} rounded-2xl border border-error/30 bg-error/10 p-6 text-error`}>
         {error || "Profile not found"}
       </div>
     </div>
@@ -220,8 +222,8 @@ const InvestorProfilePage = () => {
   };
 
   return (
-    <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-      <div className="max-w-5xl mx-auto space-y-5">
+    <div className={pageContainerClass}>
+      <div className={`${pageContentClass} space-y-5`}>
 
         {/* back */}
         <Link to="/investors" className="inline-flex items-center gap-1.5 text-sm text-content-muted hover:text-content transition-colors">

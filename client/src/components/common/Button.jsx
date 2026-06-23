@@ -22,11 +22,11 @@ const Button = ({
   ...props
 }) => {
   const sizeClasses = {
-    xs: "px-3 py-1.5 text-xs h-8",
-    sm: "px-4 py-2 text-sm h-10",
-    md: "px-5 py-2.5 text-base h-12",
-    lg: "px-6 py-3 text-lg h-14",
-    xl: "px-8 py-4 text-xl h-16",
+    xs: "px-3 py-1.5 text-xs h-8 rounded-lg",
+    sm: "px-4 py-2 text-sm h-10 rounded-lg",
+    md: "px-5 py-2.5 text-button-text h-11 rounded-xl",
+    lg: "px-6 py-3 text-base h-12 rounded-xl",
+    xl: "px-8 py-4 text-lg h-14 rounded-xl",
   };
 
   const tokenClass = VARIANT_MAP[variant] || VARIANT_MAP.primary;

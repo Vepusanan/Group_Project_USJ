@@ -1,5 +1,9 @@
 import React, { useState } from "react";
 import { Building2, Globe, Linkedin, MapPin, Plus, Trash2, Upload, User } from "lucide-react";
+import {
+  onboardingIconInputClass,
+  onboardingUploadButtonClass,
+} from "./onboardingStyles";
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
@@ -15,16 +19,14 @@ const COUNTRIES = [
   "United Kingdom","United States","Vietnam","Zimbabwe",
 ];
 
-const inputCls =
-  "w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all";
-const iconInputCls =
-  "w-full pl-11 pr-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all";
+const iconInputCls = onboardingIconInputClass;
 
-const Field = ({ label, required, error, children }) => (
+const Field = ({ label, required, error, hint, children }) => (
   <div>
     <label className="block text-sm font-medium text-content-secondary mb-1.5">
       {label}
       {required && <span className="text-error ml-1">*</span>}
+      {hint && <span className="text-content-muted font-normal ml-2 text-xs">{hint}</span>}
     </label>
     {children}
     {error && <p className="text-xs text-error mt-1.5">{error}</p>}
@@ -78,7 +80,7 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
       </div>
 
       {/* Logo upload */}
-      <Field label="Company Logo" error={errors.logo_file || logoError}>
+      <Field label="Company Logo" hint="optional" error={errors.logo_file || logoError}>
         <div className="flex items-center gap-4">
           <div className="w-20 h-20 rounded-xl border-2 border-dashed border-line flex items-center justify-center overflow-hidden bg-surface-alt shrink-0">
             {formData.logo_preview ? (
@@ -88,7 +90,7 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
             )}
           </div>
           <div>
-            <label className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-light border border-solid border-primary-light text-sm font-medium text-primary hover:bg-primary/20 hover:border-primary transition-all">
+            <label className={onboardingUploadButtonClass}>
               <Upload className="w-4 h-4" />
               {formData.logo_preview ? "Change Logo" : "Upload Logo"}
               <input
@@ -187,31 +189,33 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
         </Field>
       </div>
 
-      <Field label="Website URL" error={errors.website_url}>
-        <div className="relative">
-          <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
-          <input
-            type="url"
-            placeholder="https://yourcompany.com"
-            value={formData.website_url || ""}
-            onChange={(e) => updateFormData({ website_url: e.target.value })}
-            className={iconInputCls}
-          />
-        </div>
-      </Field>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label="Website URL" hint="optional" error={errors.website_url}>
+          <div className="relative">
+            <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
+            <input
+              type="url"
+              placeholder="https://yourcompany.com"
+              value={formData.website_url || ""}
+              onChange={(e) => updateFormData({ website_url: e.target.value })}
+              className={iconInputCls}
+            />
+          </div>
+        </Field>
 
-      <Field label="LinkedIn Profile" error={errors.linkedin_url}>
-        <div className="relative">
-          <Linkedin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
-          <input
-            type="url"
-            placeholder="https://linkedin.com/company/your-company"
-            value={formData.linkedin_url || ""}
-            onChange={(e) => updateFormData({ linkedin_url: e.target.value })}
-            className={iconInputCls}
-          />
-        </div>
-      </Field>
+        <Field label="LinkedIn Profile" hint="optional" error={errors.linkedin_url}>
+          <div className="relative">
+            <Linkedin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
+            <input
+              type="url"
+              placeholder="https://linkedin.com/company/your-company"
+              value={formData.linkedin_url || ""}
+              onChange={(e) => updateFormData({ linkedin_url: e.target.value })}
+              className={iconInputCls}
+            />
+          </div>
+        </Field>
+      </div>
     </div>
   );
 };

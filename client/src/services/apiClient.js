@@ -23,6 +23,8 @@ const api = axios.create({
 // stampeding /auth/token.
 let inFlightRefresh = null;
 
+const shouldSkipTerminalLogout = (config) => Boolean(config?._silentAuth);
+
 const terminalLogout = () => {
   // Tokens live in HttpOnly cookies and we cannot delete them from JS;
   // the backend clears them on /auth/logout. After a failed refresh the
@@ -44,7 +46,9 @@ api.interceptors.response.use(
     // Guard against a refresh-token call itself 401ing — refreshing again
     // would loop forever.
     if (error.response?.status === 401 && url.includes("/auth/token")) {
-      terminalLogout();
+      if (!shouldSkipTerminalLogout(original)) {
+        terminalLogout();
+      }
       return Promise.reject(error);
     }
 
@@ -54,14 +58,20 @@ api.interceptors.response.use(
         if (!inFlightRefresh) {
           // No body — the browser sends the refresh_token cookie and the
           // backend sets a new access_token cookie on success.
-          inFlightRefresh = api.post("/auth/token").finally(() => {
-            inFlightRefresh = null;
-          });
+          inFlightRefresh = api
+            .post("/auth/token", null, {
+              _silentAuth: shouldSkipTerminalLogout(original),
+            })
+            .finally(() => {
+              inFlightRefresh = null;
+            });
         }
         await inFlightRefresh;
         return api(original);
       } catch {
-        terminalLogout();
+        if (!shouldSkipTerminalLogout(original)) {
+          terminalLogout();
+        }
         return Promise.reject(error);
       }
     }

@@ -1,196 +1,262 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import {
+  BadgeCheck,
+  CheckCircle2,
+  Gauge,
+  Network,
+} from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import Button from "../components/common/Button";
-import { Link, useNavigate } from "react-router-dom";
+
+const STATS = [
+  { value: "500+", label: "Startups" },
+  { value: "200+", label: "Investors" },
+  { value: "1500+", label: "Connections" },
+  { value: "50+", label: "Industries" },
+];
+
+const PIPELINE_STEPS = [
+  {
+    step: "01.",
+    title: "Create Your Profile",
+    description:
+      "Build a comprehensive data-rich presence. Highlighting your KPIs, vision, and institutional-ready metrics for potential partners.",
+    image: "/images/home/pipeline/step-01-create-profile.png",
+    imageAlt: "Professional founder building a polished institutional profile",
+    imageClass: "object-cover object-top",
+  },
+  {
+    step: "02.",
+    title: "Discover & Connect",
+    description:
+      "Leverage our proprietary matching to identify the perfect partner. Filter by industry, stage, and strategic alignment in real-time.",
+    image: "/images/home/pipeline/step-02-discover-connect.png",
+    imageAlt: "Investor surveying opportunities to discover the right match",
+    imageClass: "object-cover object-top",
+    featured: true,
+  },
+  {
+    step: "03.",
+    title: "Collaborate & Grow",
+    description:
+      "Finalize terms within secure data rooms. Access legal toolkits and post-funding support to scale your horizons.",
+    image: "/images/home/pipeline/step-03-collaborate-grow.png",
+    imageAlt: "Founders and investors collaborating on a growth partnership",
+    imageClass: "object-cover object-top",
+  },
+];
 
 const HomePage = () => {
-  const { isAuthenticated, user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
   const roleLandingPath =
     user?.userType === "investor" ? "/startups" : "/investors";
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch {
-      localStorage.removeItem("userData");
-    }
-    navigate("/login");
-  };
+  const ctaLink = isAuthenticated && user ? roleLandingPath : "/signup";
+  const ctaLabel = isAuthenticated && user ? "Explore Matches" : "Get Started Free";
 
   return (
-    <div className="relative bg-page">
-      <section className="relative min-h-screen hero-gradient flex flex-col overflow-visible pb-24">
-        <header className="relative z-20 w-full flex justify-between items-center px-6 py-4 md:px-8 lg:px-12 xl:px-16">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-soft">
+    <div className="overflow-x-hidden bg-slate-50 font-sans text-slate-900">
+      <section className="relative flex w-full flex-col min-h-[100dvh] lg:h-[100dvh] lg:min-h-0">
+        <img
+          src="/images/hero-background/hero-vortex.png"
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <div
+          className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/10 sm:from-black/60 sm:via-black/30 sm:to-black/10"
+          aria-hidden
+        />
+
+        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-8 pt-6 text-center sm:px-6 sm:pb-10 md:px-10 lg:px-16">
+          <div className="mx-auto flex w-full max-w-3xl flex-col items-center">
+            <h1 className="mb-4 font-display text-[1.625rem] leading-[1.12] tracking-tight text-white drop-shadow-lg sm:mb-5 sm:text-4xl sm:leading-[1.1] md:text-5xl lg:text-[3.25rem]">
+              Scale Your Vision
+              <br />
+              With Elite Capital
+            </h1>
+
+            <p className="mb-6 max-w-xl text-sm leading-relaxed text-white/90 drop-shadow-md sm:mb-8 sm:text-base md:text-lg">
+              Discover high-potential startups, connect with verified investors,
+              and build funded ventures — all in one seamless platform.
+            </p>
+
+            <Link
+              to={ctaLink}
+              className="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-on-surface shadow-lg transition-colors hover:bg-white/90 sm:w-auto sm:px-8 sm:py-3.5"
+            >
+              {ctaLabel}
+            </Link>
+
+            <p className="mt-5 font-label text-[10px] uppercase tracking-widest text-white/60 sm:mt-8 sm:text-xs">
+              Trusted by 1,500+ founders worldwide
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="relative z-20 -mt-16 px-5 sm:-mt-20 md:-mt-24 md:px-16">
+        <div className="light-card-surface mx-auto grid max-w-container-max grid-cols-2 gap-6 rounded-[2rem] p-6 sm:gap-8 sm:p-8 md:grid-cols-4 md:gap-12 md:p-12">
+          {STATS.map(({ value, label }) => (
+            <div key={label} className="flex flex-col items-center text-center">
+              <div className="font-label text-2xl font-bold text-midnight-navy sm:text-3xl md:text-4xl">
+                {value}
+              </div>
+              <div className="mt-1 font-label text-xs uppercase tracking-wider text-slate-600">
+                {label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* About */}
+      <section
+        id="about"
+        className="scroll-mt-24 overflow-hidden px-5 py-20 sm:py-24 md:px-16 md:py-32"
+      >
+        <div className="mx-auto grid max-w-container-max items-center gap-12 lg:grid-cols-2 lg:gap-20">
+          <div className="relative">
+            <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-blue-500/5 blur-[100px]" />
+            <h2 className="relative mb-6 text-3xl font-bold leading-tight text-midnight-navy sm:mb-8 sm:text-4xl md:text-5xl">
+              Building Solutions,
+              <br />
+              Expanding Horizons
+            </h2>
+            <p className="relative mb-8 text-base leading-relaxed text-slate-600 sm:text-lg">
+              StartHub bridges the gap between ambitious founders and strategic
+              investors. We believe the next generation of deep tech and software
+              innovations shouldn&apos;t be stalled by access to capital.
+            </p>
+            <div className="relative space-y-4">
+              <div className="flex items-start gap-4">
+                <BadgeCheck className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
+                <div>
+                  <h4 className="text-lg font-semibold text-midnight-navy">
+                    Verified Ecosystem
+                  </h4>
+                  <p className="text-slate-600">
+                    Every participant undergoes rigorous vetting to ensure
+                    high-stakes professional integrity.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <Gauge className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
+                <div>
+                  <h4 className="text-lg font-semibold text-midnight-navy">
+                    Rapid Deployment
+                  </h4>
+                  <p className="text-slate-600">
+                    Accelerate the fundraising process from months to weeks with
+                    targeted matching algorithms.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="group relative">
+            <div className="absolute inset-0 rounded-[2rem] bg-blue-500/5 opacity-0 blur-3xl transition-opacity duration-1000 group-hover:opacity-100" />
+            <div className="relative aspect-video overflow-hidden rounded-[2rem] border border-slate-200 shadow-xl lg:aspect-square">
               <img
-                src="/images/home/rocketicon.png"
-                alt="StartHub Capital Logo"
-                className="w-5 h-6 object-contain brightness-0 invert"
+                src="/images/home/about-solutions.png"
+                alt="Growth and strategic vision for founders and investors"
+                className="h-full w-full scale-[1.15] object-cover object-center transition-all duration-700 group-hover:scale-110"
               />
             </div>
-            <span className="text-xl font-bold text-content">
-              StartHub <span className="text-primary">Capital</span>
-            </span>
-          </Link>
-          <div className="flex items-center gap-3">
-            {isAuthenticated && user ? (
-              <>
-                <Link to={roleLandingPath} className="btn-primary-token px-4 py-2 text-sm">
-                  Explore
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="btn-secondary-token px-4 py-2 text-sm"
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section
+        id="how-it-works"
+        className="scroll-mt-24 bg-slate-50 px-5 py-20 sm:py-24 md:px-16 md:py-32"
+      >
+        <div className="mx-auto max-w-container-max">
+          <div className="mb-12 text-center sm:mb-16 md:mb-20">
+            <h2 className="mb-3 text-3xl font-bold text-midnight-navy sm:mb-4 sm:text-4xl md:text-5xl">
+              The Pipeline to Success
+            </h2>
+            <p className="mx-auto max-w-2xl text-base text-slate-600 sm:text-lg">
+              Our streamlined process connects vision with resources through
+              three critical phases.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3 md:gap-8">
+            {PIPELINE_STEPS.map(
+              ({ step, title, description, image, imageAlt, imageClass, featured }) => (
+                <div
+                  key={step}
+                  className={`light-card-surface hover-lift group relative overflow-hidden rounded-3xl p-8 sm:p-10 ${
+                    featured ? "md:-mt-2" : ""
+                  }`}
                 >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/signup"
-                  className="px-4 py-2 text-sm font-medium text-content-secondary hover:text-content"
-                >
-                  Sign up
-                </Link>
-                <Link to="/login" className="btn-primary-token px-4 py-2 text-sm">
-                  Login
-                </Link>
-              </>
+                  {featured && (
+                    <div className="pointer-events-none absolute right-0 top-0 p-4">
+                      <Network className="h-16 w-16 text-blue-500/10 transition-transform group-hover:scale-125" />
+                    </div>
+                  )}
+                  <div className="mb-5 font-label text-xl font-bold text-blue-600 sm:mb-6">
+                    {step}
+                  </div>
+                  <h3 className="mb-3 text-xl font-semibold text-midnight-navy sm:mb-4">
+                    {title}
+                  </h3>
+                  <p className="mb-6 text-slate-600 sm:mb-8">{description}</p>
+                  <div className="h-40 w-full overflow-hidden rounded-xl border border-slate-100 sm:h-48">
+                    <img
+                      src={image}
+                      alt={imageAlt}
+                      className={`h-full w-full ${imageClass}`}
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+              ),
             )}
           </div>
-        </header>
+        </div>
+      </section>
 
-        <div className="relative z-10 flex-1 container mx-auto px-6 md:px-10 lg:px-20 flex flex-col lg:flex-row items-center justify-center gap-12 py-12">
-          <div className="lg:w-1/2 text-center lg:text-left">
-            <span className="badge-class mb-6">
-              ✦ Connect Startups with Investors
+      {/* Final CTA */}
+      <section
+        id="cta"
+        className="relative scroll-mt-24 overflow-hidden px-5 py-16 sm:py-20 md:px-16 md:py-24"
+      >
+        <div className="absolute inset-0 z-0 bg-slate-50">
+          <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/5 blur-[120px] sm:h-[800px] sm:w-[800px]" />
+        </div>
+
+        <div className="light-card-surface relative z-10 mx-auto max-w-4xl rounded-[2rem] p-6 text-center sm:rounded-[3rem] sm:p-8 md:p-12">
+          <h2 className="mb-4 text-3xl font-bold text-midnight-navy sm:mb-5 sm:text-4xl md:text-5xl">
+            Raise the bar for your
+            <br />
+            <span className="text-blue-600">venture portfolio</span>
+          </h2>
+          <p className="mx-auto mb-5 max-w-xl text-base text-slate-600 sm:mb-6 sm:text-lg">
+            Join the exclusive ecosystem where high-growth visionaries and
+            institutional capital unite to build the future.
+          </p>
+          <Link
+            to="/signup"
+            className="inline-flex items-center justify-center rounded-2xl bg-[#0f172a] px-10 py-4 text-base font-bold !text-white no-underline shadow-xl transition-all hover:scale-105 hover:!text-white hover:!bg-[#1e293b] active:scale-95 sm:px-12 sm:py-5"
+          >
+            Join the Pipeline
+          </Link>
+          <div className="mt-4 flex flex-col items-center justify-center gap-2 font-label text-xs uppercase tracking-wider text-slate-600 sm:mt-5 sm:flex-row sm:gap-5">
+            <span className="inline-flex items-center gap-1">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              No upfront fees
             </span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-content leading-tight tracking-tight mb-6">
-              Empowering Teams,{" "}
-              <span className="text-gradient-primary">One Match at a Time</span>
-            </h1>
-            <p className="text-content-secondary text-lg leading-relaxed mb-10 max-w-xl mx-auto lg:mx-0">
-              A smart matching platform that helps founders showcase their ideas,
-              connect with verified investors, and secure funding faster.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              {isAuthenticated && user ? (
-                <Link to={roleLandingPath}>
-                  <Button variant="primary" size="lg">
-                    Explore Matches
-                  </Button>
-                </Link>
-              ) : (
-                <>
-                  <Link to="/signup">
-                    <Button variant="primary" size="lg">
-                      Get Started Free
-                    </Button>
-                  </Link>
-                  <Link to="/login">
-                    <Button variant="secondary" size="lg">
-                      Talk to us
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </div>
+            <span className="inline-flex items-center gap-1">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              SEC Compliant
+            </span>
           </div>
-          <div className="lg:w-1/2 flex justify-center">
-            <div className="relative w-full max-w-md animate-float">
-              <img
-                src="/images/home/homepagerocket.png"
-                alt="Rocket Launching"
-                className="w-full h-auto max-w-md mx-auto drop-shadow-card"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="relative z-20 container mx-auto px-6 md:px-10 lg:px-20 translate-y-12">
-          <div className="surface-card grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 p-8 md:p-10">
-            {[
-              { value: "500+", label: "Startups" },
-              { value: "200+", label: "Investors" },
-              { value: "1500+", label: "Connections" },
-              { value: "50+", label: "Industries" },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <p className="text-3xl md:text-4xl font-bold text-content mb-1">
-                  {stat.value}
-                </p>
-                <p className="text-sm text-content-muted">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="section-alt pt-32 pb-20">
-        <div className="container mx-auto px-6 md:px-10 lg:px-20">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start max-w-6xl mx-auto">
-            <div>
-              <span className="text-primary text-sm font-semibold mb-3 block">
-                About Us
-              </span>
-              <h2 className="text-3xl md:text-4xl font-bold text-content tracking-tight">
-                Building Solutions, Expanding Horizons
-              </h2>
-            </div>
-            <div className="space-y-4 text-content-secondary leading-relaxed">
-              <p>
-                StartHub Capital bridges the gap between ambitious founders and
-                investors who share their vision.
-              </p>
-              <p>
-                Whether you are a startup seeking funding or an investor looking
-                for your next opportunity, our platform helps you find the right
-                match faster.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-20 bg-surface">
-        <div className="container mx-auto px-6 md:px-10 lg:px-20">
-          <div className="text-center mb-16">
-            <span className="badge-class mb-4">How it works</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-content mb-4">
-              From Profile to Partnership
-            </h2>
-            <p className="text-content-secondary max-w-xl mx-auto">
-              Three simple steps to connect founders with the right investors.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {[
-              ["01", "Create Your Profile", "Startups showcase vision and funding needs. Investors highlight thesis and focus."],
-              ["02", "Discover & Connect", "Browse curated profiles and send connection requests to ideal partners."],
-              ["03", "Collaborate & Grow", "Message directly, share pitch decks, and build funded ventures."],
-            ].map(([step, title, desc]) => (
-              <div key={step} className="surface-card p-8 text-center">
-                <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-content-inverse text-sm font-bold mx-auto mb-5 shadow-soft">
-                  {step}
-                </div>
-                <h3 className="text-lg font-bold text-content mb-3">{title}</h3>
-                <p className="text-content-secondary text-sm leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-          {!isAuthenticated && (
-            <div className="text-center mt-14">
-              <Link to="/signup">
-                <Button variant="primary" size="lg">
-                  Get Started Free →
-                </Button>
-              </Link>
-            </div>
-          )}
         </div>
       </section>
     </div>

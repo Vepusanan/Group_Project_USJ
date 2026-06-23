@@ -20,6 +20,7 @@ import {
   logAuthEvent,
   touchUserActivity,
 } from "../repositories/UserActivityRepository.js";
+import { isAdminUser } from "../middleware/admin.js";
 
 //auth business logic
 
@@ -187,6 +188,7 @@ const serializeAuthUser = (user) => ({
   userType: user.user_type,
   emailVerified: user.email_verified,
   createdAt: user.created_at,
+  isAdmin: isAdminUser(user),
 });
 
 const resolvePostVerificationPath = async (user) => {
@@ -541,12 +543,7 @@ export const login = async (req, res) => {
       success: true,
       message: "Login successful",
       user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name,
-        userType: user.user_type,
-        emailVerified: user.email_verified,
-        createdAt: user.created_at,
+        ...serializeAuthUser(user),
         sessionExpires: expiresAt.toISOString(),
       },
     });
@@ -597,13 +594,26 @@ export const refreshToken = async (req, res) => {
 
     const user = sessionResult.rows[0];
 
-    // 2. Generate a new access token
     const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken();
 
-    // 3. Set the new access cookie. Don't reissue the refresh cookie —
-    // we're not rotating it, the session row's expiry is unchanged.
+    const rotateResult = await pool.query(
+      `UPDATE sessions
+       SET refresh_token = $1
+       WHERE refresh_token = $2 AND expires_at > NOW()
+       RETURNING id`,
+      [newRefreshToken, incomingRefresh],
+    );
+
+    if (rotateResult.rows.length === 0) {
+      return res
+        .status(401)
+        .json({ success: false, error: "Invalid or expired session." });
+    }
+
     setAuthCookies(res, {
       accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
       isRemembered: !!user.is_remembered,
     });
 
@@ -931,14 +941,7 @@ export const getCurrentUser = async (req, res) => {
   try {
     return res.status(200).json({
       success: true,
-      user: {
-        id: req.user.id,
-        email: req.user.email,
-        fullName: req.user.full_name,
-        userType: req.user.user_type,
-        emailVerified: req.user.email_verified,
-        createdAt: req.user.created_at,
-      },
+      user: serializeAuthUser(req.user),
     });
   } catch (error) {
     console.error("Get current user error:", error);

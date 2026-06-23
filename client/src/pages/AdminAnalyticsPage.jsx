@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Activity,
   BarChart3,
@@ -11,7 +11,6 @@ import {
 import PageLayout from "../components/layout/PageLayout";
 import { SectionCard } from "../components/common/SectionCard";
 import TrendChart from "../components/analytics/TrendChart";
-import engagementService from "../services/engagementService";
 import { adminAnalyticsService } from "../services/adminAnalyticsService";
 
 const MetricCard = ({ icon: Icon, label, value, sub }) => (
@@ -29,20 +28,10 @@ const AdminAnalyticsPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isAdmin, setIsAdmin] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
-
-    const statusRes = await engagementService.getVerificationStatus();
-    if (statusRes.success) {
-      setIsAdmin(statusRes.data?.is_admin);
-      if (!statusRes.data?.is_admin) {
-        setLoading(false);
-        return;
-      }
-    }
 
     const result = await adminAnalyticsService.getDashboard();
     if (!result.success) {
@@ -59,16 +48,12 @@ const AdminAnalyticsPage = () => {
     load();
   }, [load]);
 
-  if (isAdmin === false) {
-    return <Navigate to="/settings" replace />;
-  }
-
   const adoption = data?.feature_adoption || {};
   const aiFeatures = data?.ai_usage?.last_30_days || {};
 
   return (
     <PageLayout>
-      <div className="max-w-6xl mx-auto space-y-6 pb-12">
+      <div className="space-y-6 pb-12">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-primary mb-2">

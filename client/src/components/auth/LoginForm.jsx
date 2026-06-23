@@ -132,12 +132,13 @@ const LoginForm = () => {
 
       <Button
         type="submit"
-        variant="gradient-border"
+        variant="primary"
         fullWidth
         loading={isLoading}
         disabled={isLoading}
+        className="!py-4"
       >
-        Log in
+        Sign In to StartHub
       </Button>
     </form>
   );

@@ -3,6 +3,8 @@ import profileService from "../services/profileService";
 import { Link } from "react-router-dom";
 import {
   cardIdentityClass,
+  pageContainerClass,
+  pageContentClass,
   profileIdentityTitleClass,
   profileIdentitySubtitleClass,
   profileIdentitySubtitleMutedClass,
@@ -131,8 +133,8 @@ const MyProfilePage = () => {
   );
 
   if (error) return (
-    <div className="min-h-screen px-6 py-10">
-      <div className="max-w-3xl mx-auto rounded-xl border border-error/30 bg-error/10 p-5 text-error flex items-center justify-between gap-4">
+    <div className={pageContainerClass}>
+      <div className={`${pageContentClass} rounded-xl border border-error/30 bg-error/10 p-5 text-error flex items-center justify-between gap-4`}>
         <span>{error}</span>
         <button
           onClick={() => invalidate()}
@@ -145,8 +147,8 @@ const MyProfilePage = () => {
   );
 
   if (!profile) return (
-    <div className="min-h-screen px-6 py-10">
-      <div className="max-w-3xl mx-auto rounded-xl border border-line bg-surface shadow-sm p-6 text-content-secondary">
+    <div className={pageContainerClass}>
+      <div className={`${pageContentClass} rounded-xl border border-line bg-surface shadow-sm p-6 text-content-secondary`}>
         Profile not created yet.{" "}
         <Link to={user?.userType === "investor" ? "/investor-onboarding" : "/onboarding"} className="text-primary underline">
           Complete onboarding
@@ -165,8 +167,8 @@ const MyProfilePage = () => {
     const structures = parseJson(profile.investment_structure, []);
 
     return (
-      <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-        <div className="max-w-3xl mx-auto space-y-4">
+      <div className={pageContainerClass}>
+        <div className={`${pageContentClass} space-y-4`}>
           {/* Header card */}
           <div className="rounded-xl border border-line bg-surface shadow-sm p-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-6">
@@ -244,8 +246,8 @@ const MyProfilePage = () => {
     : profile.founder_names;
 
   return (
-    <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-      <div className="max-w-3xl mx-auto space-y-4">
+    <div className={pageContainerClass}>
+      <div className={`${pageContentClass} space-y-4`}>
         {/* Header card */}
         <div className="rounded-xl border border-line bg-surface shadow-sm p-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-6">

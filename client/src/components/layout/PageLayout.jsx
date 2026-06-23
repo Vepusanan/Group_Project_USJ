@@ -1,11 +1,10 @@
-import React from 'react';
+import React from "react";
+import { pageContainerClass, pageContentClass } from "../../styles/theme";
 
-const PageLayout = ({ children }) => {
-  return (
-    <div className="relative z-10 px-4 py-8 md:px-8 lg:px-12">
-      {children}
-    </div>
-  );
-};
+const PageLayout = ({ children }) => (
+  <div className={pageContainerClass}>
+    <div className={pageContentClass}>{children}</div>
+  </div>
+);
 
 export default PageLayout;

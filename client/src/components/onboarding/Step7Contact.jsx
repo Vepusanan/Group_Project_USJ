@@ -1,10 +1,8 @@
 import React from "react";
 import { Facebook, Instagram, Linkedin, Mail, Phone, Twitter, UserRound } from "lucide-react";
+import { onboardingIconInputClass } from "./onboardingStyles";
 
-const inputCls =
-  "w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all";
-const iconInputCls =
-  "w-full pl-11 pr-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all";
+const iconInputCls = onboardingIconInputClass;
 
 const Field = ({ label, required, error, hint, children }) => (
   <div>

@@ -1,5 +1,9 @@
 import React from "react";
 import { DollarSign, Link as LinkIcon, TrendingUp } from "lucide-react";
+import {
+  onboardingIconInputClass,
+  onboardingTextareaClass,
+} from "./onboardingStyles";
 
 const FUNDING_STAGES = [
   { value: "PRE_SEED", label: "Pre-Seed" },
@@ -16,8 +20,8 @@ const REVENUE_STATUSES = [
   { value: "PROFITABLE", label: "Profitable" },
 ];
 
-const iconInputCls =
-  "w-full pl-11 pr-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all appearance-none";
+const iconInputCls = onboardingIconInputClass;
+const textareaCls = onboardingTextareaClass;
 
 const Field = ({ label, required, error, hint, children }) => (
   <div>
@@ -123,7 +127,7 @@ const Step4FundingDetails = ({ formData, updateFormData, errors }) => (
         placeholder="How will this round be allocated? e.g., 40% product, 35% hiring, 25% marketing"
         value={formData.use_of_funds}
         onChange={(e) => updateFormData({ use_of_funds: e.target.value })}
-        className="w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all resize-none"
+        className={textareaCls}
       />
     </Field>
 
@@ -135,7 +139,7 @@ const Step4FundingDetails = ({ formData, updateFormData, errors }) => (
             type="file"
             accept="application/pdf,.pdf"
             onChange={(e) => updateFormData({ pitch_deck_file: e.target.files?.[0] || null })}
-            className="block w-full text-sm text-content-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border file:border-line file:bg-surface-alt file:text-content-secondary"
+            className="block w-full text-sm text-content-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:!border file:!border-solid file:border-outline-variant/70 file:bg-surface-container-lowest file:text-on-surface-variant"
           />
           {formData.pitch_deck_file && (
             <p className="text-xs text-content-muted mt-1.5">
@@ -154,7 +158,7 @@ const Step4FundingDetails = ({ formData, updateFormData, errors }) => (
             type="file"
             accept="application/pdf,.pdf"
             onChange={(e) => updateFormData({ business_plan_file: e.target.files?.[0] || null })}
-            className="block w-full text-sm text-content-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border file:border-line file:bg-surface-alt file:text-content-secondary"
+            className="block w-full text-sm text-content-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:!border file:!border-solid file:border-outline-variant/70 file:bg-surface-container-lowest file:text-on-surface-variant"
           />
           {formData.business_plan_file && (
             <p className="text-xs text-content-muted mt-1.5">

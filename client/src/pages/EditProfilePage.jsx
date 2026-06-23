@@ -5,6 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useProfileData } from "../hooks/useProfileCache";
 import profileService from "../services/profileService";
 import investorProfileService from "../services/investorProfileService";
+import { pageContainerClass, pageContentClass } from "../styles/theme";
 
 /* ─── helpers ──────────────────────────────────────────────────────────────── */
 const parseJson = (value, fallback) => {
@@ -430,8 +431,8 @@ const EditProfilePage = () => {
   const inv2 = (key) => (e) => setInv((p) => ({ ...p, [key]: e.target.value }));
 
   return (
-    <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-      <div className="max-w-3xl mx-auto space-y-4">
+    <div className={pageContainerClass}>
+      <div className={`${pageContentClass} space-y-4`}>
         <div className="rounded-xl border border-line bg-surface shadow-sm p-6">
           <h1 className="text-2xl font-bold text-content">Edit Profile</h1>
           <p className="text-content-muted text-sm mt-1">Update your {isInvestor ? "investor" : "startup"} profile information.</p>

@@ -159,7 +159,7 @@ const DataRoomViewerPage = () => {
   if (error && !dataRoom) {
     return (
       <PageLayout>
-        <div className="max-w-2xl mx-auto py-16 text-center space-y-4">
+        <div className="py-16 text-center space-y-4">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-error/10 text-error">
             <Lock className="w-7 h-7" />
           </div>
@@ -181,7 +181,7 @@ const DataRoomViewerPage = () => {
 
   return (
     <PageLayout>
-      <div className="max-w-4xl mx-auto space-y-6 pb-12">
+      <div className="space-y-6 pb-12">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-primary mb-1">

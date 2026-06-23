@@ -30,12 +30,26 @@ export default defineConfig({
     minify: 'terser',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'axios-vendor': ['axios']
-        }
-      }
-    }
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('react-pdf') || id.includes('pdfjs-dist')) {
+            return 'pdf-vendor';
+          }
+          if (id.includes('socket.io-client')) {
+            return 'socket-vendor';
+          }
+          if (id.includes('react-router') || id.includes('react-dom') || id.includes('/react/')) {
+            return 'react-vendor';
+          }
+          if (id.includes('axios')) {
+            return 'axios-vendor';
+          }
+          if (id.includes('lucide-react')) {
+            return 'icons-vendor';
+          }
+        },
+      },
+    },
   },
   preview: {
     port: 3000

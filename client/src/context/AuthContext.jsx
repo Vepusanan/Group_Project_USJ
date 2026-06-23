@@ -4,10 +4,12 @@ import React, {
   useReducer,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import authService from "../services/authService";
 import { apiService } from "../services/apiService";
 import { clearProfileCaches } from "../hooks/useProfileCache";
+import { clearListingCaches } from "../hooks/useListingCache";
 
 const initialState = {
   user: null,
@@ -129,6 +131,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const onForceLogout = () => {
       clearProfileCaches();
+      clearListingCaches();
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
     };
     window.addEventListener("auth:force-logout", onForceLogout);
@@ -137,47 +140,36 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Cookie-based auth: we can't read the access_token from JS, so the
-    // only signal that the user is logged in is whether `/auth/me`
-    // succeeds. userData is cached so the UI can render an optimistic
-    // logged-in skeleton while the network call resolves; on 401 we
-    // clear it and stay logged out.
+    // canonical signal is whether `/auth/me` succeeds. userData is cached
+    // for optimistic UI; we always probe /auth/me on load so cookie-only
+    // sessions restore even when localStorage was cleared. The probe uses
+    // _silentAuth so anonymous visitors are not redirected on 401.
     const checkAuthStatus = async () => {
       const userDataStr = localStorage.getItem("userData");
-      let optimisticallyHydrated = false;
 
       if (userDataStr) {
         try {
           const cachedUser = JSON.parse(userDataStr);
           dispatch({ type: AUTH_ACTIONS.SET_USER, payload: cachedUser });
-          optimisticallyHydrated = true;
         } catch (parseError) {
           console.error("Failed to parse user data:", parseError);
           localStorage.removeItem("userData");
         }
       }
 
-      // Only call /auth/me when we have a cached user to confirm. Anonymous
-      // visitors should not trigger a 401 cascade (the apiClient interceptor
-      // would otherwise treat the bootstrap 401 as a session expiry and
-      // redirect them away from public pages like the home screen).
-      if (!optimisticallyHydrated) {
-        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
-        return;
-      }
-
+      // Always probe /auth/me so a valid cookie session restores even when
+      // localStorage was cleared. The request uses _silentAuth so anonymous
+      // visitors are not redirected away from public pages on 401.
       try {
         const userData = await apiService.getCurrentUser();
         if (userData.success && userData.data) {
           localStorage.setItem("userData", JSON.stringify(userData.data));
           dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData.data });
         } else {
-          // /auth/me failed but we'd already rendered the user — roll back.
           localStorage.removeItem("userData");
           dispatch({ type: AUTH_ACTIONS.LOGOUT });
         }
       } catch (error) {
-        // Either the network call failed or the cookie has expired and
-        // even the refresh-retry could not save it. Treat as logged out.
         console.error("Failed to fetch user data:", error);
         localStorage.removeItem("userData");
         dispatch({ type: AUTH_ACTIONS.LOGOUT });
@@ -253,6 +245,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     clearProfileCaches();
+    clearListingCaches();
     dispatch({ type: AUTH_ACTIONS.LOGOUT });
   }, []);
 
@@ -390,18 +383,32 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
   }, []);
 
-  const value = {
-    ...state,
-    login,
-    register,
-    logout,
-    forgotPassword,
-    resetPassword,
-    verifyEmail,
-    resendVerification,
-    refreshAccessToken,
-    clearError,
-  };
+  const value = useMemo(
+    () => ({
+      ...state,
+      login,
+      register,
+      logout,
+      forgotPassword,
+      resetPassword,
+      verifyEmail,
+      resendVerification,
+      refreshAccessToken,
+      clearError,
+    }),
+    [
+      state,
+      login,
+      register,
+      logout,
+      forgotPassword,
+      resetPassword,
+      verifyEmail,
+      resendVerification,
+      refreshAccessToken,
+      clearError,
+    ],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -1,8 +1,12 @@
 import React from "react";
 import { Users } from "lucide-react";
+import {
+  onboardingIconInputClass,
+  onboardingTextareaClass,
+} from "./onboardingStyles";
 
-const textareaCls =
-  "w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all resize-none";
+const textareaCls = onboardingTextareaClass;
+const iconInputCls = onboardingIconInputClass;
 
 const Field = ({ label, required, error, hint, children }) => (
   <div>
@@ -33,7 +37,7 @@ const Step3TeamInfo = ({ formData, updateFormData, errors }) => (
             placeholder="e.g., 8"
             value={formData.team_size}
             onChange={(e) => updateFormData({ team_size: e.target.value })}
-            className="w-full pl-11 pr-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all"
+            className={iconInputCls}
           />
         </div>
       </Field>

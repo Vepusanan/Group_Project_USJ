@@ -45,7 +45,7 @@ const VerificationSettingsTab = ({
           {verification.latest_request.rejection_reason || "See email for details"}
         </p>
       )}
-      {verification?.is_admin && (
+      {(user?.isAdmin || verification?.is_admin) && (
         <div className="flex flex-wrap gap-4">
           <Link to="/admin/analytics" className="text-sm text-primary hover:underline">
             Platform analytics dashboard →

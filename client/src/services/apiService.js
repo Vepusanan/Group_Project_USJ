@@ -22,7 +22,9 @@ const getRequestErrorMessage = (error, fallback) => {
 export const apiService = {
   getCurrentUser: async () => {
     try {
-      const response = await api.get(API_ENDPOINTS.AUTH.ME);
+      const response = await api.get(API_ENDPOINTS.AUTH.ME, {
+        _silentAuth: true,
+      });
       return {
         success: true,
         data: response.data.user,

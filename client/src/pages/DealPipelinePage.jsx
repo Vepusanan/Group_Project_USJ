@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   BarChart3,
   Columns3,
@@ -12,9 +12,15 @@ import {
   Users,
   Video,
 } from "lucide-react";
-import PageLayout from "../components/layout/PageLayout";
+import {
+  cardClass,
+  pageContainerClass,
+  pageContentClass,
+  pageEyebrowClass,
+  pageHeadingClass,
+  pageSubheadingClass,
+} from "../styles/theme";
 import TrendChart from "../components/analytics/TrendChart";
-import { useAuth } from "../hooks/useAuth";
 import {
   ANALYTICS_PERIODS,
   dealPipelineService,
@@ -63,8 +69,8 @@ const PipelineCard = ({
       onDragStart?.(card.id);
     }}
     onDragEnd={() => onDragStart?.(null)}
-    className={`rounded-xl border border-line bg-surface p-3 shadow-soft cursor-grab active:cursor-grabbing transition-opacity ${
-      isDragging ? "opacity-50" : "hover:border-primary-light"
+    className={`${cardClass} p-4 cursor-grab active:cursor-grabbing transition-opacity ${
+      isDragging ? "opacity-50" : ""
     }`}
   >
     <div className="flex items-start gap-2">
@@ -152,7 +158,6 @@ const PipelineCard = ({
 );
 
 const DealPipelinePage = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [cardsByStage, setCardsByStage] = useState({});
   const [stats, setStats] = useState(null);
@@ -261,36 +266,29 @@ const DealPipelinePage = () => {
     });
   };
 
-  if (user?.userType !== "investor") {
-    return <Navigate to="/startups" replace />;
-  }
-
   if (loading) {
     return (
-      <PageLayout>
+      <div className={pageContainerClass}>
         <div className="flex justify-center py-24">
           <div className="w-10 h-10 border-4 border-primary-light border-t-primary rounded-full animate-spin" />
         </div>
-      </PageLayout>
+      </div>
     );
   }
 
   return (
-    <PageLayout>
-      <div className="max-w-[1400px] mx-auto space-y-6 pb-12 px-1">
+    <div className={pageContainerClass}>
+      <div className={`${pageContentClass} space-y-6 pb-12`}>
         <div>
-          <div className="flex items-center gap-2 text-primary mb-1">
-            <Kanban className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-widest">US-05</span>
-          </div>
+          <span className={pageEyebrowClass}>Active Dealflow</span>
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-content">Deal Pipeline</h1>
-              <p className="text-content-secondary text-sm mt-1">
+              <h1 className={pageHeadingClass}>Investor Pipeline</h1>
+              <p className={pageSubheadingClass}>
                 Drag startup cards between stages to track your deal flow.
               </p>
             </div>
-            <div className="flex rounded-xl border border-line bg-surface p-1">
+            <div className="flex rounded-xl border border-outline-variant/40 bg-surface-container p-1">
               {ANALYTICS_PERIODS.map((opt) => (
                 <button
                   key={opt.value}
@@ -455,16 +453,14 @@ const DealPipelinePage = () => {
                 }}
                 onDrop={(e) => handleDrop(stage.id, e)}
               >
-                <div
-                  className={`rounded-t-xl border px-3 py-2 ${stage.color}`}
-                >
-                  <h2 className="text-sm font-semibold text-content">{stage.label}</h2>
-                  <p className="text-[10px] text-content-muted">
+                <div className="rounded-t-2xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-3 border-b-0">
+                  <h2 className="font-headline text-headline-md text-on-surface">{stage.label}</h2>
+                  <p className="font-label text-label-caps uppercase tracking-wider text-outline text-[10px] mt-1">
                     {(cardsByStage[stage.id] || []).length} deal
                     {(cardsByStage[stage.id] || []).length === 1 ? "" : "s"}
                   </p>
                 </div>
-                <div className="min-h-[320px] rounded-b-xl border border-t-0 border-line bg-surface-alt/50 p-2 space-y-2">
+                <div className="min-h-[320px] rounded-b-2xl border border-outline-variant/40 bg-surface-container-low p-3 space-y-3 custom-scrollbar">
                   {(cardsByStage[stage.id] || []).length === 0 ? (
                     <p className="text-xs text-content-muted text-center py-8">
                       Drop cards here
@@ -508,7 +504,7 @@ const DealPipelinePage = () => {
           onSaved={handleNotesSaved}
         />
       )}
-    </PageLayout>
+    </div>
   );
 };
 

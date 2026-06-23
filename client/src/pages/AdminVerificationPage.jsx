@@ -1,30 +1,18 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
 import { Shield } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import engagementService from "../services/engagementService";
-import { useAuth } from "../hooks/useAuth";
 
 const AdminVerificationPage = () => {
-  const { user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rejectId, setRejectId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [busy, setBusy] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const statusRes = await engagementService.getVerificationStatus();
-    if (statusRes.success) {
-      setIsAdmin(statusRes.data?.is_admin);
-      if (!statusRes.data?.is_admin) {
-        setLoading(false);
-        return;
-      }
-    }
     const result = await engagementService.listPendingVerifications();
     if (!result.success) {
       setError(result.error);
@@ -64,13 +52,9 @@ const AdminVerificationPage = () => {
     await load();
   };
 
-  if (isAdmin === false) {
-    return <Navigate to="/settings" replace />;
-  }
-
   return (
     <PageLayout>
-      <div className="max-w-3xl mx-auto space-y-6 pb-12">
+      <div className="space-y-6 pb-12">
         <div>
           <div className="flex items-center gap-2 text-primary mb-1">
             <Shield className="w-5 h-5" />

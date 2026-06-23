@@ -11,11 +11,9 @@ import {
   ScrollText,
   Lock,
 } from "lucide-react";
-import { Navigate } from "react-router-dom";
 import PageLayout from "../components/layout/PageLayout";
 import { SectionCard } from "../components/common/SectionCard";
 import { dataRoomService } from "../services/dataRoomService";
-import { useAuth } from "../hooks/useAuth";
 
 const formatBytes = (bytes) => {
   if (!bytes) return "—";
@@ -30,7 +28,6 @@ const formatAction = (action) =>
     .replace(/\b\w/g, (c) => c.toUpperCase());
 
 const DataRoomManagePage = () => {
-  const { user } = useAuth();
   const [dataRoom, setDataRoom] = useState(null);
   const [investors, setInvestors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -241,10 +238,6 @@ const DataRoomManagePage = () => {
     await loadAll();
   };
 
-  if (user?.userType === "investor") {
-    return <Navigate to="/startups" replace />;
-  }
-
   if (loading) {
     return (
       <PageLayout>
@@ -257,7 +250,7 @@ const DataRoomManagePage = () => {
 
   return (
     <PageLayout>
-      <div className="max-w-5xl mx-auto space-y-6 pb-12">
+      <div className="space-y-6 pb-12">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-primary mb-1">

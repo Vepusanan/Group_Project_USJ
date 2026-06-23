@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   BarChart3,
   Eye,
@@ -14,7 +14,6 @@ import PageLayout from "../components/layout/PageLayout";
 import { SectionCard } from "../components/common/SectionCard";
 import TrendChart from "../components/analytics/TrendChart";
 import SlideHeatmap from "../components/analytics/SlideHeatmap";
-import { useAuth } from "../hooks/useAuth";
 import {
   ANALYTICS_PERIODS,
   startupAnalyticsService,
@@ -62,7 +61,6 @@ const severityStyles = {
 };
 
 const StartupAnalyticsPage = () => {
-  const { user } = useAuth();
   const [period, setPeriod] = useState("30d");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -86,17 +84,13 @@ const StartupAnalyticsPage = () => {
     load();
   }, [load]);
 
-  if (user?.userType === "investor") {
-    return <Navigate to="/startups" replace />;
-  }
-
   const metrics = data?.metrics;
   const trends = data?.trends;
   const completion = data?.profile_completion;
 
   return (
     <PageLayout>
-      <div className="max-w-6xl mx-auto space-y-6 pb-12">
+      <div className="space-y-6 pb-12">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-primary mb-2">

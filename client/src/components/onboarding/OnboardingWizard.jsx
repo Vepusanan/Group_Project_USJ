@@ -192,31 +192,31 @@ const OnboardingWizard = () => {
         </div>
 
         {/* Step indicators */}
-        <div className="flex items-center gap-1.5 mb-8">
+        <div className="flex items-center gap-2 mb-8">
           {STEPS.map((step, idx) => (
             <React.Fragment key={step.number}>
               <button
                 onClick={() => step.number < currentStep && setCurrentStep(step.number)}
                 disabled={step.number >= currentStep}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   step.number < currentStep
-                    ? "bg-primary-light text-primary border border-primary-light cursor-pointer hover:bg-primary/20"
+                    ? "bg-primary-light text-primary border border-primary-light cursor-pointer hover:bg-primary-light"
                     : step.number === currentStep
                     ? "bg-surface-alt text-content border border-line"
                     : "bg-surface-alt text-content-secondary border border-line cursor-default"
                 }`}
               >
                 {step.number < currentStep ? (
-                  <Check className="w-3 h-3" />
+                  <Check className="w-4 h-4" />
                 ) : (
-                  <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    step.number === currentStep ? "bg-primary text-content-inverse" : "bg-line text-content-muted"
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                    step.number === currentStep ? "bg-primary-light text-content" : "bg-line text-content-muted"
                   }`}>{step.number}</span>
                 )}
                 <span className="hidden sm:inline">{step.title}</span>
               </button>
               {idx < STEPS.length - 1 && (
-                <div className={`flex-1 h-px transition-all ${step.number < currentStep ? "bg-primary/40" : "bg-surface-alt"}`} />
+                <div className={`flex-1 h-px transition-all ${step.number < currentStep ? "bg-primary-light" : "bg-surface-alt"}`} />
               )}
             </React.Fragment>
           ))}
@@ -225,7 +225,7 @@ const OnboardingWizard = () => {
         {/* Progress bar */}
         <div className="h-1 bg-surface-alt rounded-full mb-8 overflow-hidden">
           <div
-            className="h-full bg-primary rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-primary to-primary-dark rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -264,7 +264,7 @@ const OnboardingWizard = () => {
               <button
                 onClick={handleNext}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-content-inverse rounded-xl text-sm font-semibold transition-all shadow-lg shadow-soft disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-primary to-primary-dark hover:from-primary hover:to-primary-dark !text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-soft/30 disabled:opacity-50"
               >
                 {isSaving ? (
                   <>

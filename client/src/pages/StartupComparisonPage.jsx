@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Bookmark, Columns3, Trash2 } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import VerificationBadge from "../components/common/VerificationBadge";
-import { useAuth } from "../hooks/useAuth";
 import comparisonService from "../services/comparisonService";
 
 const ROWS = [
@@ -19,7 +18,6 @@ const ROWS = [
 ];
 
 const StartupComparisonPage = () => {
-  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const idsParam = searchParams.get("ids") || "";
   const startupIds = useMemo(
@@ -94,13 +92,9 @@ const StartupComparisonPage = () => {
     window.location.href = `/compare?ids=${ids}`;
   };
 
-  if (user?.userType !== "investor") {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   return (
     <PageLayout>
-      <div className="max-w-6xl mx-auto space-y-6 pb-12">
+      <div className="space-y-6 pb-12">
         <div>
           <div className="flex items-center gap-2 text-primary mb-1">
             <Columns3 className="w-4 h-4" />

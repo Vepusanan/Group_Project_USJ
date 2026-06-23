@@ -1,5 +1,9 @@
 import React from "react";
 import { Briefcase, Calendar, Sparkles, TrendingUp } from "lucide-react";
+import {
+  onboardingIconInputClass,
+  onboardingTextareaClass,
+} from "./onboardingStyles";
 
 const INDUSTRIES = [
   "FinTech","HealthTech","E-Commerce","SaaS","EdTech","AgriTech","AI/ML",
@@ -14,8 +18,8 @@ const STAGES = [
   { value: "SCALING", label: "Scaling" },
 ];
 
-const iconInputCls =
-  "w-full pl-11 pr-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all appearance-none";
+const iconInputCls = onboardingIconInputClass;
+const textareaCls = onboardingTextareaClass;
 
 const Field = ({ label, required, error, hint, children }) => (
   <div>
@@ -61,7 +65,7 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
           maxLength={maxDesc}
           rows={5}
           onChange={(e) => updateFormData({ detailed_description: e.target.value })}
-          className="w-full px-4 py-3 bg-surface-alt border border-line rounded-xl text-content placeholder:text-content-muted focus:outline-none focus:border-primary focus:bg-surface-alt transition-all resize-none"
+          className={textareaCls}
         />
       </Field>
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   MapPin, Calendar, Users, Tag, Rocket, Globe, Linkedin,
@@ -7,7 +7,9 @@ import {
 } from "lucide-react";
 import ConnectModal from "../components/connections/ConnectModal";
 import ConnectionMeetingsPanel from "../components/connections/ConnectionMeetingsPanel";
-import PitchDeckSlidePreview from "../components/pitchDeck/PitchDeckSlidePreview";
+const PitchDeckSlidePreview = React.lazy(
+  () => import("../components/pitchDeck/PitchDeckSlidePreview"),
+);
 import investorIntentService from "../services/investorIntentService";
 import IntentLevelControl from "../components/investor/IntentLevelControl";
 import MatchExplanationBlock from "../components/investor/MatchExplanationBlock";
@@ -35,6 +37,8 @@ import {
   cardIdentityClass,
   profileIdentityTitleClass,
   profileIdentitySubtitleMutedClass,
+  pageContainerClass,
+  pageContentClass,
 } from "../styles/theme";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -239,8 +243,8 @@ const StartupProfilePage = () => {
   );
 
   if (error || !profile) return (
-    <div className="px-6 py-10">
-      <div className="max-w-4xl mx-auto rounded-2xl border border-error/30 bg-error/10 p-6 text-error">
+    <div className={pageContainerClass}>
+      <div className={`${pageContentClass} rounded-2xl border border-error/30 bg-error/10 p-6 text-error`}>
         {error || "Profile not found"}
       </div>
     </div>
@@ -356,16 +360,14 @@ const StartupProfilePage = () => {
   };
 
   return (
-    <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-      <div className="max-w-5xl mx-auto space-y-5">
+    <div className={pageContainerClass}>
+      <div className={`${pageContentClass} space-y-6`}>
 
-        {/* back */}
-        <Link to="/startups" className="inline-flex items-center gap-1.5 text-sm text-content-muted hover:text-content transition-colors">
+        <Link to="/startups" className="inline-flex items-center gap-1.5 text-sm text-outline hover:text-on-surface transition-colors font-label uppercase tracking-wide">
           <ArrowLeft className="w-4 h-4" /> Back to Startups
         </Link>
 
-        {/* ── HERO HEADER ─────────────────────────────────────────────────── */}
-        <div className="rounded-2xl border border-line bg-surface overflow-hidden shadow-card p-6">
+        <div className="surface-card p-6 md:p-8">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 min-w-0">
                 <div className={`w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-br ${gFrom} ${gTo} border border-line flex items-center justify-center flex-shrink-0 shadow-soft overflow-hidden`}>
@@ -720,10 +722,16 @@ const StartupProfilePage = () => {
           {relationship.canViewPrivate ? (
             <div className="space-y-2">
               {(profile.can_view_pitch_deck || profile.pitch_deck_url) && (
-                <PitchDeckSlidePreview
-                  startupProfileId={profile.startup_profile_id || id}
-                  companyName={profile.company_name}
-                />
+                <Suspense
+                  fallback={
+                    <div className="h-40 animate-pulse rounded-xl bg-surface-container" />
+                  }
+                >
+                  <PitchDeckSlidePreview
+                    startupProfileId={profile.startup_profile_id || id}
+                    companyName={profile.company_name}
+                  />
+                </Suspense>
               )}
               {dataRoomAccess?.can_access ? (
                 <DataRoomLink

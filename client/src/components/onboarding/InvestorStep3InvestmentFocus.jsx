@@ -34,6 +34,12 @@ const Field = ({ label, required, error, children }) => (
   </div>
 );
 
+const pillBaseClass = "text-sm !border !border-solid transition-all";
+const pillInactiveClass =
+  "bg-surface-container-lowest !border-outline-variant/70 text-on-surface-variant hover:!border-primary/40";
+const pillActiveClass = "bg-primary/15 !border-primary/50 text-primary font-medium";
+const timelineActiveClass = "bg-primary-light !border-primary/50 text-primary font-medium";
+
 const InvestorStep3InvestmentFocus = ({ formData, updateFormData, errors }) => (
   <div className="space-y-5">
     <div className="pb-2">
@@ -80,10 +86,8 @@ const InvestorStep3InvestmentFocus = ({ formData, updateFormData, errors }) => (
               key={s.value}
               type="button"
               onClick={() => updateFormData({ investment_structure: toggle(formData.investment_structure, s.value) })}
-              className={`px-3.5 py-1.5 rounded-full text-sm border transition-all ${
-                selected
-                  ? "bg-primary/25 border-primary/50 text-primary font-medium"
-                  : "bg-surface-alt border-line text-content-muted hover:border-line hover:text-content-secondary"
+              className={`px-3.5 py-1.5 rounded-full ${pillBaseClass} ${
+                selected ? pillActiveClass : pillInactiveClass
               }`}
             >
               {s.label}
@@ -102,10 +106,8 @@ const InvestorStep3InvestmentFocus = ({ formData, updateFormData, errors }) => (
               key={t.value}
               type="button"
               onClick={() => updateFormData({ investment_timeline: t.value })}
-              className={`py-2.5 px-3 rounded-xl text-sm border transition-all text-center ${
-                selected
-                  ? "bg-primary-light border-primary-light text-primary font-medium"
-                  : "bg-surface-alt border-line text-content-muted hover:border-line hover:text-content-secondary"
+              className={`py-2.5 px-3 rounded-xl ${pillBaseClass} text-center ${
+                selected ? timelineActiveClass : pillInactiveClass
               }`}
             >
               {t.label}

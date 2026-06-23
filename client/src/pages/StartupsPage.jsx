@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutGrid, List, MapPin, Tag, Rocket, Calendar, Users, TrendingUp, Globe, Search, ChevronDown, ArrowUpDown, X, Sparkles, Bookmark, Columns3, Play, Ban } from "lucide-react";
+import { LayoutGrid, List, MapPin, Search, ChevronDown, ArrowUpDown, X, Sparkles, Bookmark, Columns3, Play, Ban, Calendar, Users, Globe } from "lucide-react";
 import ConnectModal from "../components/connections/ConnectModal";
 import MatchExplanationBlock from "../components/investor/MatchExplanationBlock";
 import investorIntentService from "../services/investorIntentService";
@@ -14,10 +14,14 @@ import {
 } from "../utils/profileRelationship";
 import {
   connectButtonClass,
-  cardHeaderRowClass,
-  cardIdentityClass,
-  cardIdentityTitleClass,
-  cardIdentitySubtitleMutedClass,
+  discoveryCardClass,
+  discoveryPageContainerClass,
+  discoveryResultsGridClass,
+  discoveryTagPillClass,
+  formatDiscoveryTagLabel,
+  pageEyebrowClass,
+  pageHeadingClass,
+  pageSubheadingClass,
 } from "../styles/theme";
 import { useDebounce } from "../hooks/useDebounce";
 import { INVESTOR_INDUSTRY_OPTIONS } from "../utils/investorFilterOptions";
@@ -26,6 +30,13 @@ import {
   formatCoolingEnd,
   isInConnectionCooling,
 } from "../utils/connectionCooling";
+import {
+  buildListingCacheKey,
+  fetchListingDeduped,
+  invalidateListingNamespace,
+  readListingCache,
+  writeListingCache,
+} from "../hooks/useListingCache";
 
 const defaultFilters = {
   q: "",
@@ -92,9 +103,55 @@ const STAGE_LABEL = {
 };
 
 const getMatchScoreBadgeClass = (score) => {
-  if (score >= 80) return "bg-success/10 text-success border-success/30";
-  if (score >= 60) return "bg-primary/10 text-primary border-primary/30";
-  return "bg-warning/10 text-warning border-warning/30";
+  if (score >= 80) return "bg-green-100 text-green-700";
+  if (score >= 60) return "bg-blue-100 text-blue-700";
+  return "bg-orange-100 text-orange-700";
+};
+
+const filterFieldClass =
+  "w-full h-11 appearance-none rounded-xl bg-surface-container-low border border-outline-variant/40 pl-3 pr-9 text-sm text-on-surface transition-all duration-200 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10";
+
+const filterInputClass =
+  "w-full h-11 rounded-xl bg-surface-container-low border border-outline-variant/40 pl-10 pr-3 text-sm text-on-surface placeholder:text-outline transition-all duration-200 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10";
+
+const viewToggleBtnClass = (active) =>
+  `p-1.5 rounded-md transition-all duration-200 ${
+    active
+      ? "bg-white text-primary shadow-sm"
+      : "text-on-surface-variant hover:bg-white/60 hover:text-on-surface"
+  }`;
+
+const buildPageNumbers = (current, total, maxVisible = 5) => {
+  if (total <= 1) return [1];
+  if (total <= maxVisible) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  let start = Math.max(1, current - Math.floor(maxVisible / 2));
+  let end = start + maxVisible - 1;
+  if (end > total) {
+    end = total;
+    start = Math.max(1, end - maxVisible + 1);
+  }
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+};
+
+const fmtMoney = (val) => {
+  const amount = Number(val);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const getFooterStat = (startup) => {
+  const seeking = fmtMoney(startup.amount_seeking);
+  if (seeking) {
+    return { label: "Seeking", value: seeking };
+  }
+  return null;
 };
 
 const MatchScoreBadge = ({ score }) => {
@@ -103,22 +160,21 @@ const MatchScoreBadge = ({ score }) => {
   const normalized = Math.round(Number(score));
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold border rounded-full ${getMatchScoreBadgeClass(normalized)}`}
+      className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${getMatchScoreBadgeClass(normalized)}`}
       title="Compatibility based on your stated investment preferences"
     >
-      <Sparkles className="w-3 h-3" />
-      {normalized}% match
+      <Sparkles className="w-3.5 h-3.5" />
+      {normalized}% Match
     </span>
   );
 };
 
-const StartupCard = ({
+const StartupCard = React.memo(({
   startup,
   onConnect,
   onAccept,
   onDecline,
   isConnecting,
-  isListView,
   relationship,
   showMatchScore,
   showWatchlist,
@@ -129,6 +185,7 @@ const StartupCard = ({
   isSelectedForCompare,
   onToggleCompare,
 }) => {
+  const navigate = useNavigate();
   const startupProfileId = startup.startup_profile_id || startup.id;
   const connectionStatus = startup.connection_status || "not_connected";
   const inDeclineCooling =
@@ -140,7 +197,6 @@ const StartupCard = ({
   const description = truncateDescription(startup.detailed_description || startup.description);
   const name = startup.company_name || "Unnamed Startup";
   const avatarInitial = name.charAt(0).toUpperCase();
-  const avatarGradient = getStartupGradient(name);
   const locationParts = [startup.location_city || startup.city, startup.location_country || startup.country].filter(Boolean);
   const stage = STAGE_LABEL[startup.funding_stage] || startup.funding_stage || null;
   const profileUrl = `/startups/${startupProfileId}`;
@@ -172,384 +228,264 @@ const StartupCard = ({
   const hasWebsite = Boolean(startup.website_url);
   const hasFounderVideo = Boolean(startup.has_founder_video);
 
-  if (isListView) {
-    const description = truncateDescription(startup.detailed_description || startup.description, 180);
-    return (
-      <div className="group relative rounded-2xl border border-line bg-gradient-to-br from-surface to-surface-alt hover:border-primary-light hover:from-surface-alt hover:to-surface  transition-all duration-300 overflow-hidden">
-        {/* Top accent bar */}
-        <div className={`h-1 w-full bg-gradient-to-r ${avatarGradient}`} />
+  const footerStat = getFooterStat(startup);
+  const showConnectionStatus =
+    connectionStatus !== "not_connected" || relationship?.showInteractionActions;
 
-        <div className="p-5 flex flex-col md:flex-row md:items-center gap-5">
-          {/* Avatar */}
-          <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden self-start`}>
-            {startup.logo_url
-              ? <img src={startup.logo_url} alt={name} className="w-full h-full object-cover" />
-              : <span className="avatar-initial text-3xl">{avatarInitial}</span>
-            }
-          </div>
+  const renderSecondaryActions = () => (
+    <div
+      className="flex flex-wrap items-center gap-2"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+      role="presentation"
+    >
+      {showCompare && (
+        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-outline-variant/40 bg-surface-container-low text-xs text-on-surface-variant cursor-pointer hover:border-primary/30 transition-colors">
+          <input
+            type="checkbox"
+            checked={isSelectedForCompare}
+            onChange={() => onToggleCompare?.(startupProfileId)}
+            className="rounded border-outline-variant"
+          />
+          Compare
+        </label>
+      )}
+      {showWatchlist && (
+        <button
+          type="button"
+          onClick={() => onWatchlistToggle?.(startup)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs transition-all ${
+            startup.is_watchlisted
+              ? "border-primary bg-primary-fixed text-primary"
+              : "border-outline-variant/40 bg-surface-container-low text-on-surface-variant hover:border-primary/30"
+          }`}
+        >
+          <Bookmark className={`w-3.5 h-3.5 ${startup.is_watchlisted ? "fill-current" : ""}`} />
+          {startup.is_watchlisted ? "Saved" : "Watchlist"}
+        </button>
+      )}
+      <Link
+        to={profileUrl}
+        className="inline-flex items-center px-3 py-1.5 rounded-xl border border-outline-variant/40 bg-surface-container-low text-xs text-on-surface-variant hover:text-primary hover:border-primary/30 transition-colors font-medium"
+      >
+        View Profile
+      </Link>
+      {showWatchlist && canConnect && relationship?.canInitiateConnection && (
+        <button
+          type="button"
+          disabled={isPassing}
+          onClick={() => onPass?.(startup)}
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-outline-variant/40 text-xs text-on-surface-variant hover:text-on-surface transition-colors"
+          title="Pass — archive from discovery"
+        >
+          <Ban className="w-3.5 h-3.5" />
+          {isPassing ? "…" : "Pass"}
+        </button>
+      )}
+    </div>
+  );
 
-          {/* Info */}
-          <div className="flex-1 min-w-0 flex flex-col">
-            <div className={cardIdentityClass}>
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className={cardIdentityTitleClass}>{name}</h3>
-                <VerificationBadge tier={startup.verification_tier} />
-              </div>
-              <p className={cardIdentitySubtitleMutedClass}>{startup.tagline || "No tagline provided"}</p>
-            </div>
-
-            {/* Meta pills */}
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {startup.industry && (
-                <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-primary-light border border-primary-light text-primary">
-                  <Tag className="w-2.5 h-2.5" />{startup.industry}
-                </span>
-              )}
-              {stage && (
-                <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-primary/15 border border-primary-light text-primary">
-                  <Rocket className="w-2.5 h-2.5" />{stage}
-                </span>
-              )}
-              {revenueLabel && (
-                <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-warning/15 border border-warning/30 text-warning">
-                  <TrendingUp className="w-2.5 h-2.5" />{revenueLabel}
-                </span>
-              )}
-            </div>
-
-            {/* Description */}
-            <p className="mt-2.5 text-xs text-content-muted leading-relaxed line-clamp-2">{description}</p>
-            {showMatchScore && (
-              <MatchExplanationBlock
-                startupProfileId={startupProfileId}
-                matchScore={startup.match_score}
-                compact
-                className="mt-2"
-              />
-            )}
-
-            {hasFounderVideo && (
-              <div className="mt-2 relative w-28 h-16 rounded-lg overflow-hidden border border-line">
-                {startup.founder_video_thumbnail_url ? (
-                  <img
-                    src={startup.founder_video_thumbnail_url}
-                    alt="Founder video"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-surface-alt" />
-                )}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                  <Play className="w-4 h-4 text-white" />
-                </div>
-                <span className="absolute bottom-1 left-1 text-[9px] px-1 py-0.5 rounded bg-black/60 text-white">
-                  Video pitch
-                </span>
-              </div>
-            )}
-
-            {/* Meta strip */}
-            <div className="mt-3 flex items-center gap-4 flex-wrap text-xs text-content-muted">
-              {locationParts.length > 0 && (
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="w-3 h-3 text-primary" />{locationParts.join(", ")}
-                </span>
-              )}
-              {foundedYear && (
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="w-3 h-3 text-primary" />Est. {foundedYear}
-                </span>
-              )}
-              {teamSize && (
-                <span className="flex items-center gap-1.5">
-                  <Users className="w-3 h-3 text-primary" />{teamSize} {Number(teamSize) === 1 ? "person" : "people"}
-                </span>
-              )}
-              {hasWebsite && (
-                <span className="flex items-center gap-1.5">
-                  <Globe className="w-3 h-3 text-primary" />Website
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Actions column — status on top, buttons grouped below */}
-          <div className="flex flex-col items-stretch md:items-end justify-between gap-3 w-full md:shrink-0 md:w-[150px]">
-            <div className="flex flex-col items-stretch md:items-end gap-2">
-              {showMatchScore && <MatchScoreBadge score={startup.match_score} />}
-              <span className={`px-2.5 py-1 text-[11px] font-medium border rounded-full whitespace-nowrap ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}>
-                {statusDisplayLabel}
-              </span>
-            </div>
-            <div className="flex flex-col items-stretch gap-2 w-full">
-              {showCompare && (
-                <label className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm rounded-xl border border-line text-content-secondary cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isSelectedForCompare}
-                    onChange={() => onToggleCompare?.(startupProfileId)}
-                    className="rounded border-line"
-                  />
-                  Compare
-                </label>
-              )}
-              {showWatchlist && (
-                <button
-                  type="button"
-                  onClick={() => onWatchlistToggle?.(startup)}
-                  className={`flex items-center justify-center gap-1 px-4 py-2.5 text-sm rounded-xl border transition-all ${
-                    startup.is_watchlisted
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-line text-content-secondary hover:border-primary-light"
-                  }`}
-                >
-                  <Bookmark className={`w-4 h-4 ${startup.is_watchlisted ? "fill-current" : ""}`} />
-                  {startup.is_watchlisted ? "Saved" : "Watchlist"}
-                </button>
-              )}
-              <Link
-                to={profileUrl}
-                className="text-center px-4 py-2.5 text-sm rounded-xl border border-line text-content-secondary hover:text-content hover:border-line-strong hover:bg-surface-alt transition-all font-medium"
-              >
-                View Profile
-              </Link>
-              {relationship?.showInteractionActions && relationship.canRespondToConnection ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled={isConnecting}
-                    onClick={() => onAccept(startup.connection_id)}
-                    className="px-2 py-2.5 text-sm rounded-xl bg-primary hover:bg-primary-dark text-content-inverse font-medium disabled:opacity-40 transition-colors"
-                  >
-                    {isConnecting ? "…" : "Accept"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isConnecting}
-                    onClick={() => onDecline(startup.connection_id)}
-                    className="px-2 py-2.5 text-sm rounded-xl border border-error/30 text-error hover:bg-error/10 font-medium disabled:opacity-40 transition-colors"
-                  >
-                    Decline
-                  </button>
-                </div>
-              ) : relationship?.showInteractionActions && relationship.canInitiateConnection ? (
-                <>
-                  <button
-                    type="button"
-                    disabled={!canConnect || isConnecting}
-                    onClick={() => onConnect(startup)}
-                    className={`px-4 py-2.5 text-sm btn-connect-token ${connectButtonClass} shadow-md`}
-                  >
-                    {connectLabel}
-                  </button>
-                  {showWatchlist && canConnect && (
-                    <button
-                      type="button"
-                      disabled={isPassing}
-                      onClick={() => onPass?.(startup)}
-                      className="px-4 py-2.5 text-sm rounded-xl border border-line text-content-muted hover:text-content hover:border-line-strong transition-all"
-                    >
-                      {isPassing ? "…" : "Pass"}
-                    </button>
-                  )}
-                </>
-              ) : null}
-            </div>
-          </div>
+  const renderPrimaryAction = () => {
+    if (relationship?.showInteractionActions && relationship.canRespondToConnection) {
+      return (
+        <div
+          className="flex shrink-0 items-center gap-2"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          role="presentation"
+        >
+          <button
+            type="button"
+            disabled={isConnecting}
+            onClick={() => onDecline(startup.connection_id)}
+            className="px-4 py-2 text-sm rounded-xl border border-error/30 text-error hover:bg-error/10 font-semibold disabled:opacity-40 transition-colors"
+          >
+            Decline
+          </button>
+          <button
+            type="button"
+            disabled={isConnecting}
+            onClick={() => onAccept(startup.connection_id)}
+            className={`px-5 py-2 text-sm rounded-xl font-semibold text-on-primary bg-primary hover:bg-primary-dark disabled:opacity-40 transition-all ${connectButtonClass}`}
+          >
+            {isConnecting ? "…" : "Accept"}
+          </button>
         </div>
-      </div>
-    );
-  }
+      );
+    }
+
+    if (relationship?.showInteractionActions && relationship.canInitiateConnection) {
+      return (
+        <button
+          type="button"
+          disabled={!canConnect || isConnecting}
+          onClick={(e) => {
+            e.stopPropagation();
+            onConnect(startup);
+          }}
+          className={`shrink-0 px-5 py-2 text-sm rounded-xl font-semibold text-on-primary bg-primary hover:bg-primary-dark disabled:opacity-40 transition-all ${connectButtonClass}`}
+        >
+          {connectLabel}
+        </button>
+      );
+    }
+
+    return null;
+  };
+
+  const primaryAction = renderPrimaryAction();
+  const showCardFooter = Boolean(footerStat || primaryAction);
+  const taglineText = startup.tagline || description;
+  const showDescription =
+    Boolean(startup.tagline) &&
+    description &&
+    description !== taglineText &&
+    description !== "No startup description provided yet.";
 
   return (
-    <div className="group relative rounded-2xl border border-line bg-gradient-to-br from-surface to-surface-alt hover:border-primary-light hover:shadow-card hover:shadow-soft  transition-all duration-300 overflow-hidden flex flex-col">
-      {/* Top accent bar */}
-      <div className={`h-1 w-full bg-gradient-to-r ${avatarGradient}`} />
+    <div
+      className={`${discoveryCardClass} cursor-pointer`}
+      onClick={() => navigate(profileUrl)}
+    >
+      <div className="mb-2">
+        <div className="flex items-start gap-3">
+          <div className="mx-auto flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-outline-variant/20 bg-primary/10 sm:size-14">
+            {startup.logo_url ? (
+              <img src={startup.logo_url} alt={name} className="size-8 object-contain sm:size-9" />
+            ) : (
+              <span className="avatar-initial text-lg text-primary sm:text-xl">{avatarInitial}</span>
+            )}
+          </div>
 
-      <div className="p-5 flex flex-col flex-1">
-        {/* Header row */}
-        <div className={cardHeaderRowClass}>
-          <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden`}>
-            {startup.logo_url
-              ? <img src={startup.logo_url} alt={name} className="w-full h-full object-cover" />
-              : <span className="avatar-initial text-xl">{avatarInitial}</span>
-            }
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className={cardIdentityClass}>
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className={cardIdentityTitleClass}>{name}</h3>
-                <VerificationBadge tier={startup.verification_tier} />
-              </div>
-              <p className={cardIdentitySubtitleMutedClass}>{startup.tagline || "No tagline provided"}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="m-0 min-w-0 flex-1 break-words text-base font-semibold leading-snug text-on-surface sm:text-lg">
+                {name}
+              </h3>
+              {showMatchScore && (
+                <div className="shrink-0">
+                  <MatchScoreBadge score={startup.match_score} />
+                </div>
+              )}
             </div>
+
+            <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-on-surface-variant">
+              {taglineText}
+            </p>
           </div>
-          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-            {showMatchScore && <MatchScoreBadge score={startup.match_score} />}
-            <span className={`px-2 py-0.5 text-[10px] font-medium border rounded-full ${statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected}`}>
+        </div>
+
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <VerificationBadge tier={startup.verification_tier} />
+          {showConnectionStatus && (
+            <span
+              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium sm:px-3 ${
+                statusBadgeClass[connectionStatus] || statusBadgeClass.not_connected
+              }`}
+            >
               {statusDisplayLabel}
             </span>
-          </div>
-        </div>
-
-        {/* Meta pills (industry + stage) */}
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {startup.industry && (
-            <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-primary-light border border-primary-light text-primary">
-              <Tag className="w-2.5 h-2.5" />{startup.industry}
-            </span>
-          )}
-          {stage && (
-            <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-primary/15 border border-primary-light text-primary">
-              <Rocket className="w-2.5 h-2.5" />{stage}
-            </span>
-          )}
-          {revenueLabel && (
-            <span className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-warning/15 border border-warning/30 text-warning">
-              <TrendingUp className="w-2.5 h-2.5" />{revenueLabel}
-            </span>
           )}
         </div>
+      </div>
 
-        {/* About */}
-        <p className="mt-3 text-xs text-content-muted leading-relaxed line-clamp-3">{description}</p>
-        {showMatchScore && (
+      {showDescription && (
+        <p className="mb-3 line-clamp-2 text-sm leading-snug text-on-surface-variant/80">
+          {description}
+        </p>
+      )}
+
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {stage && <span className={discoveryTagPillClass}>{stage}</span>}
+        {startup.industry && (
+          <span className={discoveryTagPillClass}>{formatDiscoveryTagLabel(startup.industry)}</span>
+        )}
+        {locationParts.length > 0 && (
+          <span className={discoveryTagPillClass}>
+            {formatDiscoveryTagLabel(locationParts.join(", "))}
+          </span>
+        )}
+        {revenueLabel && <span className={discoveryTagPillClass}>{revenueLabel}</span>}
+      </div>
+
+      {showMatchScore && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          role="presentation"
+        >
           <MatchExplanationBlock
             startupProfileId={startupProfileId}
             matchScore={startup.match_score}
             compact
-            className="mt-2"
+            className="mb-3"
           />
-        )}
+        </div>
+      )}
 
-        {hasFounderVideo && (
-          <div className="mt-3 relative w-full h-24 rounded-xl overflow-hidden border border-line">
-            {startup.founder_video_thumbnail_url ? (
-              <img
-                src={startup.founder_video_thumbnail_url}
-                alt="Founder video"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-surface-alt" />
-            )}
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-              <Play className="w-6 h-6 text-white" />
-            </div>
-            <span className="absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-black/60 text-white">
-              Video pitch available
-            </span>
-          </div>
-        )}
-
-        {/* Stats grid — fills card with substantive content */}
-        <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-          {locationParts.length > 0 && (
-            <div className="flex items-center gap-1.5 text-content-secondary bg-surface-alt rounded-lg px-2.5 py-1.5 min-w-0">
-              <MapPin className="w-3 h-3 text-primary flex-shrink-0" />
-              <span className="truncate">{locationParts.join(", ")}</span>
-            </div>
+      {hasFounderVideo && (
+        <div className="relative mb-3 h-24 w-full overflow-hidden rounded-xl border border-outline-variant/30">
+          {startup.founder_video_thumbnail_url ? (
+            <img src={startup.founder_video_thumbnail_url} alt="Founder video" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full bg-surface-container" />
           )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+            <Play className="h-6 w-6 text-white" />
+          </div>
+          <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-white">
+            Video pitch available
+          </span>
+        </div>
+      )}
+
+      {(foundedYear || teamSize || hasWebsite) && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-on-surface-variant">
           {foundedYear && (
-            <div className="flex items-center gap-1.5 text-content-secondary bg-surface-alt rounded-lg px-2.5 py-1.5 min-w-0">
-              <Calendar className="w-3 h-3 text-primary flex-shrink-0" />
-              <span className="truncate">Est. {foundedYear}</span>
-            </div>
+            <span className="inline-flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" />
+              Est. {foundedYear}
+            </span>
           )}
           {teamSize && (
-            <div className="flex items-center gap-1.5 text-content-secondary bg-surface-alt rounded-lg px-2.5 py-1.5 min-w-0">
-              <Users className="w-3 h-3 text-primary flex-shrink-0" />
-              <span className="truncate">{teamSize} {Number(teamSize) === 1 ? "person" : "people"}</span>
-            </div>
+            <span className="inline-flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 shrink-0 text-primary" />
+              {teamSize} {Number(teamSize) === 1 ? "person" : "people"}
+            </span>
           )}
           {hasWebsite && (
-            <div className="flex items-center gap-1.5 text-content-secondary bg-surface-alt rounded-lg px-2.5 py-1.5 min-w-0">
-              <Globe className="w-3 h-3 text-primary flex-shrink-0" />
-              <span className="truncate">Website</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Globe className="h-3.5 w-3.5 shrink-0 text-primary" />
+              Website
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className={showCardFooter ? "mb-4" : "mt-auto"}>{renderSecondaryActions()}</div>
+
+      {showCardFooter && (
+        <div
+          className={`mt-auto flex flex-wrap items-end gap-3 border-t border-outline-variant/30 pt-4 ${
+            footerStat ? "justify-between" : "justify-end"
+          }`}
+        >
+          {footerStat && (
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-outline">{footerStat.label}</span>
+              <span className="mt-0.5 block text-lg font-bold leading-tight text-on-surface">
+                {footerStat.value}
+              </span>
             </div>
           )}
+          {primaryAction}
         </div>
-
-        {/* Divider + Actions */}
-        <div className="mt-auto pt-4 flex gap-2">
-          {showCompare && (
-            <label className="inline-flex items-center gap-1.5 px-2 py-2 rounded-xl border border-line text-xs text-content-secondary cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isSelectedForCompare}
-                onChange={() => onToggleCompare?.(startupProfileId)}
-                className="rounded border-line"
-              />
-              Compare
-            </label>
-          )}
-          {showWatchlist && (
-            <button
-              type="button"
-              onClick={() => onWatchlistToggle?.(startup)}
-              className={`px-3 py-2 rounded-xl border text-xs ${
-                startup.is_watchlisted
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-line text-content-secondary hover:border-primary-light"
-              }`}
-              title="Save to watchlist"
-            >
-              <Bookmark className={`w-4 h-4 ${startup.is_watchlisted ? "fill-current" : ""}`} />
-            </button>
-          )}
-          <Link
-            to={profileUrl}
-            className="flex-1 text-center px-3 py-2 text-xs rounded-xl border border-line text-content-secondary hover:text-content hover:border-line-strong hover:bg-surface-alt transition-all font-medium"
-          >
-            View Profile
-          </Link>
-          {relationship?.showInteractionActions && relationship.canRespondToConnection ? (
-            <>
-              <button
-                type="button"
-                disabled={isConnecting}
-                onClick={() => onAccept(startup.connection_id)}
-                className="flex-1 px-3 py-2 text-xs rounded-xl bg-primary hover:bg-primary-dark text-content-inverse font-medium disabled:opacity-40 transition-colors"
-              >
-                {isConnecting ? "…" : "Accept"}
-              </button>
-              <button
-                type="button"
-                disabled={isConnecting}
-                onClick={() => onDecline(startup.connection_id)}
-                className="flex-1 px-3 py-2 text-xs rounded-xl border border-error/30 text-error hover:bg-error/10 font-medium disabled:opacity-40 transition-colors"
-              >
-                Decline
-              </button>
-            </>
-          ) : relationship?.showInteractionActions && relationship.canInitiateConnection ? (
-            <>
-              <button
-                type="button"
-                disabled={!canConnect || isConnecting}
-                onClick={() => onConnect(startup)}
-                className={`flex-1 px-3 py-2 text-xs btn-connect-token ${connectButtonClass} shadow-md`}
-              >
-                {connectLabel}
-              </button>
-              {showWatchlist && canConnect && (
-                <button
-                  type="button"
-                  disabled={isPassing}
-                  onClick={() => onPass?.(startup)}
-                  className="px-3 py-2 rounded-xl border border-line text-xs text-content-muted hover:text-content"
-                  title="Pass — archive from discovery"
-                >
-                  <Ban className="w-4 h-4" />
-                </button>
-              )}
-            </>
-          ) : null}
-        </div>
-      </div>
+      )}
     </div>
   );
-};
+});
+
+StartupCard.displayName = "StartupCard";
 
 const StartupsPage = () => {
   const { user } = useAuth();
@@ -607,62 +543,64 @@ const StartupsPage = () => {
     [filters, debouncedQ, debouncedLocation],
   );
 
-  const fetchStartups = useCallback(async () => {
-    setLoading(true);
+  const fetchStartups = useCallback(async ({ background = false } = {}) => {
+    const requestParams = buildStartupApiParams(apiFilters, { page, limit: 9 });
+    const cacheKey = buildListingCacheKey("startups", requestParams);
+    const cached = readListingCache(cacheKey);
+
+    if (!background && !cached) {
+      setLoading(true);
+    }
     setError("");
 
-    const result = await apiService.getStartups(
-      buildStartupApiParams(apiFilters, { page, limit: 9 }),
+    const result = await fetchListingDeduped(cacheKey, () =>
+      apiService.getStartups(requestParams),
     );
 
     if (!result.success) {
-      setError(result.error || "Failed to load startups");
-      setStartups([]);
-      setTotalCount(0);
+      if (!cached) {
+        setError(result.error || "Failed to load startups");
+        setStartups([]);
+        setTotalCount(0);
+      }
       setLoading(false);
       return;
     }
 
     const payload = result.data || {};
-    setStartups(Array.isArray(payload.data) ? payload.data : []);
-    setTotalPages(payload.totalPages || 1);
-    setTotalCount(payload.total ?? 0);
+    const nextState = {
+      startups: Array.isArray(payload.data) ? payload.data : [],
+      totalPages: payload.totalPages || 1,
+      totalCount: payload.total ?? 0,
+    };
+    writeListingCache(cacheKey, nextState);
+    setStartups(nextState.startups);
+    setTotalPages(nextState.totalPages);
+    setTotalCount(nextState.totalCount);
     setLoading(false);
   }, [apiFilters, page]);
 
   useEffect(() => {
-    let active = true;
+    const requestParams = buildStartupApiParams(apiFilters, { page, limit: 9 });
+    const cacheKey = buildListingCacheKey("startups", requestParams);
+    const cached = readListingCache(cacheKey);
 
-    const load = async () => {
-      setLoading(true);
-      setError("");
-
-      const result = await apiService.getStartups(
-        buildStartupApiParams(apiFilters, { page, limit: 9 }),
-      );
-
-      if (!active) return;
-
-      if (!result.success) {
-        setError(result.error || "Failed to load startups");
-        setStartups([]);
-        setTotalCount(0);
-        setLoading(false);
-        return;
-      }
-
-      const payload = result.data || {};
-      setStartups(Array.isArray(payload.data) ? payload.data : []);
-      setTotalPages(payload.totalPages || 1);
-      setTotalCount(payload.total ?? 0);
+    if (cached) {
+      setStartups(cached.startups);
+      setTotalPages(cached.totalPages);
+      setTotalCount(cached.totalCount);
       setLoading(false);
-    };
+    }
 
-    load();
+    let active = true;
+    fetchStartups({ background: Boolean(cached) }).finally(() => {
+      if (!active) return;
+    });
+
     return () => {
       active = false;
     };
-  }, [apiFilters, page]);
+  }, [apiFilters, page, fetchStartups]);
 
   const handleFilterChange = (key, value) => {
     setPage(1);
@@ -702,7 +640,7 @@ const StartupsPage = () => {
     setAiSearchSummary(summary || "");
   };
 
-  const handleOpenConnect = (startup) => {
+  const handleOpenConnect = useCallback((startup) => {
     if (!startup?.user_id) return;
     const name = startup.company_name || "Startup";
     const gradientParts = getStartupGradient(name).split(" ");
@@ -714,9 +652,9 @@ const StartupsPage = () => {
       gradientTo: gradientParts.slice(1).join(" ") || "to-primary-dark",
     });
     setConnectMsg("");
-  };
+  }, []);
 
-  const handleSubmitConnect = async () => {
+  const handleSubmitConnect = useCallback(async () => {
     if (!connectTarget?.userId) return;
     setConnectingUserId(connectTarget.userId);
     const response = await apiService.createConnection(
@@ -731,10 +669,11 @@ const StartupsPage = () => {
     }
     setConnectTarget(null);
     setConnectMsg("");
+    invalidateListingNamespace("startups");
     await fetchStartups();
-  };
+  }, [connectMsg, connectTarget?.userId, fetchStartups]);
 
-  const handlePass = async (startup) => {
+  const handlePass = useCallback(async (startup) => {
     const profileId = startup.startup_profile_id || startup.id;
     if (!profileId) return;
     setPassingProfileId(profileId);
@@ -744,10 +683,11 @@ const StartupsPage = () => {
       setError(result.error);
       return;
     }
+    invalidateListingNamespace("startups");
     await fetchStartups();
-  };
+  }, [fetchStartups]);
 
-  const handleAccept = async (connectionId) => {
+  const handleAccept = useCallback(async (connectionId) => {
     if (!connectionId) return;
     setConnectingUserId(connectionId);
     const response = await apiService.respondToConnection(connectionId, "accepted");
@@ -756,10 +696,11 @@ const StartupsPage = () => {
       setError(response.error || "Failed to accept request");
       return;
     }
+    invalidateListingNamespace("startups");
     await fetchStartups();
-  };
+  }, [fetchStartups]);
 
-  const handleWatchlistToggle = async (startup) => {
+  const handleWatchlistToggle = useCallback(async (startup) => {
     const profileId = startup.startup_profile_id || startup.id;
     const result = startup.is_watchlisted
       ? await engagementService.removeFromWatchlist(profileId)
@@ -775,9 +716,9 @@ const StartupsPage = () => {
           : s,
       ),
     );
-  };
+  }, []);
 
-  const handleDecline = async (connectionId) => {
+  const handleDecline = useCallback(async (connectionId) => {
     if (!connectionId) return;
     setConnectingUserId(connectionId);
     const response = await apiService.respondToConnection(connectionId, "declined");
@@ -786,32 +727,39 @@ const StartupsPage = () => {
       setError(response.error || "Failed to decline request");
       return;
     }
+    invalidateListingNamespace("startups");
     await fetchStartups();
-  };
+  }, [fetchStartups]);
 
   const hasActiveFilters = Object.entries(filters).some(
     ([k, v]) => k !== "sort" && v !== ""
   );
 
   return (
-    <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-      <div className="mx-auto max-w-7xl min-h-[calc(100vh-9rem)] flex flex-col">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-content">Discover Startups</h1>
-            <p className="text-content-secondary mt-1">Browse and search startups seeking funding.</p>
+    <div className={`${discoveryPageContainerClass} min-h-[calc(100vh-9rem)] flex flex-col overflow-x-hidden`}>
+      <div className="flex min-w-0 flex-col gap-6 md:gap-8">
+        {/* Page header */}
+        <div className="flex items-start justify-between gap-4 md:gap-6">
+          <div className="min-w-0 max-w-3xl">
+            <span className={pageEyebrowClass}>Startup Discovery</span>
+            <h1 className={pageHeadingClass}>
+              Discover the next{" "}
+              <span className="text-gradient-primary">high-velocity</span> unicorns
+            </h1>
+            <p className={pageSubheadingClass}>
+              Browse and search startups seeking funding.
+            </p>
             {isInvestorViewer && (
-              <p className="mt-2 text-xs text-content-muted max-w-2xl">
+              <p className="mt-3 text-xs text-outline max-w-2xl leading-relaxed">
                 Match scores reflect alignment with your stated preferences (industry, stage, geography, check size, and revenue status). They are a guide only and may not capture every relevant factor.
               </p>
             )}
           </div>
-          {/* Grid / List toggle */}
-          <div className="flex items-center gap-1 rounded-lg border border-line bg-surface-alt p-1">
+          <div className="flex shrink-0 items-center gap-1 rounded-lg border border-outline-variant/40 bg-surface-container p-1">
             <button
               type="button"
               onClick={() => setIsListView(false)}
-              className={`p-1.5 rounded-md transition-colors ${!isListView ? "bg-primary-light/30 text-content" : "text-content-muted hover:text-content"}`}
+              className={viewToggleBtnClass(!isListView)}
               title="Grid view"
             >
               <LayoutGrid className="w-4 h-4" />
@@ -819,7 +767,7 @@ const StartupsPage = () => {
             <button
               type="button"
               onClick={() => setIsListView(true)}
-              className={`p-1.5 rounded-md transition-colors ${isListView ? "bg-primary-light/30 text-content" : "text-content-muted hover:text-content"}`}
+              className={viewToggleBtnClass(isListView)}
               title="List view"
             >
               <List className="w-4 h-4" />
@@ -827,12 +775,11 @@ const StartupsPage = () => {
           </div>
         </div>
 
-        {/* Filters Panel */}
-        <div className="mt-6 rounded-xl border border-line bg-surface-alt  p-4 space-y-3">
-          {/* Row 1: Search (wide) */}
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted pointer-events-none" />
+        {/* Filters panel */}
+        <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest shadow-soft p-5 md:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-outline pointer-events-none" />
               <input
                 type="text"
                 placeholder={
@@ -851,7 +798,7 @@ const StartupsPage = () => {
                     handleAiSearch();
                   }
                 }}
-                className="w-full h-10 rounded-lg bg-surface-alt border border-line pl-10 pr-3 text-sm text-content placeholder:text-content-muted focus:outline-none focus:border-primary transition-colors"
+                className={filterInputClass}
               />
             </div>
             {isInvestorViewer && (
@@ -859,7 +806,7 @@ const StartupsPage = () => {
                 type="button"
                 onClick={handleAiSearch}
                 disabled={aiSearchLoading || !filters.q.trim()}
-                className="inline-flex items-center gap-1.5 h-10 px-3 rounded-lg border border-primary/30 bg-primary/10 text-sm text-primary hover:bg-primary/15 disabled:opacity-50 shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-xl border border-primary/30 bg-primary-fixed text-sm font-semibold text-primary hover:bg-primary/10 disabled:opacity-50 shrink-0 transition-colors"
                 title="Parse natural language into filters"
               >
                 <Sparkles className="w-4 h-4" />
@@ -867,145 +814,169 @@ const StartupsPage = () => {
               </button>
             )}
           </div>
+
           {aiSearchSummary && (
-            <p className="text-xs text-content-secondary bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
-              <span className="font-medium text-primary">Applied filters:</span> {aiSearchSummary}
+            <p className="text-xs text-on-surface-variant bg-primary-fixed/50 border border-primary/15 rounded-xl px-3 py-2.5 leading-relaxed">
+              <span className="font-semibold text-primary">Applied filters:</span> {aiSearchSummary}
             </p>
           )}
 
-          {/* Row 2: Dropdown filters */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <div className="relative">
               <select
                 value={filters.industry}
                 onChange={(e) => handleFilterChange("industry", e.target.value)}
-                className="w-full h-10 appearance-none rounded-lg bg-surface-alt border border-line pl-3 pr-9 text-sm text-content focus:outline-none focus:border-primary transition-colors"
+                className={filterFieldClass}
               >
                 <option value="">All Industries</option>
                 {INVESTOR_INDUSTRY_OPTIONS.map((ind) => (
                   <option key={ind} value={ind}>{ind}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline pointer-events-none" />
             </div>
 
             <div className="relative">
               <select
                 value={filters.funding_stage}
                 onChange={(e) => handleFilterChange("funding_stage", e.target.value)}
-                className="w-full h-10 appearance-none rounded-lg bg-surface-alt border border-line pl-3 pr-9 text-sm text-content focus:outline-none focus:border-primary transition-colors"
+                className={filterFieldClass}
               >
                 <option value="">All Stages</option>
                 {FUNDING_STAGES.map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline pointer-events-none" />
             </div>
 
             <div className="relative">
               <select
                 value={filters.revenue_status}
                 onChange={(e) => handleFilterChange("revenue_status", e.target.value)}
-                className="w-full h-10 appearance-none rounded-lg bg-surface-alt border border-line pl-3 pr-9 text-sm text-content focus:outline-none focus:border-primary transition-colors"
+                className={filterFieldClass}
               >
                 <option value="">All Revenue Status</option>
                 {REVENUE_STATUSES.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline pointer-events-none" />
             </div>
 
-            {isInvestorViewer && (
-              <div className="relative">
-                <select
-                  value={filters.min_verification}
-                  onChange={(e) => handleFilterChange("min_verification", e.target.value)}
-                  className="w-full h-10 appearance-none rounded-lg bg-surface-alt border border-line pl-3 pr-9 text-sm text-content focus:outline-none focus:border-primary transition-colors"
-                >
-                  {VERIFICATION_FILTERS.map((v) => (
-                    <option key={v.value || "all"} value={v.value}>{v.label}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted pointer-events-none" />
-              </div>
-            )}
-
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted pointer-events-none" />
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline pointer-events-none" />
               <input
                 type="text"
                 placeholder="Country"
                 value={filters.location_country}
                 onChange={(e) => handleFilterChange("location_country", e.target.value)}
-                className="w-full h-10 rounded-lg bg-surface-alt border border-line pl-9 pr-3 text-sm text-content placeholder:text-content-muted focus:outline-none focus:border-primary transition-colors"
+                className={`${filterInputClass} pl-9`}
               />
             </div>
+
+            {isInvestorViewer && (
+              <div className="relative sm:col-span-2 lg:col-span-4 lg:max-w-xs">
+                <select
+                  value={filters.min_verification}
+                  onChange={(e) => handleFilterChange("min_verification", e.target.value)}
+                  className={filterFieldClass}
+                >
+                  {VERIFICATION_FILTERS.map((v) => (
+                    <option key={v.value || "all"} value={v.value}>{v.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline pointer-events-none" />
+              </div>
+            )}
           </div>
 
-          {/* Row 3: Sort + Clear (right-aligned) */}
-          <div className="flex items-center gap-2 pt-1">
-            <div className="ml-auto flex items-center gap-2">
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="flex items-center gap-1 h-10 px-3 rounded-lg border border-line bg-surface-alt text-sm text-content-secondary hover:text-content hover:border-line-strong transition-colors"
-                >
-                  <X className="w-3.5 h-3.5" /> Clear
-                </button>
-              )}
-              <div className="relative">
-                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted pointer-events-none" />
-                <select
-                  value={filters.sort}
-                  onChange={(e) => handleFilterChange("sort", e.target.value)}
-                  className="h-10 appearance-none rounded-lg bg-surface-alt border border-line pl-9 pr-9 text-sm text-content focus:outline-none focus:border-primary transition-colors"
-                >
-                  {isInvestorViewer && (
-                    <option value="match_score">Best Match</option>
-                  )}
-                  <option value="newest">Newest First</option>
-                  <option value="alphabetical">Alphabetical</option>
-                  <option value="recently_updated">Recently Updated</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted pointer-events-none" />
-              </div>
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-outline-variant/20">
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1.5 h-11 px-4 rounded-xl border border-outline-variant/40 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+                Clear
+              </button>
+            )}
+            <div className="relative">
+              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-outline pointer-events-none" />
+              <select
+                value={filters.sort}
+                onChange={(e) => handleFilterChange("sort", e.target.value)}
+                className={`${filterFieldClass} w-auto min-w-[11rem] pl-9`}
+              >
+                {isInvestorViewer && <option value="match_score">Best Match</option>}
+                <option value="newest">Newest First</option>
+                <option value="alphabetical">Alphabetical</option>
+                <option value="recently_updated">Recently Updated</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline pointer-events-none" />
             </div>
           </div>
         </div>
 
         {error && (
-          <div className="mt-4 rounded-lg border border-error/40 bg-error/10 px-4 py-3 text-error">
+          <div className="rounded-xl border border-error/40 bg-error/10 px-4 py-3 text-error text-sm">
             {error}
           </div>
         )}
 
-        {!loading && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-content-secondary">
+        {/* Results meta */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {loading ? (
+            <div className="h-5 w-40 rounded bg-surface-container-low animate-pulse" />
+          ) : (
+            <p className="text-sm text-on-surface-variant">
               {totalCount === 1 ? "1 startup found" : `${totalCount} startups found`}
             </p>
-            {isInvestorViewer && compareIds.length > 0 && (
-              <button
-                type="button"
-                onClick={openComparison}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-content-inverse text-sm"
-              >
-                <Columns3 className="w-4 h-4" />
-                Compare {compareIds.length} startup{compareIds.length > 1 ? "s" : ""}
-              </button>
-            )}
-          </div>
-        )}
+          )}
+          {!loading && isInvestorViewer && compareIds.length > 0 && (
+            <button
+              type="button"
+              onClick={openComparison}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-content-inverse text-sm"
+            >
+              <Columns3 className="w-4 h-4" />
+              Compare {compareIds.length} startup{compareIds.length > 1 ? "s" : ""}
+            </button>
+          )}
+        </div>
 
-        {loading ? (
-          <div className="mt-8 text-content-secondary">Loading startups...</div>
-        ) : (
-          <>
-            <div className={`mt-6 ${isListView ? "flex flex-col gap-3" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"}`}>
-              {startups.map((startup) => (
+        <div className={discoveryResultsGridClass(isListView)}>
+          {loading
+            ? Array.from({ length: isListView ? 6 : 9 }).map((_, idx) => (
+                <div
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={idx}
+                  className={`${discoveryCardClass} animate-pulse`}
+                >
+                  <div className="mb-3">
+                    <div className="flex items-start gap-3">
+                      <div className="size-12 shrink-0 rounded-2xl bg-surface-container sm:size-14" />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="h-5 w-full rounded bg-surface-container" />
+                        <div className="h-4 w-full rounded bg-surface-container" />
+                        <div className="h-4 w-4/5 rounded bg-surface-container" />
+                      </div>
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <div className="h-5 w-20 rounded-full bg-surface-container" />
+                      <div className="h-5 w-24 rounded-full bg-surface-container" />
+                    </div>
+                  </div>
+                  <div className="mb-3 h-4 w-full rounded bg-surface-container" />
+                  <div className="mb-4 flex gap-2">
+                    <div className="h-7 w-16 rounded-full bg-surface-container" />
+                    <div className="h-7 w-20 rounded-full bg-surface-container" />
+                  </div>
+                  <div className="h-8 w-28 rounded-xl bg-surface-container" />
+                </div>
+              ))
+            : startups.map((startup) => (
                 <StartupCard
                   key={startup.startup_profile_id || startup.id || startup.user_id}
                   startup={startup}
@@ -1019,7 +990,6 @@ const StartupsPage = () => {
                     (connectingUserId === startup.user_id ||
                       connectingUserId === startup.connection_id)
                   }
-                  isListView={isListView}
                   relationship={getProfileRelationship({
                     viewerUserId: user?.id,
                     viewerUserType: user?.userType,
@@ -1039,35 +1009,55 @@ const StartupsPage = () => {
                   onWatchlistToggle={handleWatchlistToggle}
                 />
               ))}
-            </div>
+        </div>
 
+        {!loading && (
+          <>
             {!startups.length && (
-              <div className="mt-8 text-content-secondary">No startups found.</div>
+              <div className="mt-8 text-center text-on-surface-variant">No startups found.</div>
             )}
 
-            <div className="mt-auto pt-8 flex items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                disabled={page <= 1}
-                className="px-3 py-1.5 rounded-lg border border-line text-content-secondary disabled:opacity-40"
+            {totalPages > 1 && (
+              <nav
+                className="flex flex-wrap items-center justify-center gap-2 pt-6 pb-2"
+                aria-label="Pagination"
               >
-                Previous
-              </button>
-              <span className="text-sm text-content-secondary">
-                Page {page} of {Math.max(1, totalPages)}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPage((prev) => Math.min(totalPages || 1, prev + 1))}
-                disabled={page >= totalPages}
-                className="px-3 py-1.5 rounded-lg border border-line text-content-secondary disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page <= 1}
+                  className="inline-flex h-10 items-center rounded-xl border border-outline-variant/40 px-4 text-sm font-semibold text-on-surface-variant hover:bg-surface-container disabled:opacity-40 transition-colors"
+                >
+                  Previous
+                </button>
+                {buildPageNumbers(page, totalPages, 5).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => setPage(pageNum)}
+                    className={`flex h-10 min-w-10 px-3 items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 ${
+                      page === pageNum
+                        ? "bg-primary text-on-primary shadow-soft"
+                        : "border border-outline-variant/40 text-on-surface-variant hover:bg-surface-container hover:border-primary/20"
+                    }`}
+                    aria-current={page === pageNum ? "page" : undefined}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.min(totalPages || 1, prev + 1))}
+                  disabled={page >= totalPages}
+                  className="inline-flex h-10 items-center rounded-xl border border-outline-variant/40 px-4 text-sm font-semibold text-on-surface-variant hover:bg-surface-container disabled:opacity-40 transition-colors"
+                >
+                  Next
+                </button>
+              </nav>
+            )}
           </>
         )}
+
       </div>
 
       <ConnectModal

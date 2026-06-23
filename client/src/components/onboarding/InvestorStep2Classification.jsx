@@ -38,10 +38,10 @@ const PillGroup = ({ items, selected, onToggle, activeColor }) => (
           key={val}
           type="button"
           onClick={() => onToggle(val)}
-          className={`px-3.5 py-1.5 rounded-full text-sm border transition-all ${
+          className={`px-3.5 py-1.5 rounded-full text-sm !border !border-solid transition-all ${
             isSelected
               ? `${activeColor} font-medium`
-              : "bg-surface-alt border-line text-content-muted hover:border-line hover:text-content-secondary"
+              : "bg-surface-container-lowest !border-outline-variant/70 text-on-surface-variant hover:!border-primary/40"
           }`}
         >
           {label}
@@ -84,7 +84,7 @@ const InvestorStep2Classification = ({ formData, updateFormData, errors }) => (
         items={INDUSTRIES}
         selected={formData.industries_of_interest}
         onToggle={(val) => updateFormData({ industries_of_interest: toggle(formData.industries_of_interest, val) })}
-        activeColor="bg-primary-light border-primary-light text-primary"
+        activeColor="bg-primary-light !border-primary/50 text-primary"
       />
     </Field>
 
@@ -93,7 +93,7 @@ const InvestorStep2Classification = ({ formData, updateFormData, errors }) => (
         items={GEOGRAPHIES}
         selected={formData.geographic_preference}
         onToggle={(val) => updateFormData({ geographic_preference: toggle(formData.geographic_preference, val) })}
-        activeColor="bg-primary/25 border-primary/50 text-primary"
+        activeColor="bg-primary/15 !border-primary/50 text-primary"
       />
     </Field>
 
@@ -102,7 +102,7 @@ const InvestorStep2Classification = ({ formData, updateFormData, errors }) => (
         items={STAGES}
         selected={formData.stage_preference}
         onToggle={(val) => updateFormData({ stage_preference: toggle(formData.stage_preference, val) })}
-        activeColor="bg-primary/25 border-primary/50 text-primary"
+        activeColor="bg-primary/15 !border-primary/50 text-primary"
       />
     </Field>
   </div>

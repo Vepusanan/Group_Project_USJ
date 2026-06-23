@@ -1,10 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Bell, LogOut, Menu, Settings, X } from "lucide-react";
+import { Bell, LogOut, Menu, Rocket, Settings, X } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { apiService } from "../../services/apiService";
 import { useProfileData } from "../../hooks/useProfileCache";
-import { iconButtonClass, navLinkClass } from "../../styles/theme";
+import {
+  floatingNavIconClass,
+  floatingNavLinkClass,
+  floatingNavPillClass,
+  floatingNavShellClass,
+  iconButtonClass,
+} from "../../styles/theme";
 
 const Header = () => {
   const location = useLocation();
@@ -35,9 +41,12 @@ const Header = () => {
           { to: "/watchlist", label: "Watchlist" },
         ]
       : [{ to: "/analytics", label: "Analytics" }]),
-    { to: "/connections", label: "My Connections" },
+    { to: "/connections", label: "Connections" },
     { to: "/messages", label: "Messages" },
   ];
+
+  const showAppNav =
+    isAuthenticated && user && !isOnboardingPage && !isVerifyEmailPage;
 
   const handleLogout = async () => {
     try {
@@ -126,26 +135,211 @@ const Header = () => {
     }
   };
 
-  return (
-    <header className="sticky top-0 z-50 w-full bg-surface/95 backdrop-blur-md border-b border-line">
-      <div className="relative w-full flex justify-between items-center px-4 py-3 sm:px-6 md:px-8 lg:px-12 xl:px-16">
-        <Link to="/" className="flex items-center gap-2 min-w-0">
-          <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-soft shrink-0">
-            <img
-              src="/images/home/rocketicon.png"
-              alt="StartHub Capital Logo"
-              className="w-5 h-6 object-contain brightness-0 invert"
-            />
-          </div>
-          <span className="text-lg sm:text-xl font-bold text-content truncate">
-            StartHub <span className="text-primary">Capital</span>
+  const notificationsDropdown = (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        aria-label="Open notifications"
+        onClick={() => setShowNotifications((p) => !p)}
+        className={`${floatingNavIconClass} relative`}
+      >
+        <Bell className="w-4 h-4" />
+        {!showNotifications && notifications.length > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-error text-on-primary text-[10px] font-semibold flex items-center justify-center">
+            {notifications.length > 9 ? "9+" : notifications.length}
           </span>
+        )}
+      </button>
+      {showNotifications && (
+        <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] surface-card p-3 z-50 before:block">
+          <p className="text-sm font-semibold text-on-surface mb-2">
+            Notifications
+          </p>
+          {notifications.length === 0 ? (
+            <p className="text-sm text-outline py-3">No new notifications.</p>
+          ) : (
+            <div className="space-y-2 max-h-80 overflow-auto">
+              {notifications.map((notification) => (
+                <button
+                  key={notification.key}
+                  type="button"
+                  onClick={() => handleNotificationClick(notification)}
+                  className="w-full text-left rounded-xl border border-outline-variant/40 bg-surface-container-low p-3 hover:bg-primary-fixed transition-colors"
+                >
+                  <p className="text-sm text-on-surface font-medium">
+                    {notification.title}
+                  </p>
+                  <p className="text-xs text-outline mt-1">
+                    {notification.message}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  if (showAppNav) {
+    return (
+      <header className={floatingNavShellClass}>
+        <div className={`${floatingNavPillClass} px-3 py-2 md:px-4 md:py-2.5`}>
+          <div className="flex items-center justify-between gap-2 md:gap-3">
+            <Link
+              to={isInvestor ? "/startups" : "/investors"}
+              className="flex shrink-0 items-center"
+              aria-label="StartHub Capital home"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-on-primary shadow-soft">
+                <Rocket className="h-4 w-4" />
+              </span>
+            </Link>
+
+            <nav className="hidden xl:flex flex-1 items-center justify-center gap-1">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) => floatingNavLinkClass(isActive)}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+              <NavLink
+                to="/settings"
+                className={({ isActive }) => floatingNavLinkClass(isActive)}
+              >
+                Settings
+              </NavLink>
+            </nav>
+
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                aria-label={showMobileNav ? "Close menu" : "Open menu"}
+                aria-expanded={showMobileNav}
+                onClick={() => setShowMobileNav((prev) => !prev)}
+                className={`${floatingNavIconClass} xl:hidden`}
+              >
+                {showMobileNav ? (
+                  <X className="w-4 h-4" />
+                ) : (
+                  <Menu className="w-4 h-4" />
+                )}
+              </button>
+
+              <div className="hidden sm:block">{notificationsDropdown}</div>
+
+              <Link
+                to="/settings"
+                aria-label="Open settings"
+                className={`${floatingNavIconClass} hidden md:inline-flex xl:hidden ${
+                  location.pathname === "/settings"
+                    ? "!bg-primary !text-on-primary !border-primary"
+                    : ""
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
+
+              <Link
+                to="/profile"
+                aria-label="Open profile"
+                className="inline-flex items-center gap-2 rounded-full bg-primary pl-1 pr-3 py-1 text-on-primary shadow-soft hover:bg-primary-dark transition-colors shrink-0"
+              >
+                <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-primary-fixed">
+                  {profileImageUrl ? (
+                    <img
+                      src={profileImageUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xs font-bold text-primary">
+                      {userInitial}
+                    </span>
+                  )}
+                </span>
+                <span className="hidden md:inline text-sm font-semibold max-w-[120px] truncate">
+                  {user?.firstName || user?.name || "Profile"}
+                </span>
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                aria-label="Log out"
+                className={`${floatingNavIconClass} hidden lg:inline-flex`}
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {showMobileNav && (
+            <nav className="mt-3 border-t border-primary/15 pt-3 xl:hidden">
+              <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+                {navItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setShowMobileNav(false)}
+                    className={({ isActive }) =>
+                      `rounded-xl px-3 py-2 text-center text-xs font-label uppercase tracking-wider transition-all ${
+                        isActive
+                          ? "bg-primary text-on-primary font-bold shadow-soft"
+                          : "text-primary font-semibold hover:bg-primary-fixed"
+                      }`
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                ))}
+                <NavLink
+                  to="/settings"
+                  onClick={() => setShowMobileNav(false)}
+                  className={({ isActive }) =>
+                    `rounded-xl px-3 py-2 text-center text-xs font-label uppercase tracking-wider transition-all ${
+                      isActive
+                        ? "bg-primary text-on-primary font-bold shadow-soft"
+                        : "text-primary font-semibold hover:bg-primary-fixed"
+                    }`
+                  }
+                >
+                  Settings
+                </NavLink>
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2 sm:hidden">
+                {notificationsDropdown}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex-1 rounded-xl border border-primary/20 bg-primary-fixed/40 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary-fixed transition-colors"
+                >
+                  Log out
+                </button>
+              </div>
+            </nav>
+          )}
+        </div>
+      </header>
+    );
+  }
+
+  return (
+    <header className="fixed top-0 z-50 w-full h-16 bg-surface/95 backdrop-blur-md border-b border-outline-variant/40 shadow-sm">
+      <div className="relative mx-auto max-w-container flex h-full items-center justify-between px-5 md:px-gutter">
+        <Link
+          to="/"
+          className="font-display text-headline-md font-bold text-primary tracking-tight shrink-0"
+        >
+          StartHub Capital
         </Link>
 
         {!isVerifyEmailPage && (
           <div className="flex items-center gap-2 sm:gap-3">
             {isAuthenticated && user ? (
-              isOnboardingPage ? (
+              isOnboardingPage && (
                 <button
                   onClick={handleLogout}
                   aria-label="Log out"
@@ -153,133 +347,20 @@ const Header = () => {
                 >
                   <LogOut className="w-5 h-5" />
                 </button>
-              ) : (
-                <>
-                  <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2">
-                    <nav className="flex items-center gap-1">
-                      {navItems.map((item) => (
-                        <NavLink
-                          key={item.to}
-                          to={item.to}
-                          className={({ isActive }) => navLinkClass(isActive)}
-                        >
-                          {item.label}
-                        </NavLink>
-                      ))}
-                    </nav>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
-                    <button
-                      type="button"
-                      aria-label={showMobileNav ? "Close menu" : "Open menu"}
-                      aria-expanded={showMobileNav}
-                      onClick={() => setShowMobileNav((prev) => !prev)}
-                      className={`${iconButtonClass} lg:hidden`}
-                    >
-                      {showMobileNav ? (
-                        <X className="w-5 h-5" />
-                      ) : (
-                        <Menu className="w-5 h-5" />
-                      )}
-                    </button>
-
-                    <div className="relative" ref={dropdownRef}>
-                      <button
-                        type="button"
-                        aria-label="Open notifications"
-                        onClick={() => setShowNotifications((p) => !p)}
-                        className={`${iconButtonClass} relative`}
-                      >
-                        <Bell className="w-5 h-5" />
-                        {!showNotifications && notifications.length > 0 && (
-                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-error text-content-inverse text-[10px] font-semibold flex items-center justify-center">
-                            {notifications.length > 9
-                              ? "9+"
-                              : notifications.length}
-                          </span>
-                        )}
-                      </button>
-                      {showNotifications && (
-                        <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] surface-card p-3 z-50">
-                          <p className="text-sm font-semibold text-content mb-2">
-                            Notifications
-                          </p>
-                          {notifications.length === 0 ? (
-                            <p className="text-sm text-content-muted py-3">
-                              No new notifications.
-                            </p>
-                          ) : (
-                            <div className="space-y-2 max-h-80 overflow-auto">
-                              {notifications.map((notification) => (
-                                <button
-                                  key={notification.key}
-                                  type="button"
-                                  onClick={() =>
-                                    handleNotificationClick(notification)
-                                  }
-                                  className="w-full text-left rounded-lg border border-line bg-surface-alt p-3 hover:bg-primary-light transition-colors"
-                                >
-                                  <p className="text-sm text-content font-medium">
-                                    {notification.title}
-                                  </p>
-                                  <p className="text-xs text-content-muted mt-1">
-                                    {notification.message}
-                                  </p>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <Link
-                      to="/settings"
-                      aria-label="Open settings"
-                      className={`${iconButtonClass} ${location.pathname === "/settings" ? "bg-primary-light text-primary border-primary-light" : ""}`}
-                    >
-                      <Settings className="w-5 h-5" />
-                    </Link>
-
-                    <Link
-                      to="/profile"
-                      aria-label="Open profile"
-                      className={`w-10 h-10 rounded-full border overflow-hidden flex items-center justify-center transition-colors shrink-0 ${location.pathname.startsWith("/profile") ? "border-primary ring-2 ring-primary-light" : "border-line hover:border-primary"}`}
-                    >
-                      {profileImageUrl ? (
-                        <img
-                          src={profileImageUrl}
-                          alt="Profile"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-primary-light flex items-center justify-center text-primary font-semibold text-sm">
-                          {userInitial}
-                        </div>
-                      )}
-                    </Link>
-
-                    <button
-                      onClick={handleLogout}
-                      aria-label="Log out"
-                      className={`${iconButtonClass} hidden sm:inline-flex`}
-                    >
-                      <LogOut className="w-5 h-5" />
-                    </button>
-                  </div>
-                </>
               )
             ) : (
               <>
                 <Link
                   to="/signup"
-                  className="px-3 sm:px-4 py-2 text-sm font-medium text-content-secondary hover:text-content transition-colors"
+                  className="px-3 sm:px-4 py-2 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors"
                 >
                   Sign up
                 </Link>
                 {!isLoginPage && (
-                  <Link to="/login" className="btn-primary-token px-3 sm:px-4 py-2 text-sm">
+                  <Link
+                    to="/login"
+                    className="btn-primary-token px-4 py-2 text-sm rounded-xl"
+                  >
                     Login
                   </Link>
                 )}
@@ -288,33 +369,6 @@ const Header = () => {
           </div>
         )}
       </div>
-
-      {isAuthenticated && user && !isOnboardingPage && !isVerifyEmailPage && showMobileNav && (
-        <nav className="lg:hidden border-t border-line bg-surface px-4 py-3 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-primary-light text-primary"
-                    : "text-content-secondary hover:text-content hover:bg-surface-alt"
-                }`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="w-full text-left rounded-lg px-3 py-2.5 text-sm font-medium text-content-secondary hover:text-content hover:bg-surface-alt sm:hidden"
-          >
-            Log out
-          </button>
-        </nav>
-      )}
     </header>
   );
 };

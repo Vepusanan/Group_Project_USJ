@@ -7,10 +7,6 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://REPLACE_WITH_BACKEND_VERCEL_URL/api/:path*"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

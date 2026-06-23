@@ -10,6 +10,7 @@ import {
   Shield,
   Sparkles,
 } from "lucide-react";
+import { pageContentClass } from "../styles/theme";
 import { useAuth } from "../hooks/useAuth";
 import { usePitchDeckSession } from "../hooks/usePitchDeckSession";
 import pitchDeckService from "../services/pitchDeckService";
@@ -171,7 +172,7 @@ const PitchDeckViewerPage = () => {
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur px-4 py-2">
-        <div className="mx-auto max-w-5xl flex items-center justify-between gap-3 flex-wrap">
+        <div className={`${pageContentClass} flex flex-wrap items-center justify-between gap-3`}>
           {/* Compact single-line header */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Link
@@ -231,7 +232,7 @@ const PitchDeckViewerPage = () => {
 
       {(analysis || analysisError) && (user?.userType === "investor" || user?.userType === "startup") && (
         <div className="px-4 pt-4">
-          <div className="mx-auto max-w-5xl rounded-2xl border border-line bg-surface p-4 md:p-5 space-y-3">
+          <div className={`${pageContentClass} rounded-2xl border border-line bg-surface p-4 md:p-5 space-y-3`}>
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
               <h2 className="text-sm font-semibold text-content">AI deck analysis</h2>
@@ -298,7 +299,7 @@ const PitchDeckViewerPage = () => {
       )}
 
       <div className="px-4 py-4">
-        <div className="mx-auto max-w-5xl rounded-2xl border border-line bg-white p-3 md:p-4 overflow-auto min-h-[480px]">
+        <div className={`${pageContentClass} rounded-2xl border border-line bg-white p-3 md:p-4 overflow-auto min-h-[480px]`}>
           <Document
             key={id}
             file={pdfFile}

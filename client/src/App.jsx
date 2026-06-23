@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -11,94 +11,61 @@ import ErrorBoundary from "./ErrorBoundary";
 import BaseLayout from "./components/layout/BaseLayout";
 import AuthLayout from "./components/layout/AuthLayout";
 import PageLayout from "./components/layout/PageLayout";
-import HomePage from "./pages/HomePage";
-import LoginPage from "./pages/LoginPage";
-import RegistrationPage from "./pages/RegistrationPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import EmailVerificationPage from "./pages/EmailVerificationPage";
-import OnboardingPage from "./pages/OnboardingPage";
-import InvestorOnboardingPage from "./pages/InvestorOnboardingPage";
-import StartupsPage from "./pages/StartupsPage";
-import InvestorsPage from "./pages/InvestorsPage";
-import ConnectionsPage from "./pages/ConnectionsPage";
-import MessagesPage from "./pages/MessagesPage";
-import StartupProfilePage from "./pages/StartupProfilePage";
-const PitchDeckViewerPage = React.lazy(() => import("./pages/PitchDeckViewerPage"));
-import DataRoomManagePage from "./pages/DataRoomManagePage";
-import DataRoomViewerPage from "./pages/DataRoomViewerPage";
-import FundingRoundManagePage from "./pages/FundingRoundManagePage";
-import DealPipelinePage from "./pages/DealPipelinePage";
-import StartupComparisonPage from "./pages/StartupComparisonPage";
-import StartupAnalyticsPage from "./pages/StartupAnalyticsPage";
-import WatchlistPage from "./pages/WatchlistPage";
-import AdminVerificationPage from "./pages/AdminVerificationPage";
-import AdminAnalyticsPage from "./pages/AdminAnalyticsPage";
-import InvestorProfilePage from "./pages/InvestorProfilePage";
-import MyProfilePage from "./pages/MyProfilePage";
-import EditProfilePage from "./pages/EditProfilePage";
-import SettingsPage from "./pages/SettingsPage";
-import TermsPage from "./pages/TermsPage";
-import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
-import Header from "./components/common/Header.jsx";
-import Footer from "./components/common/Footer";
+import FloatingNavBar from "./components/common/FloatingNavBar.jsx";
+import SiteFooter from "./components/common/SiteFooter";
+import PageLoader from "./components/common/PageLoader";
+import ScrollToTop from "./components/routing/ScrollToTop";
+import {
+  AdminRoute,
+  OnboardingGuard,
+  OnboardingRoleRoute,
+  ProtectedRoute,
+  RoleRoute,
+} from "./components/routing/ProtectedAppLayout";
+import {
+  AdminAnalyticsPage,
+  AdminVerificationPage,
+  ConnectionsPage,
+  DataRoomManagePage,
+  DataRoomViewerPage,
+  DealPipelinePage,
+  EditProfilePage,
+  EmailVerificationPage,
+  ForgotPasswordPage,
+  FundingRoundManagePage,
+  HomePage,
+  InvestorOnboardingPage,
+  InvestorProfilePage,
+  InvestorsPage,
+  LoginPage,
+  MessagesPage,
+  MyProfilePage,
+  OnboardingPage,
+  PitchDeckViewerPage,
+  PrivacyPolicyPage,
+  RegistrationPage,
+  ResetPasswordPage,
+  SettingsPage,
+  StartupAnalyticsPage,
+  StartupComparisonPage,
+  StartupProfilePage,
+  StartupsPage,
+  TermsPage,
+  WatchlistPage,
+} from "./routes/lazyPages";
+import { getRoleHomePath } from "./utils/roleUtils";
 import { useAuth } from "./hooks/useAuth";
-import { useProfileExistence } from "./hooks/useProfileCache";
-
-const getRoleHomePath = (userType) =>
-  userType === "investor" ? "/startups" : "/investors";
 
 const AuthenticatedRedirect = () => {
   const { user } = useAuth();
   return <Navigate to={user?.userType ? "/dashboard" : "/"} replace />;
 };
 
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-page">
-        <div className="w-16 h-16 border-4 border-primary-light border-t-primary rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  return isAuthenticated && user ? children : <Navigate to="/login" replace />;
-};
-
-// Redirects users without a profile to their onboarding route.
-// Wraps all protected routes except the onboarding pages themselves.
-// Backed by useProfileExistence so the answer is fetched once per session and
-// shared with every other consumer (LoginForm, OnboardingPage, etc.).
-const OnboardingGuard = ({ children }) => {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { isReady, onboardingPath } = useProfileExistence();
-
-  if (authLoading || (isAuthenticated && !isReady)) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-page">
-        <div className="w-16 h-16 border-4 border-primary-light border-t-primary rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (onboardingPath) {
-    return <Navigate to={onboardingPath} replace />;
-  }
-
-  return children;
-};
-
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-page">
-        <div className="w-16 h-16 border-4 border-primary-light border-t-primary rounded-full animate-spin"></div>
-      </div>
-    );
+    return <PageLoader className="min-h-screen" />;
   }
 
   if (isAuthenticated && user) {
@@ -108,36 +75,55 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+const AUTH_CHROMELESS_ROUTES = [
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  "/onboarding",
+  "/investor-onboarding",
+];
+
+const LazyPage = ({ children }) => (
+  <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>{children}</Suspense>
+);
+
 const AppContent = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const hideHeaderRoutes = ["/"];
-  const showBgRoutes = location.pathname !== "/";
+  const showBgRoutes =
+    location.pathname !== "/" &&
+    location.pathname !== "/terms" &&
+    location.pathname !== "/privacy";
 
-  const shouldShowHeader = !hideHeaderRoutes.includes(location.pathname);
+  const shouldShowChrome = !AUTH_CHROMELESS_ROUTES.includes(location.pathname);
   const shouldShowBg = showBgRoutes;
 
   return (
-    <div className="flex flex-col min-h-screen relative">
+    <div className="relative flex min-h-screen flex-col">
       {shouldShowBg && <div className="page-hero-bg" />}
 
-      {shouldShowHeader && (
-        <div className="relative z-10">
-          <Header />
-        </div>
-      )}
+      {shouldShowChrome && <FloatingNavBar />}
 
-      <div className="relative flex flex-col flex-1">
+      <div className="relative flex flex-1 flex-col">
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/"
+            element={
+              <LazyPage>
+                <HomePage />
+              </LazyPage>
+            }
+          />
 
           <Route
             path="/login"
             element={
               <PublicRoute>
-                <AuthLayout>
-                  <LoginPage />
-                </AuthLayout>
+                <LazyPage>
+                  <AuthLayout>
+                    <LoginPage />
+                  </AuthLayout>
+                </LazyPage>
               </PublicRoute>
             }
           />
@@ -146,23 +132,42 @@ const AppContent = () => {
             path="/signup"
             element={
               <PublicRoute>
-                <AuthLayout>
-                  <RegistrationPage />
-                </AuthLayout>
+                <LazyPage>
+                  <AuthLayout>
+                    <RegistrationPage />
+                  </AuthLayout>
+                </LazyPage>
               </PublicRoute>
             }
           />
 
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route
+            path="/terms"
+            element={
+              <LazyPage>
+                <TermsPage />
+              </LazyPage>
+            }
+          />
+
+          <Route
+            path="/privacy"
+            element={
+              <LazyPage>
+                <PrivacyPolicyPage />
+              </LazyPage>
+            }
+          />
 
           <Route
             path="/forgot-password"
             element={
               <PublicRoute>
-                <AuthLayout>
-                  <ForgotPasswordPage />
-                </AuthLayout>
+                <LazyPage>
+                  <AuthLayout>
+                    <ForgotPasswordPage />
+                  </AuthLayout>
+                </LazyPage>
               </PublicRoute>
             }
           />
@@ -171,9 +176,11 @@ const AppContent = () => {
             path="/reset-password"
             element={
               <PublicRoute>
-                <AuthLayout>
-                  <ResetPasswordPage />
-                </AuthLayout>
+                <LazyPage>
+                  <AuthLayout>
+                    <ResetPasswordPage />
+                  </AuthLayout>
+                </LazyPage>
               </PublicRoute>
             }
           />
@@ -182,9 +189,11 @@ const AppContent = () => {
             path="/verify-email"
             element={
               <PublicRoute>
-                <AuthLayout>
-                  <EmailVerificationPage />
-                </AuthLayout>
+                <LazyPage>
+                  <AuthLayout>
+                    <EmailVerificationPage />
+                  </AuthLayout>
+                </LazyPage>
               </PublicRoute>
             }
           />
@@ -193,7 +202,11 @@ const AppContent = () => {
             path="/onboarding"
             element={
               <ProtectedRoute>
-                <OnboardingPage />
+                <OnboardingRoleRoute requiredType="startup">
+                  <LazyPage>
+                    <OnboardingPage />
+                  </LazyPage>
+                </OnboardingRoleRoute>
               </ProtectedRoute>
             }
           />
@@ -202,255 +215,113 @@ const AppContent = () => {
             path="/investor-onboarding"
             element={
               <ProtectedRoute>
-                <InvestorOnboardingPage />
+                <OnboardingRoleRoute requiredType="investor">
+                  <LazyPage>
+                    <InvestorOnboardingPage />
+                  </LazyPage>
+                </OnboardingRoleRoute>
               </ProtectedRoute>
             }
           />
 
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <Navigate to={getRoleHomePath(user?.userType)} replace />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<OnboardingGuard />}>
+              <Route
+                path="/dashboard"
+                element={<Navigate to={getRoleHomePath(user?.userType)} replace />}
+              />
 
-          <Route
-            path="/startups"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <StartupsPage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/startups/:id"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <StartupProfilePage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/analytics"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <StartupAnalyticsPage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/funding-round"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <FundingRoundManagePage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/data-room"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <DataRoomManagePage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/startups/:id/data-room"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <DataRoomViewerPage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/startups/:id/pitch-deck"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <Suspense
-                    fallback={
-                      <div className="min-h-screen flex items-center justify-center bg-page">
-                        <div className="w-10 h-10 border-4 border-primary-light border-t-primary rounded-full animate-spin" />
-                      </div>
-                    }
-                  >
-                    <PitchDeckViewerPage />
-                  </Suspense>
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/investors"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <InvestorsPage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/investors/:id"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <InvestorProfilePage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/pipeline"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <DealPipelinePage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/compare"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <StartupComparisonPage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/watchlist"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <WatchlistPage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/admin/analytics"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <AdminAnalyticsPage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/admin/verification"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <AdminVerificationPage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/connections"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <ConnectionsPage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/messages"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <MessagesPage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <MyProfilePage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/profile/edit"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <EditProfilePage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <OnboardingGuard>
-                  <SettingsPage />
-                </OnboardingGuard>
-              </ProtectedRoute>
-            }
-          />
+              <Route path="/startups" element={<StartupsPage />} />
+              <Route path="/startups/:id" element={<StartupProfilePage />} />
+              <Route
+                path="/analytics"
+                element={
+                  <RoleRoute allowedTypes={["startup"]}>
+                    <StartupAnalyticsPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/funding-round"
+                element={
+                  <RoleRoute allowedTypes={["startup"]}>
+                    <FundingRoundManagePage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/data-room"
+                element={
+                  <RoleRoute allowedTypes={["startup"]}>
+                    <DataRoomManagePage />
+                  </RoleRoute>
+                }
+              />
+              <Route path="/startups/:id/data-room" element={<DataRoomViewerPage />} />
+              <Route path="/startups/:id/pitch-deck" element={<PitchDeckViewerPage />} />
+              <Route path="/investors" element={<InvestorsPage />} />
+              <Route path="/investors/:id" element={<InvestorProfilePage />} />
+              <Route
+                path="/pipeline"
+                element={
+                  <RoleRoute allowedTypes={["investor"]}>
+                    <DealPipelinePage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/compare"
+                element={
+                  <RoleRoute allowedTypes={["investor"]}>
+                    <StartupComparisonPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/watchlist"
+                element={
+                  <RoleRoute allowedTypes={["investor"]}>
+                    <WatchlistPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="/admin/analytics"
+                element={
+                  <AdminRoute>
+                    <AdminAnalyticsPage />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/verification"
+                element={
+                  <AdminRoute>
+                    <AdminVerificationPage />
+                  </AdminRoute>
+                }
+              />
+              <Route path="/connections" element={<ConnectionsPage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/profile" element={<MyProfilePage />} />
+              <Route path="/profile/edit" element={<EditProfilePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
+          </Route>
 
           <Route
             path="*"
             element={
               <BaseLayout>
                 <PageLayout>
-                  <div className="flex flex-col justify-center items-center min-h-[50vh] text-center">
-                    <h1 className="text-3xl font-bold text-content mb-4">
+                  <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
+                    <h1 className="mb-4 text-3xl font-bold text-content">
                       404 - Page Not Found
                     </h1>
-                    <p className="text-lg text-content-secondary mb-6">
+                    <p className="mb-6 text-lg text-content-secondary">
                       The page you're looking for doesn't exist.
                     </p>
-                    <a
-                      href="/"
-                      className="btn-primary-token px-4 py-2 text-sm"
-                    >
+                    <a href="/" className="btn-primary-token px-4 py-2 text-sm">
                       Go to Home
                     </a>
                   </div>
@@ -460,14 +331,14 @@ const AppContent = () => {
           />
         </Routes>
 
-        <Footer />
+        {shouldShowChrome && <SiteFooter />}
       </div>
     </div>
   );
 };
 
 const AppShell = () => (
-  <div className="min-h-screen bg-page text-content relative">
+  <div className="relative min-h-screen bg-background text-on-surface">
     <AppContent />
   </div>
 );
@@ -477,6 +348,7 @@ function App() {
     <ErrorBoundary>
       <AuthProvider>
         <Router>
+          <ScrollToTop />
           <AppShell />
         </Router>
       </AuthProvider>

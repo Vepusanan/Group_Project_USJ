@@ -185,13 +185,13 @@ const InvestorOnboardingWizard = () => {
         </div>
 
         {/* Step indicators */}
-        <div className="flex items-center gap-1.5 mb-8">
+        <div className="flex items-center gap-2 mb-8">
           {STEPS.map((step, idx) => (
             <React.Fragment key={step.number}>
               <button
                 onClick={() => step.number < currentStep && setCurrentStep(step.number)}
                 disabled={step.number >= currentStep}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   step.number < currentStep
                     ? "bg-primary-light text-primary border border-primary-light cursor-pointer hover:bg-primary-light"
                     : step.number === currentStep
@@ -200,9 +200,9 @@ const InvestorOnboardingWizard = () => {
                 }`}
               >
                 {step.number < currentStep ? (
-                  <Check className="w-3 h-3" />
+                  <Check className="w-4 h-4" />
                 ) : (
-                  <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
                     step.number === currentStep ? "bg-primary-light text-content" : "bg-line text-content-muted"
                   }`}>{step.number}</span>
                 )}
@@ -257,7 +257,7 @@ const InvestorOnboardingWizard = () => {
               <button
                 onClick={handleNext}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-primary to-primary-dark hover:from-primary hover:to-primary-dark text-content rounded-xl text-sm font-semibold transition-all shadow-lg shadow-soft/30 disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-primary to-primary-dark hover:from-primary hover:to-primary-dark !text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-soft/30 disabled:opacity-50"
               >
                 {isSaving ? (
                   <>

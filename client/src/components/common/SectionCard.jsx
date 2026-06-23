@@ -7,12 +7,12 @@ import {
 } from "../../styles/theme";
 
 const ACCENT_BARS = {
-  purple: "from-primary to-primary-dark",
-  violet: "from-primary to-primary-dark",
-  blue: "from-primary to-primary-dark",
-  emerald: "from-primary to-primary-dark",
-  amber: "from-primary-dark to-primary",
-  rose: "from-primary to-primary-dark",
+  purple: "bg-primary",
+  violet: "bg-primary",
+  blue: "bg-primary",
+  emerald: "bg-success",
+  amber: "bg-warning",
+  rose: "bg-primary",
 };
 
 export const SectionCard = ({
@@ -21,13 +21,16 @@ export const SectionCard = ({
   accent = "purple",
   badge,
   children,
+  className = "",
 }) => {
   const bar = ACCENT_BARS[accent] || ACCENT_BARS.purple;
 
   return (
-    <div className="rounded-2xl border border-line bg-surface overflow-hidden shadow-card">
-      <div className={`h-0.5 w-full bg-gradient-to-r ${bar}`} />
-      <div className="p-4 sm:p-6">
+    <div
+      className={`relative rounded-card border border-outline-variant/30 bg-surface-container-lowest overflow-hidden shadow-premium hover:shadow-premium-hover hover:-translate-y-0.5 transition-all duration-300 ${className}`}
+    >
+      <div className={`h-1 w-full ${bar}`} />
+      <div className="p-5 sm:p-6 md:p-8">
         <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
           <div className={sectionHeaderClass}>
             {Icon && <Icon className={sectionHeaderIconClass} />}
@@ -43,18 +46,18 @@ export const SectionCard = ({
 
 export const Pill = ({ children, color = "default", href }) => {
   const cls = {
-    default: "bg-surface-alt border-line text-content-secondary",
-    purple: "bg-primary-light/15 border-primary-light/25 text-primary",
-    violet: "bg-primary-light border-primary-light text-primary",
-    blue: "bg-primary/15 border-primary-light text-primary",
-    emerald: "bg-primary-light border-primary-light text-primary",
-    amber: "bg-warning/15 border-warning/30 text-warning",
-    indigo: "bg-primary-light/15 border-primary-light text-primary",
-  }[color] || "bg-surface-alt border-line text-content-secondary";
+    default: "bg-surface-container text-on-surface-variant border-outline-variant/30",
+    purple: "bg-primary-fixed/15 border-primary/20 text-primary",
+    violet: "bg-primary-fixed border-primary/20 text-primary",
+    blue: "bg-primary/10 border-primary/20 text-primary",
+    emerald: "bg-success/10 border-success/30 text-success",
+    amber: "bg-warning/10 border-warning/30 text-warning",
+    indigo: "bg-primary-fixed/15 border-primary/20 text-primary",
+  }[color] || "bg-surface-container text-on-surface-variant border-outline-variant/30";
 
   const inner = (
     <span
-      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border font-medium ${cls}`}
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-[11px] border font-semibold font-label uppercase tracking-wide ${cls}`}
     >
       {children}
     </span>
@@ -70,7 +73,7 @@ export const Pill = ({ children, color = "default", href }) => {
 };
 
 export const TagGrid = ({ items, color = "default" }) => {
-  if (!items?.length) return <p className="text-sm text-content-muted">—</p>;
+  if (!items?.length) return <p className="text-sm text-outline">—</p>;
   return (
     <div className="flex flex-wrap gap-2">
       {items.map((item, i) => (
@@ -83,16 +86,16 @@ export const TagGrid = ({ items, color = "default" }) => {
 };
 
 export const PrivateBadge = () => (
-  <span className="flex items-center gap-1 text-[10px] text-content-muted border border-line rounded-full px-2 py-0.5 shrink-0">
+  <span className="flex items-center gap-1 text-[10px] text-outline border border-outline-variant rounded-full px-2 py-0.5 shrink-0 font-label uppercase tracking-wide">
     <Lock className="w-2.5 h-2.5" /> Private
   </span>
 );
 
 export const LockOverlay = ({ message }) => (
   <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-    <div className="w-12 h-12 rounded-full bg-surface-alt border border-line flex items-center justify-center">
-      <Lock className="w-5 h-5 text-content-muted" />
+    <div className="w-12 h-12 rounded-full bg-surface-container border border-outline-variant flex items-center justify-center">
+      <Lock className="w-5 h-5 text-outline" />
     </div>
-    <p className="text-sm text-content-muted">{message}</p>
+    <p className="text-sm text-on-surface-variant">{message}</p>
   </div>
 );

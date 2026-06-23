@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { DollarSign, Save, XCircle } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import { SectionCard } from "../components/common/SectionCard";
 import FundingRoundTracker from "../components/funding/FundingRoundTracker";
-import { useAuth } from "../hooks/useAuth";
 import {
   CURRENCY_OPTIONS,
   FUNDING_STAGE_OPTIONS,
@@ -21,7 +20,6 @@ const emptyForm = {
 };
 
 const FundingRoundManagePage = () => {
-  const { user } = useAuth();
   const [round, setRound] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -116,10 +114,6 @@ const FundingRoundManagePage = () => {
     await loadRound();
   };
 
-  if (user?.userType === "investor") {
-    return <Navigate to="/startups" replace />;
-  }
-
   if (loading) {
     return (
       <PageLayout>
@@ -134,7 +128,7 @@ const FundingRoundManagePage = () => {
 
   return (
     <PageLayout>
-      <div className="max-w-2xl mx-auto space-y-6 pb-12">
+      <div className="space-y-6 pb-12">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-primary mb-1">

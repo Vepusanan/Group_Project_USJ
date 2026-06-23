@@ -12,6 +12,12 @@ import {
   cardIdentityClass,
   cardIdentitySubtitleMutedClass,
   cardIdentityTitleClass,
+  pageContainerClass,
+  pageContentClass,
+  pageEyebrowClass,
+  pageHeadingClass,
+  pageSubheadingClass,
+  tabNavClass,
 } from "../styles/theme";
 
 const ConnectionsPage = () => {
@@ -142,12 +148,13 @@ const ConnectionsPage = () => {
   ];
 
   return (
-    <div className="min-h-screen px-4 py-8 md:px-8 lg:px-12">
-      <div className="mx-auto max-w-5xl space-y-6">
+    <div className={pageContainerClass}>
+      <div className={`${pageContentClass} space-y-6`}>
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-content">My Connections</h1>
-          <p className="text-content-muted mt-1 text-sm">
-            {acceptedConnections.length} connection{acceptedConnections.length !== 1 ? "s" : ""}
+          <span className={pageEyebrowClass}>Network</span>
+          <h1 className={pageHeadingClass}>Network Connections</h1>
+          <p className={pageSubheadingClass}>
+            Manage your venture relationships, ongoing discussions, and inbound opportunities.
           </p>
         </div>
 
@@ -162,27 +169,18 @@ const ConnectionsPage = () => {
             <div className="w-8 h-8 border-4 border-primary-light/30 border-t-primary rounded-full animate-spin" />
           </div>
         ) : (
-          <section className="rounded-xl border border-line bg-surface shadow-sm p-5">
-            {/* Tab bar */}
-            <div className="flex flex-wrap gap-2 mb-5 border-b border-line pb-4">
+          <section className="surface-card p-5 md:p-6">
+            <div className="flex flex-wrap items-center border-b border-outline-variant gap-6 md:gap-8 mb-6">
               {tabs.map((tab) => (
                 <button
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm border transition-colors ${
-                    activeTab === tab.key
-                      ? "bg-primary-light/30 border-primary-light/60 text-content"
-                      : "bg-surface-alt border-line text-content-secondary hover:text-content"
-                  }`}
+                  className={`${tabNavClass(activeTab === tab.key)} flex items-center gap-2`}
                 >
-                  {tab.label}
+                  {tab.label.toUpperCase()}
                   {tab.count > 0 && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                      activeTab === tab.key
-                        ? "bg-primary-light/50 text-content"
-                        : "bg-surface-alt text-content-muted"
-                    }`}>
+                    <span className="bg-primary text-on-primary text-[10px] px-1.5 py-0.5 rounded-full font-label">
                       {tab.count}
                     </span>
                   )}
