@@ -47,6 +47,7 @@ coverage/
 junit.xml
 playwright-report/
 test-results/
+e2e/.fixtures.json
 
 # ─── Logs ────────────────────────────────────────────────────────────────────
 logs/

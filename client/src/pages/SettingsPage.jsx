@@ -37,7 +37,7 @@ const SettingsPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, logout } = useAuth();
-  const role = user?.role || user?.user_type || "startup";
+  const role = user?.userType || "startup";
   const isStartup = role === "startup";
   const navItems = useMemo(
     () => BASE_NAV_ITEMS.filter((item) => !item.startupOnly || isStartup),

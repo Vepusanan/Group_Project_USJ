@@ -482,27 +482,6 @@ export const apiService = {
       };
     }
   },
-
-  /**
-   * Update user profile
-   * @param {Object} profileData - Profile data to update
-   * @returns {Promise} Response with updated profile
-   */
-  updateProfile: async (profileData) => {
-    try {
-      const response = await api.put(API_ENDPOINTS.PROFILE, profileData);
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      console.error("updateProfile error:", error);
-      return {
-        success: false,
-        error: error.response?.data?.error || "Failed to update profile",
-      };
-    }
-  },
 };
 
 export default apiService;

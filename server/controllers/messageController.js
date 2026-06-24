@@ -5,6 +5,7 @@ import {
 } from "../repositories/ConnectionRepository.js";
 import { sendNewMessageEmail } from "../utils/emailServices.js";
 import { isUserRecentlyActive } from "../utils/userPresence.js";
+import { assertAllowedMessageAttachmentUrl } from "../utils/messageAttachmentUrl.js";
 
 // Send a new message
 export const sendMessage = async (req, res) => {
@@ -33,6 +34,17 @@ export const sendMessage = async (req, res) => {
         success: false,
         error: "You can only message users you are connected with.",
       });
+    }
+
+    if (attachmentUrl) {
+      try {
+        assertAllowedMessageAttachmentUrl(attachmentUrl, senderId);
+      } catch (attachmentError) {
+        return res.status(attachmentError.statusCode || 400).json({
+          success: false,
+          error: attachmentError.message,
+        });
+      }
     }
 
     const messageData = await MessageRepository.createAndStoreMessage({

@@ -1,5 +1,6 @@
 import express from "express";
 import { protect } from "../middleware/auth.js"; // Ensure correct path to your auth middleware
+import { requireProfileComplete } from "../middleware/requireProfileComplete.js";
 import {
   sendMessage,
   getConversations,
@@ -10,8 +11,8 @@ import { handleMessageAttachment } from "../middleware/messageUpload.js";
 
 const router = express.Router();
 
-// All message routes require authentication
-router.use(protect);
+// All message routes require authentication and completed onboarding
+router.use(protect, requireProfileComplete);
 
 // POST /api/messages - Send a message
 router.post("/", sendMessage);

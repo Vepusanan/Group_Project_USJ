@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../middleware/auth.js";
 import { aiLimiter } from "../middleware/rateLimiter.js";
+import { requireProfileComplete } from "../middleware/requireProfileComplete.js";
 import {
   addMeetingNoteHandler,
   createMeetingRequestHandler,
@@ -12,7 +13,7 @@ import {
 
 const router = express.Router();
 
-router.use(protect);
+router.use(protect, requireProfileComplete);
 
 router.get("/connection/:connectionId", listConnectionMeetings);
 router.post("/connection/:connectionId", createMeetingRequestHandler);

@@ -152,36 +152,6 @@ const authService = {
     }
   },
 
-  protectedTest: async () => {
-    try {
-      const response = await api.get("/auth/protected-test");
-
-      if (response.data.success) {
-        return {
-          success: true,
-          message: response.data.message,
-          user: response.data.user,
-        };
-      }
-
-      return {
-        success: false,
-        error: response.data.error || "Protected test failed",
-      };
-    } catch (error) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "Protected test failed";
-      console.error("Protected test error:", errorMessage);
-      return {
-        success: false,
-        error: errorMessage,
-      };
-    }
-  },
-
   forgotPassword: async (email) => {
     try {
       const response = await api.post("/auth/forgot-password", { email });

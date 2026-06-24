@@ -8,14 +8,15 @@ import {
   updateNotificationSettings,
 } from "../controllers/notificationController.js";
 import { protect } from "../middleware/auth.js";
+import { requireProfileComplete } from "../middleware/requireProfileComplete.js";
 
 const router = express.Router();
 
 // All settings routes require authentication
 
-// Privacy settings routes
-router.get("/privacy", protect, getPrivacySettings);
-router.put("/privacy", protect, updatePrivacySettings);
+// Privacy settings require completed onboarding (profile visibility features)
+router.get("/privacy", protect, requireProfileComplete, getPrivacySettings);
+router.put("/privacy", protect, requireProfileComplete, updatePrivacySettings);
 
 // Notification settings routes
 router.get("/notifications", protect, getNotificationSettings);

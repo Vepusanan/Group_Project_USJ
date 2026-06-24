@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../middleware/auth.js";
 import { requireStartup } from "../middleware/roles.js";
+import { requireProfileComplete } from "../middleware/requireProfileComplete.js";
 import {
   closeFundingRoundHandler,
   createFundingRoundHandler,
@@ -12,7 +13,7 @@ import {
 
 const router = express.Router();
 
-router.use(protect);
+router.use(protect, requireProfileComplete);
 
 router.get("/me", requireStartup, getMyFundingRound);
 router.get("/startup/:startupProfileId", getStartupFundingRound);

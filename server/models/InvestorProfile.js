@@ -170,7 +170,9 @@ export class InvestorProfile {
         let isFilled = false;
 
         if (value !== null && value !== undefined && value !== "") {
-          if (typeof value === "string") {
+          if (value instanceof Date) {
+            isFilled = !Number.isNaN(value.getTime());
+          } else if (typeof value === "string") {
             isFilled = value.trim().length > 0;
           } else if (Array.isArray(value)) {
             isFilled = value.length > 0;

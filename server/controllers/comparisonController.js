@@ -27,6 +27,9 @@ export const compareStartups = async (req, res, next) => {
     const data = await buildComparisonData(req.user.id, ids);
     res.json({ success: true, data });
   } catch (error) {
+    if (error.statusCode === 403) {
+      return res.status(403).json({ success: false, error: error.message });
+    }
     next(error);
   }
 };
@@ -72,6 +75,8 @@ export const saveSnapshot = async (req, res, next) => {
       });
     }
 
+    await buildComparisonData(req.user.id, ids);
+
     const snapshot = await createSnapshot({
       investorUserId: req.user.id,
       name,
@@ -80,6 +85,9 @@ export const saveSnapshot = async (req, res, next) => {
 
     res.status(201).json({ success: true, data: snapshot });
   } catch (error) {
+    if (error.statusCode === 403) {
+      return res.status(403).json({ success: false, error: error.message });
+    }
     next(error);
   }
 };

@@ -3,6 +3,8 @@ import {
   listWatchlistForInvestor,
   removeFromWatchlist,
 } from "../repositories/WatchlistRepository.js";
+import { getStartupProfileById } from "../repositories/StartupProfileRepository.js";
+import { canViewProfile } from "../utils/profileVisibility.js";
 import { getMatchScoresForInvestor } from "../repositories/CompatibilityMatchScoreRepository.js";
 import { getConnectionStatusesForStartups } from "../repositories/StartupProfileRepository.js";
 import { getProfileIntent } from "../repositories/InvestorProfileIntentRepository.js";
@@ -79,6 +81,22 @@ export const addWatchlistItem = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         error: "startup_profile_id is required",
+      });
+    }
+
+    const profile = await getStartupProfileById(startupProfileId);
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        error: "Startup profile not found",
+      });
+    }
+
+    const { canView } = await canViewProfile(profile.user_id, req.user.id);
+    if (!canView) {
+      return res.status(403).json({
+        success: false,
+        error: "This profile is private",
       });
     }
 

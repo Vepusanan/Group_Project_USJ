@@ -11,7 +11,6 @@ export const API_ENDPOINTS = {
     LOGIN: "/auth/login",
     TOKEN: "/auth/token",
     ME: "/auth/me",
-    PROTECTED_TEST: "/auth/protected-test",
     FORGOT_PASSWORD: "/auth/forgot-password",
     RESET_PASSWORD: "/auth/reset-password",
     LOGOUT: "/auth/logout",
@@ -23,7 +22,6 @@ export const API_ENDPOINTS = {
   STARTUPS: "/startups",
   INVESTORS: "/investors",
   CONNECTIONS: "/connections",
-  PROFILE: "/profile",
 };
 
 /**

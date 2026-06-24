@@ -1,5 +1,6 @@
 import { getStartupProfileById, getStartupProfileByUserId } from "../repositories/StartupProfileRepository.js";
 import { getConnectionBetweenUsers } from "../repositories/ConnectionRepository.js";
+import { canViewProfile } from "../utils/profileVisibility.js";
 import {
   ALLOWED_CURRENCIES,
   ALLOWED_FUNDING_STAGES,
@@ -108,6 +109,14 @@ export const getStartupFundingRound = async (req, res, next) => {
     const profile = await getStartupProfileById(req.params.startupProfileId);
     if (!profile) {
       return res.status(404).json({ success: false, error: "Startup profile not found" });
+    }
+
+    const { canView } = await canViewProfile(profile.user_id, req.user?.id);
+    if (!canView) {
+      return res.status(403).json({
+        success: false,
+        error: "This profile is private",
+      });
     }
 
     const { round, canViewFinancials } = await resolveFundingRoundVisibility({

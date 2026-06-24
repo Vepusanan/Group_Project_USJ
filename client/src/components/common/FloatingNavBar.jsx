@@ -157,7 +157,7 @@ const FloatingNavBar = () => {
       try {
         const result = await apiService.getConversations();
         if (!mounted || !result.success) return;
-        const total = (result.data?.data || []).reduce(
+        const total = (result.data?.conversations || []).reduce(
           (sum, c) => sum + Number(c.unread_count || 0),
           0,
         );

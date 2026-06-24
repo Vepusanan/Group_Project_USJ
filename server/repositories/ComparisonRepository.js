@@ -3,6 +3,7 @@ import { getStartupProfileById } from "./StartupProfileRepository.js";
 import { getConnectionBetweenUsers } from "./ConnectionRepository.js";
 import { getMatchScoreMapForInvestor } from "../services/compatibilityMatchService.js";
 import { getUserVerification } from "./VerificationRepository.js";
+import { canViewProfile } from "../utils/profileVisibility.js";
 
 let tablesReadyPromise = null;
 
@@ -60,6 +61,16 @@ export async function buildComparisonData(investorUserId, startupProfileIds) {
   );
 
   const validProfiles = profiles.filter(Boolean);
+
+  for (const profile of validProfiles) {
+    const { canView } = await canViewProfile(profile.user_id, investorUserId);
+    if (!canView) {
+      const error = new Error("One or more selected startups are not visible to you");
+      error.statusCode = 403;
+      throw error;
+    }
+  }
+
   const matchScoreMap = await getMatchScoreMapForInvestor(
     investorUserId,
     validProfiles,

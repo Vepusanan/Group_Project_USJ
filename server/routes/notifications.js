@@ -1,5 +1,6 @@
 import express from "express";
 import { protect } from "../middleware/auth.js";
+import { requireProfileComplete } from "../middleware/requireProfileComplete.js";
 import {
   getInAppNotifications,
   markNotificationAsRead,
@@ -7,7 +8,7 @@ import {
 
 const router = express.Router();
 
-router.use(protect);
+router.use(protect, requireProfileComplete);
 
 router.get("/", getInAppNotifications);
 router.post("/read", markNotificationAsRead);

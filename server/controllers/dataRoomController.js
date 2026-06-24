@@ -1,4 +1,5 @@
 import { getStartupProfileById, getStartupProfileByUserId } from "../repositories/StartupProfileRepository.js";
+import { canViewProfile } from "../utils/profileVisibility.js";
 import {
   isUsersConnected,
   getConnectionsForUser,
@@ -246,6 +247,17 @@ export const getDataRoomMeta = async (req, res, next) => {
     }
 
     const isOwner = String(profile.user_id) === String(req.user.id);
+
+    if (!isOwner) {
+      const { canView } = await canViewProfile(profile.user_id, req.user.id);
+      if (!canView) {
+        return res.status(403).json({
+          success: false,
+          error: "This profile is private",
+        });
+      }
+    }
+
     let canAccess = isOwner;
     let hasGrant = false;
 

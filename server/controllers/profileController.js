@@ -12,11 +12,11 @@ import {
 } from "../repositories/InvestorProfileRepository.js";
 import { StartupProfile } from "../models/StartupProfiles.js";
 import { InvestorProfile } from "../models/InvestorProfile.js";
-import { getPrivacySettingsByUserId } from "../repositories/PrivacySettingsRepository.js";
 import {
   getConnectionBetweenUsers,
   isUsersConnected,
 } from "../repositories/ConnectionRepository.js";
+import { canViewProfile } from "../utils/profileVisibility.js";
 import {
   ensureInvestorMatchScores,
   invalidateInvestorMatchScores,
@@ -267,37 +267,6 @@ const normalizeLegacyStartupPayload = (body) => {
   if (!body.product_demo_url && body.demo_link) {
     body.product_demo_url = body.demo_link;
   }
-};
-
-const canViewProfile = async (profileUserId, requestingUserId) => {
-  if (requestingUserId && profileUserId === requestingUserId) {
-    return { canView: true, isOwner: true, isConnected: false };
-  }
-
-  const connected = requestingUserId
-    ? await isUsersConnected(profileUserId, requestingUserId)
-    : false;
-
-  const privacySettings = await getPrivacySettingsByUserId(profileUserId);
-  if (!privacySettings) {
-    return { canView: true, isOwner: false, isConnected: connected };
-  }
-
-  const { profile_visibility } = privacySettings;
-
-  if (profile_visibility === "public") {
-    return { canView: true, isOwner: false, isConnected: connected };
-  }
-
-  if (profile_visibility === "connections_only" && !requestingUserId) {
-    return { canView: false, isOwner: false, isConnected: false };
-  }
-
-  if (profile_visibility === "connections_only") {
-    return { canView: connected, isOwner: false, isConnected: connected };
-  }
-
-  return { canView: true, isOwner: false, isConnected: connected };
 };
 
 export const createProfile = async (req, res, next) => {
@@ -944,6 +913,14 @@ export const getStartupMatchExplanation = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         error: "Startup profile not found",
+      });
+    }
+
+    const { canView } = await canViewProfile(profile.user_id, req.user.id);
+    if (!canView) {
+      return res.status(403).json({
+        success: false,
+        error: "This profile is private",
       });
     }
 

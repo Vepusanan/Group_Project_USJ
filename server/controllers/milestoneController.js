@@ -9,8 +9,15 @@ import {
   updateMilestone,
 } from "../repositories/MilestoneRepository.js";
 import { sendMilestonePublishedEmail } from "../utils/emailServices.js";
+import { canViewProfile } from "../utils/profileVisibility.js";
 
 const assertStartupOwner = async (req) => {
+  if (req.user.user_type !== "startup") {
+    const error = new Error("Only startup accounts can manage milestones");
+    error.statusCode = 403;
+    throw error;
+  }
+
   const profile = await getStartupProfileByUserId(req.user.id);
   if (!profile) {
     const error = new Error("Startup profile not found");
@@ -25,6 +32,14 @@ export const listStartupMilestones = async (req, res, next) => {
     const profile = await getStartupProfileById(req.params.startupProfileId);
     if (!profile) {
       return res.status(404).json({ success: false, error: "Profile not found" });
+    }
+
+    const { canView } = await canViewProfile(profile.user_id, req.user.id);
+    if (!canView) {
+      return res.status(403).json({
+        success: false,
+        error: "This profile is private",
+      });
     }
 
     const milestones = await listMilestonesForStartup(profile.startup_profile_id);

@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../middleware/auth.js";
 import { aiLimiter } from "../middleware/rateLimiter.js";
+import { requireProfileComplete } from "../middleware/requireProfileComplete.js";
 import { upload } from "../utils/fileUpload.js";
 import {
   createDataRoomFolder,
@@ -37,7 +38,7 @@ const runUpload = (req, res, next) => {
   });
 };
 
-router.use(protect);
+router.use(protect, requireProfileComplete);
 
 router.get("/me", getMyDataRoom);
 router.get("/audit-log", getDataRoomAuditLog);

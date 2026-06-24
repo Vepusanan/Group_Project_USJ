@@ -1,4 +1,5 @@
 import { getStartupProfileById } from "../repositories/StartupProfileRepository.js";
+import { canViewProfile } from "../utils/profileVisibility.js";
 import {
   advancePipelineStageIfEligible,
   getConnectionIdForInvestorAndStartup,
@@ -47,6 +48,15 @@ const assertPitchDeckAccess = async (req, startupProfileId) => {
   if (req.user.user_type !== "investor") {
     const error = new Error(
       "Only investors and the startup owner can view pitch decks",
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const { canView } = await canViewProfile(profile.user_id, userId);
+  if (!canView) {
+    const error = new Error(
+      "You do not have permission to view this pitch deck",
     );
     error.statusCode = 403;
     throw error;

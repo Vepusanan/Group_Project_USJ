@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../middleware/auth.js";
 import { requireInvestor } from "../middleware/roles.js";
+import { requireProfileComplete } from "../middleware/requireProfileComplete.js";
 import {
   compareStartups,
   getSnapshots,
@@ -10,7 +11,7 @@ import {
 
 const router = express.Router();
 
-router.use(protect, requireInvestor);
+router.use(protect, requireInvestor, requireProfileComplete);
 
 router.post("/compare", compareStartups);
 router.get("/snapshots", getSnapshots);
