@@ -1,3 +1,4 @@
+import axios from "axios";
 import { notifyAuthChanged } from "../utils/authSync";
 
 const API_URL =
