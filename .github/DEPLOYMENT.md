@@ -50,7 +50,7 @@ Set in **Vercel → Settings → Environment Variables** for **Production** and 
 | `JWT_SECRET` | Yes | App auth |
 | `JWT_VERIFY_SECRET` | Yes | Email verification |
 | `BASE_URL` | Yes | `https://your-app.vercel.app` (same as `FRONTEND_URL` on Vercel) |
-| `FRONTEND_URL` | Yes | `https://your-app.vercel.app` — **single source of truth** for auth email links |
+| `FRONTEND_URL` | Yes | `https://your-app.vercel.app` — **single source of truth** for auth email links. Must not be `localhost` in Production. |
 | `CRON_SECRET` | Yes | Random string for `/api/cron/cleanup` |
 | `ADMIN_EMAILS` | Yes | Comma-separated |
 | `EMAIL_SMTP_*` / `EMAIL_FROM` | Recommended | Auth emails |
@@ -112,7 +112,15 @@ The serverless function is crashing at startup — almost always **missing envir
 3. Set build-time vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL=/api`
 4. **Redeploy** (env changes do not apply to past deployments)
 
-After redeploy, `/api/health` should return JSON (503 with a clear message if something is still missing, or 200 when connected).
+After redeploy, `/api/health` should return JSON (503 with a clear message if something is still missing, or 200 when connected). Check `appUrl.frontend` — it must be your production domain, never `localhost`.
+
+### Verification emails link to localhost
+
+1. Open **Vercel → Settings → Environment Variables**
+2. Ensure `FRONTEND_URL` and `BASE_URL` are both `https://your-production-domain` for **Production** (not `http://localhost:3000`)
+3. Redeploy — env changes do not apply to past deployments
+
+The server ignores localhost values in production and falls back to `BASE_URL` or Vercel's `VERCEL_URL`, but you should still fix the env vars.
 
 ### White screen (frontend)
 

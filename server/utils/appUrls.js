@@ -11,6 +11,9 @@ const LOCAL_BACKEND = "http://localhost:5001";
 
 const isProduction = () => process.env.NODE_ENV === "production";
 
+const isLocalhostUrl = (url) =>
+  /:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/|$)/i.test(url);
+
 function normalizeBaseUrl(value) {
   const trimmed = String(value || "").trim();
   if (!trimmed) return null;
@@ -24,7 +27,9 @@ function normalizeBaseUrl(value) {
 function firstNormalizedUrl(keys) {
   for (const key of keys) {
     const url = normalizeBaseUrl(process.env[key]);
-    if (url) return { url, source: key };
+    if (!url) continue;
+    if (isProduction() && isLocalhostUrl(url)) continue;
+    return { url, source: key };
   }
   return null;
 }
