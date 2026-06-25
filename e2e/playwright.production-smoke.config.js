@@ -19,11 +19,15 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: `npx vite preview --port ${previewPort} --host ${previewHost}`,
-    cwd: "client",
-    url: previewUrl,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  ...(process.env.SMOKE_SKIP_WEBSERVER === "1"
+    ? {}
+    : {
+        webServer: {
+          command: `npm run preview -- --port ${previewPort} --host ${previewHost}`,
+          cwd: "client",
+          url: previewUrl,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
+      }),
 });

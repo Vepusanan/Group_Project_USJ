@@ -69,7 +69,17 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Production build smoke test (headless browser)
-        run: npm run test:smoke:production
+        run: |
+          npm run preview --prefix client -- --port 4173 --host 127.0.0.1 &
+          preview_pid=$!
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:4173/ >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          SMOKE_SKIP_WEBSERVER=1 E2E_BASE_URL=http://127.0.0.1:4173 npm run test:smoke:production
+          kill $preview_pid || true
         env:
           CI: "true"
 
