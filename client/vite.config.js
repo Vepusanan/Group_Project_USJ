@@ -23,7 +23,11 @@ export default defineConfig({
     port: 3000,
     open: true,
     strictPort: false,
-    host: true, // Add this to ensure it's accessible
+    host: true,
+    fs: {
+      // Allow imports from repo-root shared/ (auth state machine).
+      allow: [path.resolve(__dirname, "..")],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:5001',

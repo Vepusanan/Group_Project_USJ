@@ -64,7 +64,11 @@ class ErrorBoundary extends React.Component {
               Something Went Wrong
             </h1>
             <p className="text-content-secondary mb-4">
-              An unexpected error occurred. Please try refreshing the page.
+              {/Failed to fetch dynamically imported module|ChunkLoadError/i.test(
+                this.state.error?.message || "",
+              )
+                ? "The app was updated or the dev server restarted. Refresh to load the latest version."
+                : "An unexpected error occurred. Please try refreshing the page."}
             </p>
             {this.state.errorId && (
               <p className="text-content-muted text-xs mb-6 font-mono">
