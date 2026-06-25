@@ -1,4 +1,4 @@
-import axios from "axios";
+import { notifyAuthChanged } from "../utils/authSync";
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -31,6 +31,7 @@ const terminalLogout = () => {
   // cookies are effectively dead — we just drop the userData cache and
   // notify AuthContext so its in-memory state matches.
   localStorage.removeItem("userData");
+  notifyAuthChanged();
   window.dispatchEvent(new Event("auth:force-logout"));
   if (window.location.pathname !== "/login") {
     window.location.href = "/login";

@@ -20,22 +20,33 @@ const getRequestErrorMessage = (error, fallback) => {
 };
 
 export const apiService = {
-  getCurrentUser: async () => {
+  /** Authoritative auth session from GET /auth/me. */
+  getAuthSession: async () => {
     try {
       const response = await api.get(API_ENDPOINTS.AUTH.ME, {
         _silentAuth: true,
       });
       return {
         success: true,
-        data: response.data.user,
+        data: {
+          user: response.data.user,
+          redirectPath: response.data.redirectPath,
+          authState: response.data.authState,
+        },
       };
     } catch (error) {
-      console.error("getCurrentUser error:", error);
       return {
         success: false,
         error: error.response?.data?.error || "Failed to get current user",
       };
     }
+  },
+
+  /** @deprecated Use getAuthSession — kept for compatibility. */
+  getCurrentUser: async () => {
+    const session = await apiService.getAuthSession();
+    if (!session.success) return session;
+    return { success: true, data: session.data.user };
   },
 
   /**

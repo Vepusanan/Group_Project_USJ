@@ -12,7 +12,7 @@ import {
   sendPasswordChangeConfirmationEmail,
 } from "../utils/emailServices.js";
 import { getFrontendBaseUrl } from "../utils/appUrls.js";
-import { resolvePostAuthRedirectPath } from "../utils/authRedirects.js";
+import { buildAuthSession } from "../utils/authSession.js";
 import { UAParser } from "ua-parser-js";
 import { tryAwardIdentityVerification } from "../services/identityVerificationService.js";
 import {
@@ -39,17 +39,21 @@ const generateAccessToken = (user) => {
   );
 };
 
+const isDeployedRuntime = () =>
+  process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+
 // Cookie attributes shared by every auth-related response. HttpOnly so JS
-// in the SPA can't read the token (TC-SEC-006); SameSite=strict so the
-// cookie isn't sent on cross-site requests (CSRF defence); Path=/ so it
-// covers every API route. `secure` is on in production only — Chrome
-// allows non-secure cookies on localhost during dev.
-const cookieBase = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.AUTH_COOKIE_SAME_SITE || "strict",
-  path: "/",
-});
+// in the SPA can't read the token; SameSite defaults to lax in production
+// (same-origin Vercel deploy). Override via AUTH_COOKIE_SAME_SITE when needed.
+const cookieBase = () => {
+  const deployed = isDeployedRuntime();
+  return {
+    httpOnly: true,
+    secure: deployed,
+    sameSite: process.env.AUTH_COOKIE_SAME_SITE || (deployed ? "lax" : "strict"),
+    path: "/",
+  };
+};
 
 const ACCESS_TOKEN_MAX_AGE_MS = 15 * 60 * 1000;
 const SHORT_REFRESH_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -186,8 +190,6 @@ const serializeAuthUser = (user) => ({
   isAdmin: isAdminUser(user),
 });
 
-const resolvePostVerificationPath = (user) => resolvePostAuthRedirectPath(user);
-
 const createVerifiedUserSession = async (user, req, res) => {
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken();
@@ -230,10 +232,11 @@ const createVerifiedUserSession = async (user, req, res) => {
     clientIp: getClientIp(req),
   });
 
+  const session = await buildAuthSession(user, serializeAuthUser);
+
   return {
-    user: serializeAuthUser(user),
+    ...session,
     sessionExpires: expiresAt.toISOString(),
-    redirectPath: await resolvePostVerificationPath(user),
   };
 };
 
@@ -297,6 +300,7 @@ export const verifyEmail = async (req, res) => {
             message: "Email already verified",
             user: session.user,
             redirectPath: session.redirectPath,
+            authState: session.authState,
             sessionExpires: session.sessionExpires,
           });
         }
@@ -346,6 +350,7 @@ export const verifyEmail = async (req, res) => {
         message: "Email verified successfully",
         user: session.user,
         redirectPath: session.redirectPath,
+        authState: session.authState,
         sessionExpires: session.sessionExpires,
       });
     }
@@ -566,21 +571,22 @@ export const login = async (req, res) => {
       eventType: "login_success",
       clientIp,
     });
-    const redirectPath = await resolvePostAuthRedirectPath(user);
+    const session = await buildAuthSession(user, serializeAuthUser);
     console.info("[auth] login_success", {
       userId: user.id,
       userType: user.user_type,
-      redirectPath,
+      redirectPath: session.redirectPath,
       clientIp,
     });
     res.json({
       success: true,
       message: "Login successful",
       user: {
-        ...serializeAuthUser(user),
+        ...session.user,
         sessionExpires: expiresAt.toISOString(),
       },
-      redirectPath,
+      redirectPath: session.redirectPath,
+      authState: session.authState,
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -974,9 +980,10 @@ export const revokeSession = async (req, res) => {
 
 export const getCurrentUser = async (req, res) => {
   try {
+    const session = await buildAuthSession(req.user, serializeAuthUser);
     return res.status(200).json({
       success: true,
-      user: serializeAuthUser(req.user),
+      ...session,
     });
   } catch (error) {
     console.error("Get current user error:", error);

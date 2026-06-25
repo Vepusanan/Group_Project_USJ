@@ -49,8 +49,7 @@ Set in **Vercel → Settings → Environment Variables** for **Production** and 
 | `SUPABASE_JWT_SECRET` | Yes | Supabase → Settings → API → JWT Secret |
 | `JWT_SECRET` | Yes | App auth |
 | `JWT_VERIFY_SECRET` | Yes | Email verification |
-| `BASE_URL` | Yes | `https://your-app.vercel.app` (same as `FRONTEND_URL` on Vercel) |
-| `FRONTEND_URL` | Yes | `https://your-app.vercel.app` — **single source of truth** for auth email links. Must not be `localhost` in Production. |
+| `FRONTEND_URL` | Yes | `https://your-app.vercel.app` — required; server fails fast if missing or localhost |
 | `CRON_SECRET` | Yes | Random string for `/api/cron/cleanup` |
 | `ADMIN_EMAILS` | Yes | Comma-separated |
 | `EMAIL_SMTP_*` / `EMAIL_FROM` | Recommended | Auth emails |
@@ -78,10 +77,13 @@ Workflow: `.github/workflows/ci-cd.yml`
 | Trigger | Action |
 |---------|--------|
 | Push / PR | Build, test, validate `vercel.json` |
-| Push to `main` | Deploy production + `/api/health` smoke test |
-| Pull request | Preview deploy + PR comment |
+| Manual `workflow_dispatch` with deploy=true | Optional Vercel deploy via Actions (requires secrets) |
 
-**GitHub secrets:** `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+**Production deployment:** Vercel Git Integration (connect repo in Vercel dashboard — push to `main` auto-deploys).
+
+GitHub Actions does **not** auto-deploy on push (avoids dual-deployment with Vercel Git Integration).
+
+To deploy via Actions instead, set secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` and run workflow_dispatch with deploy enabled.
 
 ## 5. Local commands
 

@@ -1,9 +1,8 @@
 /**
  * Centralized URL configuration for auth redirects and email links.
  *
- * Deployed runtimes: FRONTEND_URL (preferred) → CLIENT_URL / APP_URL / BASE_URL →
- * Vercel deployment metadata. Localhost env values are ignored; never falls back to localhost.
- * Local development: explicit env vars, then localhost defaults.
+ * Production requires FRONTEND_URL — no fallbacks, no localhost, no guessing.
+ * Local development uses explicit env vars or localhost defaults.
  */
 
 const LOCAL_FRONTEND = "http://localhost:3000";
@@ -25,78 +24,48 @@ function normalizeBaseUrl(value) {
   return withScheme.replace(/\/+$/, "");
 }
 
-function firstNormalizedUrl(keys) {
-  for (const key of keys) {
-    const url = normalizeBaseUrl(process.env[key]);
-    if (!url) continue;
-    if (!isLocalDev() && isLocalhostUrl(url)) continue;
-    return { url, source: key };
+function requireProductionUrl(envKey) {
+  const url = normalizeBaseUrl(process.env[envKey]);
+  if (!url) {
+    throw new Error(
+      `${envKey} is required in production. Set it in Vercel environment variables and redeploy.`,
+    );
   }
-  return null;
+  if (isLocalhostUrl(url)) {
+    throw new Error(
+      `${envKey} cannot be localhost in production (got ${url}).`,
+    );
+  }
+  return { url, source: envKey };
 }
-
-const FRONTEND_ENV_KEYS = [
-  "FRONTEND_URL",
-  "CLIENT_URL",
-  "APP_URL",
-  "BASE_URL",
-];
-
-const BACKEND_ENV_KEYS = ["BASE_URL", "FRONTEND_URL", "CLIENT_URL", "APP_URL"];
-
-const VERCEL_ENV_KEYS = [
-  "VERCEL_PROJECT_PRODUCTION_URL",
-  "VERCEL_URL",
-  "VERCEL_BRANCH_URL",
-];
 
 function resolveFrontendUrl() {
-  const explicit = firstNormalizedUrl(FRONTEND_ENV_KEYS);
-  if (explicit) return explicit;
-
-  if (!isLocalDev()) {
-    const vercel = firstNormalizedUrl(VERCEL_ENV_KEYS);
-    if (vercel) return vercel;
-    throw new Error(
-      "App URL not configured for production. Set FRONTEND_URL (recommended) or BASE_URL in Vercel environment variables.",
-    );
+  if (isLocalDev()) {
+    const url =
+      normalizeBaseUrl(process.env.FRONTEND_URL) ||
+      normalizeBaseUrl(process.env.BASE_URL) ||
+      LOCAL_FRONTEND;
+    return { url, source: process.env.FRONTEND_URL ? "FRONTEND_URL" : "default" };
   }
-
-  return { url: LOCAL_FRONTEND, source: "default" };
-}
-
-function resolveBackendUrl() {
-  const explicit = firstNormalizedUrl(BACKEND_ENV_KEYS);
-  if (explicit) return explicit;
-
-  if (!isLocalDev()) {
-    const vercel = firstNormalizedUrl(VERCEL_ENV_KEYS);
-    if (vercel) return vercel;
-    throw new Error(
-      "App URL not configured for production. Set BASE_URL or FRONTEND_URL in Vercel environment variables.",
-    );
-  }
-
-  return { url: LOCAL_BACKEND, source: "default" };
+  return requireProductionUrl("FRONTEND_URL");
 }
 
 /** @returns {string} Public frontend origin (no trailing slash). */
 export const getFrontendBaseUrl = () => resolveFrontendUrl().url;
 
-/** @returns {string} Public API origin for same-origin links (no trailing slash). */
-export const getBackendBaseUrl = () => resolveBackendUrl().url;
+/** Same-origin API base on Vercel — identical to frontend URL. */
+export const getBackendBaseUrl = () => getFrontendBaseUrl();
 
 export const getAppUrlConfig = () => {
   const frontend = resolveFrontendUrl();
-  const backend = resolveBackendUrl();
   const usesLocalhost =
     frontend.url.includes("localhost") || frontend.url.includes("127.0.0.1");
 
   return {
     frontend: frontend.url,
-    backend: backend.url,
+    backend: frontend.url,
     frontendSource: frontend.source,
-    backendSource: backend.source,
+    backendSource: frontend.source,
     productionSafe: isLocalDev() ? true : !usesLocalhost,
   };
 };

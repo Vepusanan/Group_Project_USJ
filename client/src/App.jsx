@@ -6,7 +6,7 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, RouteChangeAuthSync } from "./context/AuthContext";
 import ErrorBoundary from "./ErrorBoundary";
 import BaseLayout from "./components/layout/BaseLayout";
 import AuthLayout from "./components/layout/AuthLayout";
@@ -20,7 +20,9 @@ import {
   OnboardingGuard,
   OnboardingRoleRoute,
   ProtectedRoute,
+  PublicRoute,
   RoleRoute,
+  VerifyEmailRoute,
 } from "./components/routing/ProtectedAppLayout";
 import {
   AdminAnalyticsPage,
@@ -55,25 +57,6 @@ import {
 } from "./routes/lazyPages";
 import { getRoleHomePath } from "./utils/roleUtils";
 import { useAuth } from "./hooks/useAuth";
-
-const AuthenticatedRedirect = () => {
-  const { user } = useAuth();
-  return <Navigate to={user?.userType ? "/dashboard" : "/"} replace />;
-};
-
-const PublicRoute = ({ children }) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
-
-  if (isLoading) {
-    return <PageLoader className="min-h-screen" />;
-  }
-
-  if (isAuthenticated && user) {
-    return <AuthenticatedRedirect />;
-  }
-
-  return children;
-};
 
 const AUTH_CHROMELESS_ROUTES = [
   "/forgot-password",
@@ -188,11 +171,13 @@ const AppContent = () => {
           <Route
             path="/verify-email"
             element={
-              <LazyPage>
-                <AuthLayout>
-                  <EmailVerificationPage />
-                </AuthLayout>
-              </LazyPage>
+              <VerifyEmailRoute>
+                <LazyPage>
+                  <AuthLayout>
+                    <EmailVerificationPage />
+                  </AuthLayout>
+                </LazyPage>
+              </VerifyEmailRoute>
             }
           />
 
@@ -347,6 +332,7 @@ function App() {
       <AuthProvider>
         <Router>
           <ScrollToTop />
+          <RouteChangeAuthSync />
           <AppShell />
         </Router>
       </AuthProvider>

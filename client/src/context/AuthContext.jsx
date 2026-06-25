@@ -5,16 +5,22 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
+import { useLocation } from "react-router-dom";
 import authService from "../services/authService";
 import { apiService } from "../services/apiService";
 import { clearProfileCaches } from "../hooks/useProfileCache";
 import { clearListingCaches } from "../hooks/useListingCache";
+import { notifyAuthChanged, subscribeAuthSync } from "../utils/authSync";
 
 const initialState = {
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  isRevalidating: false,
+  authState: null,
+  redirectPath: null,
   error: null,
 };
 
@@ -37,39 +43,33 @@ const AUTH_ACTIONS = {
   VERIFY_EMAIL_FAILURE: "VERIFY_EMAIL_FAILURE",
   CLEAR_ERROR: "CLEAR_ERROR",
   SET_LOADING: "SET_LOADING",
-  SET_USER: "SET_USER",
-  SET_CACHED_USER: "SET_CACHED_USER",
+  SET_REVALIDATING: "SET_REVALIDATING",
+  SET_SESSION: "SET_SESSION",
 };
+
+const applySession = (session) => ({
+  user: session?.user ?? null,
+  isAuthenticated: Boolean(session?.user),
+  authState: session?.authState ?? null,
+  redirectPath: session?.redirectPath ?? null,
+  isLoading: false,
+  isRevalidating: false,
+  error: null,
+});
 
 const authReducer = (state, action) => {
   switch (action.type) {
     case AUTH_ACTIONS.LOGIN_START:
     case AUTH_ACTIONS.REGISTER_START:
-      return {
-        ...state,
-        isLoading: true,
-        error: null,
-      };
+      return { ...state, isLoading: true, error: null };
 
     case AUTH_ACTIONS.FORGOT_PASSWORD_START:
     case AUTH_ACTIONS.RESET_PASSWORD_START:
     case AUTH_ACTIONS.VERIFY_EMAIL_START:
-      return {
-        ...state,
-        error: null,
-      };
+      return { ...state, error: null };
 
     case AUTH_ACTIONS.LOGIN_SUCCESS:
-    case AUTH_ACTIONS.REGISTER_SUCCESS:
-      // Tokens are in HttpOnly cookies, not state. Auth status is derived
-      // from whether we successfully got a user back.
-      return {
-        ...state,
-        user: action.payload?.user || null,
-        isAuthenticated: !!action.payload?.user,
-        isLoading: false,
-        error: null,
-      };
+      return { ...state, ...applySession(action.payload) };
 
     case AUTH_ACTIONS.LOGIN_FAILURE:
     case AUTH_ACTIONS.REGISTER_FAILURE:
@@ -79,51 +79,35 @@ const authReducer = (state, action) => {
       return {
         ...state,
         isLoading: false,
+        isRevalidating: false,
         error: action.payload || "An error occurred",
       };
 
     case AUTH_ACTIONS.FORGOT_PASSWORD_SUCCESS:
     case AUTH_ACTIONS.RESET_PASSWORD_SUCCESS:
     case AUTH_ACTIONS.VERIFY_EMAIL_SUCCESS:
-      return {
-        ...state,
-        isLoading: false,
-        error: null,
-      };
+      return { ...state, isLoading: false, isRevalidating: false, error: null };
 
     case AUTH_ACTIONS.LOGOUT:
       return {
-        ...state,
-        user: null,
-        isAuthenticated: false,
+        ...initialState,
         isLoading: false,
-        error: null,
       };
 
     case AUTH_ACTIONS.CLEAR_ERROR:
-      return {
-        ...state,
-        error: null,
-      };
+      return { ...state, error: null };
 
     case AUTH_ACTIONS.SET_LOADING:
-      return {
-        ...state,
-        isLoading: action.payload ?? true,
-      };
+      return { ...state, isLoading: action.payload ?? true };
 
-    case AUTH_ACTIONS.SET_CACHED_USER:
-      return {
-        ...state,
-        user: action.payload,
-      };
+    case AUTH_ACTIONS.SET_REVALIDATING:
+      return { ...state, isRevalidating: action.payload ?? true };
 
-    case AUTH_ACTIONS.SET_USER:
-      return {
-        ...state,
-        user: action.payload,
-        isAuthenticated: !!action.payload,
-      };
+    case AUTH_ACTIONS.SET_SESSION:
+      return { ...state, ...applySession(action.payload) };
+
+    case AUTH_ACTIONS.REGISTER_SUCCESS:
+      return { ...state, isLoading: false, error: null };
 
     default:
       return state;
@@ -134,11 +118,60 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const revalidateInFlight = useRef(null);
+
+  const applyAuthSession = useCallback((session) => {
+    if (session?.user) {
+      localStorage.setItem("userData", JSON.stringify(session.user));
+    } else {
+      localStorage.removeItem("userData");
+    }
+    dispatch({ type: AUTH_ACTIONS.SET_SESSION, payload: session });
+  }, []);
+
+  const revalidateAuth = useCallback(
+    async ({ silent = false } = {}) => {
+      if (revalidateInFlight.current) return revalidateInFlight.current;
+
+      if (!silent) {
+        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
+      } else {
+        dispatch({ type: AUTH_ACTIONS.SET_REVALIDATING, payload: true });
+      }
+
+      const promise = (async () => {
+        try {
+          const result = await apiService.getAuthSession();
+          if (result.success && result.data?.user) {
+            applyAuthSession(result.data);
+            return { success: true, ...result.data };
+          }
+          localStorage.removeItem("userData");
+          dispatch({ type: AUTH_ACTIONS.LOGOUT });
+          return { success: false };
+        } catch (error) {
+          console.error("Auth revalidation failed:", error);
+          localStorage.removeItem("userData");
+          dispatch({ type: AUTH_ACTIONS.LOGOUT });
+          return { success: false };
+        } finally {
+          dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+          dispatch({ type: AUTH_ACTIONS.SET_REVALIDATING, payload: false });
+          revalidateInFlight.current = null;
+        }
+      })();
+
+      revalidateInFlight.current = promise;
+      return promise;
+    },
+    [applyAuthSession],
+  );
 
   useEffect(() => {
     const onForceLogout = () => {
       clearProfileCaches();
       clearListingCaches();
+      localStorage.removeItem("userData");
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
     };
     window.addEventListener("auth:force-logout", onForceLogout);
@@ -146,75 +179,50 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // Cookie-based auth: we can't read the access_token from JS, so the
-    // canonical signal is whether `/auth/me` succeeds. userData is cached
-    // for optimistic UI; we always probe /auth/me on load so cookie-only
-    // sessions restore even when localStorage was cleared. The probe uses
-    // _silentAuth so anonymous visitors are not redirected on 401.
-    const checkAuthStatus = async () => {
-      const userDataStr = localStorage.getItem("userData");
+    revalidateAuth();
+  }, [revalidateAuth]);
 
-      if (userDataStr) {
-        try {
-          const cachedUser = JSON.parse(userDataStr);
-          dispatch({ type: AUTH_ACTIONS.SET_CACHED_USER, payload: cachedUser });
-        } catch (parseError) {
-          console.error("Failed to parse user data:", parseError);
-          localStorage.removeItem("userData");
-        }
-      }
+  useEffect(() => {
+    return subscribeAuthSync(() => {
+      revalidateAuth({ silent: true });
+    });
+  }, [revalidateAuth]);
 
-      // Always probe /auth/me so a valid cookie session restores even when
-      // localStorage was cleared. The request uses _silentAuth so anonymous
-      // visitors are not redirected away from public pages on 401.
+  const login = useCallback(
+    async (email, password, rememberMe = false) => {
+      dispatch({ type: AUTH_ACTIONS.LOGIN_START });
       try {
-        const userData = await apiService.getCurrentUser();
-        if (userData.success && userData.data) {
-          localStorage.setItem("userData", JSON.stringify(userData.data));
-          dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData.data });
-        } else {
-          localStorage.removeItem("userData");
-          dispatch({ type: AUTH_ACTIONS.LOGOUT });
+        const response = await authService.login(email, password, rememberMe);
+
+        if (response.success === false) {
+          dispatch({
+            type: AUTH_ACTIONS.LOGIN_FAILURE,
+            payload: response.error || "Login failed",
+          });
+          return { success: false, error: response.error };
         }
+
+        const session = {
+          user: response.user,
+          redirectPath: response.redirectPath,
+          authState: response.authState,
+        };
+        applyAuthSession(session);
+        notifyAuthChanged();
+        return {
+          success: true,
+          user: response.user,
+          redirectPath: response.redirectPath,
+          authState: response.authState,
+        };
       } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        localStorage.removeItem("userData");
-        dispatch({ type: AUTH_ACTIONS.LOGOUT });
-      } finally {
-        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+        const errorMsg = error?.message || "Login failed";
+        dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE, payload: errorMsg });
+        return { success: false, error: errorMsg };
       }
-    };
-
-    checkAuthStatus();
-  }, []);
-
-  const login = useCallback(async (email, password, rememberMe = false) => {
-    dispatch({ type: AUTH_ACTIONS.LOGIN_START });
-    try {
-      const response = await authService.login(email, password, rememberMe);
-
-      if (response.success === false) {
-        dispatch({
-          type: AUTH_ACTIONS.LOGIN_FAILURE,
-          payload: response.error || "Login failed",
-        });
-        return { success: false, error: response.error };
-      }
-
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN_SUCCESS,
-        payload: { user: response.user },
-      });
-      return { success: true, user: response.user };
-    } catch (error) {
-      const errorMsg = error?.message || "Login failed";
-      dispatch({
-        type: AUTH_ACTIONS.LOGIN_FAILURE,
-        payload: errorMsg,
-      });
-      return { success: false, error: errorMsg };
-    }
-  }, []);
+    },
+    [applyAuthSession],
+  );
 
   const register = useCallback(async (userData) => {
     dispatch({ type: AUTH_ACTIONS.REGISTER_START });
@@ -229,17 +237,11 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: response.error };
       }
 
-      dispatch({
-        type: AUTH_ACTIONS.REGISTER_SUCCESS,
-        payload: { user: response.user },
-      });
+      dispatch({ type: AUTH_ACTIONS.REGISTER_SUCCESS });
       return { success: true };
     } catch (error) {
       const errorMsg = error?.message || "Registration failed";
-      dispatch({
-        type: AUTH_ACTIONS.REGISTER_FAILURE,
-        payload: errorMsg,
-      });
+      dispatch({ type: AUTH_ACTIONS.REGISTER_FAILURE, payload: errorMsg });
       return { success: false, error: errorMsg };
     }
   }, []);
@@ -253,14 +255,15 @@ export const AuthProvider = ({ children }) => {
 
     clearProfileCaches();
     clearListingCaches();
+    localStorage.removeItem("userData");
     dispatch({ type: AUTH_ACTIONS.LOGOUT });
+    notifyAuthChanged();
   }, []);
 
   const forgotPassword = useCallback(async (email) => {
     dispatch({ type: AUTH_ACTIONS.FORGOT_PASSWORD_START });
     try {
       const response = await authService.forgotPassword(email);
-
       if (response.success === false) {
         dispatch({
           type: AUTH_ACTIONS.FORGOT_PASSWORD_FAILURE,
@@ -268,17 +271,11 @@ export const AuthProvider = ({ children }) => {
         });
         return { success: false, error: response.error };
       }
-
-      dispatch({
-        type: AUTH_ACTIONS.FORGOT_PASSWORD_SUCCESS,
-      });
+      dispatch({ type: AUTH_ACTIONS.FORGOT_PASSWORD_SUCCESS });
       return { success: true };
     } catch (error) {
       const errorMsg = error?.message || "Failed to send reset link";
-      dispatch({
-        type: AUTH_ACTIONS.FORGOT_PASSWORD_FAILURE,
-        payload: errorMsg,
-      });
+      dispatch({ type: AUTH_ACTIONS.FORGOT_PASSWORD_FAILURE, payload: errorMsg });
       return { success: false, error: errorMsg };
     }
   }, []);
@@ -287,7 +284,6 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.RESET_PASSWORD_START });
     try {
       const response = await authService.resetPassword(token, password);
-
       if (response.success === false) {
         dispatch({
           type: AUTH_ACTIONS.RESET_PASSWORD_FAILURE,
@@ -295,63 +291,61 @@ export const AuthProvider = ({ children }) => {
         });
         return { success: false, error: response.error };
       }
-
-      dispatch({
-        type: AUTH_ACTIONS.RESET_PASSWORD_SUCCESS,
-      });
+      dispatch({ type: AUTH_ACTIONS.RESET_PASSWORD_SUCCESS });
       return { success: true };
     } catch (error) {
       const errorMsg = error?.message || "Failed to reset password";
-      dispatch({
-        type: AUTH_ACTIONS.RESET_PASSWORD_FAILURE,
-        payload: errorMsg,
-      });
+      dispatch({ type: AUTH_ACTIONS.RESET_PASSWORD_FAILURE, payload: errorMsg });
       return { success: false, error: errorMsg };
     }
   }, []);
 
-  const verifyEmail = useCallback(async (token) => {
-    dispatch({ type: AUTH_ACTIONS.VERIFY_EMAIL_START });
-    try {
-      const response = await authService.verifyEmail(token);
+  const verifyEmail = useCallback(
+    async (token) => {
+      dispatch({ type: AUTH_ACTIONS.VERIFY_EMAIL_START });
+      try {
+        const response = await authService.verifyEmail(token);
 
-      if (response.success === false) {
-        dispatch({
-          type: AUTH_ACTIONS.VERIFY_EMAIL_FAILURE,
-          payload: response.error || "Failed to verify email",
-        });
-        return { success: false, error: response.error };
-      }
+        if (response.success === false) {
+          dispatch({
+            type: AUTH_ACTIONS.VERIFY_EMAIL_FAILURE,
+            payload: response.error || "Failed to verify email",
+          });
+          return { success: false, error: response.error };
+        }
 
-      if (response.user) {
-        clearProfileCaches();
-        dispatch({
-          type: AUTH_ACTIONS.LOGIN_SUCCESS,
-          payload: { user: response.user },
-        });
-      } else {
-        dispatch({ type: AUTH_ACTIONS.VERIFY_EMAIL_SUCCESS });
+        if (response.user) {
+          clearProfileCaches();
+          const session = {
+            user: response.user,
+            redirectPath: response.redirectPath,
+            authState: response.authState,
+          };
+          applyAuthSession(session);
+          notifyAuthChanged();
+        } else {
+          dispatch({ type: AUTH_ACTIONS.VERIFY_EMAIL_SUCCESS });
+        }
+
+        return {
+          success: true,
+          redirectPath: response.redirectPath,
+          authState: response.authState,
+          user: response.user,
+        };
+      } catch (error) {
+        const errorMsg = error?.message || "Failed to verify email";
+        dispatch({ type: AUTH_ACTIONS.VERIFY_EMAIL_FAILURE, payload: errorMsg });
+        return { success: false, error: errorMsg };
       }
-      return {
-        success: true,
-        redirectPath: response.redirectPath,
-        user: response.user,
-      };
-    } catch (error) {
-      const errorMsg = error?.message || "Failed to verify email";
-      dispatch({
-        type: AUTH_ACTIONS.VERIFY_EMAIL_FAILURE,
-        payload: errorMsg,
-      });
-      return { success: false, error: errorMsg };
-    }
-  }, []);
+    },
+    [applyAuthSession],
+  );
 
   const resendVerification = useCallback(async (email) => {
     dispatch({ type: AUTH_ACTIONS.VERIFY_EMAIL_START });
     try {
       const response = await authService.resendVerification(email);
-
       if (response.success === false) {
         dispatch({
           type: AUTH_ACTIONS.VERIFY_EMAIL_FAILURE,
@@ -359,33 +353,29 @@ export const AuthProvider = ({ children }) => {
         });
         return { success: false, error: response.error };
       }
-
-      dispatch({
-        type: AUTH_ACTIONS.VERIFY_EMAIL_SUCCESS,
-      });
+      dispatch({ type: AUTH_ACTIONS.VERIFY_EMAIL_SUCCESS });
       return { success: true };
     } catch (error) {
       const errorMsg = error?.message || "Failed to resend verification";
-      dispatch({
-        type: AUTH_ACTIONS.VERIFY_EMAIL_FAILURE,
-        payload: errorMsg,
-      });
+      dispatch({ type: AUTH_ACTIONS.VERIFY_EMAIL_FAILURE, payload: errorMsg });
       return { success: false, error: errorMsg };
     }
   }, []);
 
   const refreshAccessToken = useCallback(async () => {
-    // Refresh cookie is sent automatically; nothing to read from JS.
     try {
       const response = await authService.refreshAccessToken();
-      if (response.success) return { success: true };
+      if (response.success) {
+        await revalidateAuth({ silent: true });
+        return { success: true };
+      }
       return { success: false };
-    } catch (error) {
+    } catch {
       localStorage.removeItem("userData");
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
       return { success: false };
     }
-  }, []);
+  }, [revalidateAuth]);
 
   const clearError = useCallback(() => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
@@ -402,6 +392,7 @@ export const AuthProvider = ({ children }) => {
       verifyEmail,
       resendVerification,
       refreshAccessToken,
+      revalidateAuth,
       clearError,
     }),
     [
@@ -414,11 +405,30 @@ export const AuthProvider = ({ children }) => {
       verifyEmail,
       resendVerification,
       refreshAccessToken,
+      revalidateAuth,
       clearError,
     ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+/** Revalidates /auth/me on every client-side route change. */
+export const RouteChangeAuthSync = () => {
+  const location = useLocation();
+  const { revalidateAuth, isLoading } = useAuthContext();
+  const isFirstRoute = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRoute.current) {
+      isFirstRoute.current = false;
+      return;
+    }
+    if (isLoading) return;
+    revalidateAuth({ silent: true });
+  }, [location.pathname, revalidateAuth, isLoading]);
+
+  return null;
 };
 
 export { AuthContext, AUTH_ACTIONS };

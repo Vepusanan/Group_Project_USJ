@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { clearProfileCaches } from "../../hooks/useProfileCache";
-import { onboardingPathFor } from "../../utils/roleUtils";
 import Button from "../common/Button";
 
 const EmailVerification = () => {
@@ -33,10 +32,7 @@ const EmailVerification = () => {
         clearProfileCaches();
         setStatus("verified");
         setFeedback(result.message || "Email verified successfully!");
-        const destination =
-          result.redirectPath ||
-          onboardingPathFor(result.user?.userType) ||
-          "/dashboard";
+        const destination = result.redirectPath || "/dashboard";
         console.info("[auth] verification_redirect", {
           destination,
           userType: result.user?.userType,

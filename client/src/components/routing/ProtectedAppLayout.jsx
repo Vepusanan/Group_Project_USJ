@@ -1,13 +1,11 @@
 import React, { Suspense } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { useProfileExistence } from "../../hooks/useProfileCache";
 import PageLoader from "../common/PageLoader";
 import {
   getRoleHomePath,
   onboardingPathFor,
 } from "../../utils/roleUtils";
-import { verificationRequiredPath } from "../../utils/authRedirects";
 
 const AuthSpinner = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
@@ -15,16 +13,18 @@ const AuthSpinner = () => (
   </div>
 );
 
-export const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+const isAuthPending = (isLoading, isRevalidating) =>
+  isLoading || isRevalidating;
 
-  if (isLoading) return <AuthSpinner />;
+export const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, isLoading, isRevalidating, user, authState } =
+    useAuth();
+
+  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
   if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
 
-  if (user.emailVerified === false) {
-    return (
-      <Navigate to={verificationRequiredPath(user.email)} replace />
-    );
+  if (authState?.requiredRoute?.startsWith("/verify-email")) {
+    return <Navigate to={authState.requiredRoute} replace />;
   }
 
   if (children) return children;
@@ -32,9 +32,9 @@ export const ProtectedRoute = ({ children }) => {
 };
 
 export const RoleRoute = ({ allowedTypes, children }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isRevalidating } = useAuth();
 
-  if (isLoading) return <AuthSpinner />;
+  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
   if (!user || !allowedTypes.includes(user.userType)) {
     return <Navigate to={getRoleHomePath(user?.userType)} replace />;
   }
@@ -44,9 +44,9 @@ export const RoleRoute = ({ allowedTypes, children }) => {
 };
 
 export const AdminRoute = ({ children }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isRevalidating } = useAuth();
 
-  if (isLoading) return <AuthSpinner />;
+  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
   if (!user?.isAdmin) {
     return <Navigate to="/settings" replace />;
   }
@@ -56,9 +56,9 @@ export const AdminRoute = ({ children }) => {
 };
 
 export const OnboardingRoleRoute = ({ requiredType, children }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isRevalidating } = useAuth();
 
-  if (isLoading) return <AuthSpinner />;
+  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
   if (user?.userType && user.userType !== requiredType) {
     return <Navigate to={onboardingPathFor(user.userType)} replace />;
   }
@@ -67,11 +67,12 @@ export const OnboardingRoleRoute = ({ requiredType, children }) => {
 };
 
 export const OnboardingGuard = ({ children }) => {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { isReady, onboardingPath } = useProfileExistence();
+  const { isAuthenticated, isLoading, isRevalidating, authState } = useAuth();
 
-  if (authLoading || (isAuthenticated && !isReady)) return <AuthSpinner />;
-  if (onboardingPath) return <Navigate to={onboardingPath} replace />;
+  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
+  if (isAuthenticated && authState?.requiredRoute) {
+    return <Navigate to={authState.requiredRoute} replace />;
+  }
 
   if (children) {
     return (
@@ -86,4 +87,36 @@ export const OnboardingGuard = ({ children }) => {
       <Outlet />
     </Suspense>
   );
+};
+
+/** Redirect verified users away from /verify-email. */
+export const VerifyEmailRoute = ({ children }) => {
+  const { isLoading, isRevalidating, isAuthenticated, authState, redirectPath } =
+    useAuth();
+
+  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
+  if (
+    isAuthenticated &&
+    authState?.emailVerified &&
+    !authState?.requiredRoute?.startsWith("/verify-email")
+  ) {
+    return <Navigate to={redirectPath || "/dashboard"} replace />;
+  }
+
+  return children;
+};
+
+/** Public routes that redirect authenticated users per /auth/me. */
+export const PublicRoute = ({ children }) => {
+  const { isAuthenticated, isLoading, isRevalidating, redirectPath } = useAuth();
+
+  if (isAuthPending(isLoading, isRevalidating)) {
+    return <PageLoader className="min-h-screen" />;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to={redirectPath || "/dashboard"} replace />;
+  }
+
+  return children;
 };

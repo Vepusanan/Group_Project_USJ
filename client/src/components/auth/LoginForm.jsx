@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { resolvePostAuthRedirect } from "../../utils/authRedirects";
 import Input from "../common/Input";
 import PasswordInput from "../common/PasswordInput";
 import Checkbox from "../common/Checkbox";
@@ -52,9 +51,7 @@ const LoginForm = () => {
         );
 
         if (result.success) {
-          const destination = await resolvePostAuthRedirect(result.user).catch(
-            () => "/dashboard",
-          );
+          const destination = result.redirectPath || "/dashboard";
           console.info("[auth] login_redirect", {
             destination,
             userType: result.user?.userType,

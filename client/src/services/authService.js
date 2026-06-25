@@ -50,6 +50,7 @@ const authService = {
           success: true,
           user: response.data.user,
           redirectPath: response.data.redirectPath,
+          authState: response.data.authState,
         };
       }
 
@@ -86,6 +87,7 @@ const authService = {
         message: response.data.message || "Email verified successfully!",
         user: response.data.user,
         redirectPath: response.data.redirectPath,
+        authState: response.data.authState,
       };
       }
 

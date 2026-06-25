@@ -5,12 +5,7 @@ const ENV_KEYS = [
   "NODE_ENV",
   "VERCEL",
   "FRONTEND_URL",
-  "CLIENT_URL",
-  "APP_URL",
   "BASE_URL",
-  "VERCEL_URL",
-  "VERCEL_BRANCH_URL",
-  "VERCEL_PROJECT_PRODUCTION_URL",
 ];
 
 function snapshotEnv() {
@@ -28,50 +23,12 @@ async function loadAppUrls() {
   return import(`../utils/appUrls.js?test=${Date.now()}`);
 }
 
-test("getFrontendBaseUrl skips localhost FRONTEND_URL on Vercel", async () => {
-  const saved = snapshotEnv();
-  try {
-    process.env.VERCEL = "1";
-    delete process.env.NODE_ENV;
-    process.env.FRONTEND_URL = "http://localhost:3000";
-    process.env.BASE_URL = "https://group-project-usj-client.vercel.app";
-    delete process.env.VERCEL_URL;
-
-    const { getFrontendBaseUrl } = await loadAppUrls();
-    assert.equal(
-      getFrontendBaseUrl(),
-      "https://group-project-usj-client.vercel.app",
-    );
-  } finally {
-    restoreEnv(saved);
-  }
-});
-
-test("getFrontendBaseUrl skips localhost FRONTEND_URL in production", async () => {
-  const saved = snapshotEnv();
-  try {
-    process.env.NODE_ENV = "production";
-    process.env.FRONTEND_URL = "http://localhost:3000";
-    process.env.BASE_URL = "https://group-project-usj-client.vercel.app";
-    delete process.env.VERCEL_URL;
-
-    const { getFrontendBaseUrl } = await loadAppUrls();
-    assert.equal(
-      getFrontendBaseUrl(),
-      "https://group-project-usj-client.vercel.app",
-    );
-  } finally {
-    restoreEnv(saved);
-  }
-});
-
-test("getFrontendBaseUrl prefers FRONTEND_URL in production", async () => {
+test("getFrontendBaseUrl uses FRONTEND_URL in production", async () => {
   const saved = snapshotEnv();
   try {
     process.env.NODE_ENV = "production";
     process.env.FRONTEND_URL = "https://app.example.com";
-    process.env.BASE_URL = "https://other.example.com";
-    delete process.env.VERCEL_URL;
+    delete process.env.VERCEL;
 
     const { getFrontendBaseUrl } = await loadAppUrls();
     assert.equal(getFrontendBaseUrl(), "https://app.example.com");
@@ -80,38 +37,35 @@ test("getFrontendBaseUrl prefers FRONTEND_URL in production", async () => {
   }
 });
 
-test("getFrontendBaseUrl uses VERCEL_URL in production when explicit URL is unset", async () => {
+test("getFrontendBaseUrl throws when FRONTEND_URL missing in production", async () => {
   const saved = snapshotEnv();
   try {
     process.env.NODE_ENV = "production";
+    process.env.VERCEL = "1";
     delete process.env.FRONTEND_URL;
     delete process.env.BASE_URL;
-    process.env.VERCEL_URL = "group-project-usj-client.vercel.app";
 
     const { getFrontendBaseUrl } = await loadAppUrls();
-    assert.equal(
-      getFrontendBaseUrl(),
-      "https://group-project-usj-client.vercel.app",
+    assert.throws(
+      () => getFrontendBaseUrl(),
+      /FRONTEND_URL is required in production/,
     );
   } finally {
     restoreEnv(saved);
   }
 });
 
-test("getFrontendBaseUrl never returns localhost in production", async () => {
+test("getFrontendBaseUrl throws when FRONTEND_URL is localhost in production", async () => {
   const saved = snapshotEnv();
   try {
     process.env.NODE_ENV = "production";
-    delete process.env.FRONTEND_URL;
-    delete process.env.BASE_URL;
-    delete process.env.VERCEL_URL;
-    delete process.env.VERCEL_BRANCH_URL;
-    delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    process.env.VERCEL = "1";
+    process.env.FRONTEND_URL = "http://localhost:3000";
 
     const { getFrontendBaseUrl } = await loadAppUrls();
     assert.throws(
       () => getFrontendBaseUrl(),
-      /App URL not configured for production/,
+      /cannot be localhost in production/,
     );
   } finally {
     restoreEnv(saved);
@@ -123,7 +77,7 @@ test("getFrontendBaseUrl defaults to localhost in development", async () => {
   try {
     process.env.NODE_ENV = "development";
     delete process.env.FRONTEND_URL;
-    delete process.env.BASE_URL;
+    delete process.env.VERCEL;
 
     const { getFrontendBaseUrl } = await loadAppUrls();
     assert.equal(getFrontendBaseUrl(), "http://localhost:3000");
@@ -140,10 +94,7 @@ test("buildVerifyEmailCallbackUrl uses production frontend origin", async () => 
 
     const { buildVerifyEmailCallbackUrl } = await loadAppUrls();
     const url = buildVerifyEmailCallbackUrl("abc123");
-    assert.equal(
-      url,
-      "https://app.example.com/verify-email?token=abc123",
-    );
+    assert.equal(url, "https://app.example.com/verify-email?token=abc123");
     assert.ok(!url.includes("localhost"));
   } finally {
     restoreEnv(saved);
