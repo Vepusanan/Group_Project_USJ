@@ -58,7 +58,7 @@ jobs:
           VITE_API_URL: /api
 
       - name: Run server tests
-        run: npm test --prefix server
+        run: npm run test:ci --prefix server
 
   validate-vercel:
     name: Validate Vercel monorepo config
