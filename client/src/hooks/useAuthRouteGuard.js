@@ -6,16 +6,14 @@ import {
   resolveAuthRouteDecision,
 } from "@shared/authStateMachine.mjs";
 
-const isAuthPending = (isLoading, isRevalidating) =>
-  isLoading || isRevalidating;
+const isAuthPending = (isLoading) => isLoading;
 
 /**
  * State-machine route guard — all auth routing decisions flow through here.
  * @param {import('@shared/authStateMachine.mjs').GUARD_MODE[keyof import('@shared/authStateMachine.mjs').GUARD_MODE]} guardMode
  */
 export function useAuthRouteGuard(guardMode) {
-  const { user, authState, redirectPath, isLoading, isRevalidating } =
-    useAuth();
+  const { user, authState, redirectPath, isLoading } = useAuth();
   const { pathname } = useLocation();
 
   const machine = useMemo(
@@ -29,7 +27,7 @@ export function useAuthRouteGuard(guardMode) {
   );
 
   return {
-    pending: isAuthPending(isLoading, isRevalidating),
+    pending: isAuthPending(isLoading),
     machine,
     decision,
   };

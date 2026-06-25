@@ -62,7 +62,7 @@ const authReducer = (state, action) => {
   switch (action.type) {
     case AUTH_ACTIONS.LOGIN_START:
     case AUTH_ACTIONS.REGISTER_START:
-      return { ...state, isLoading: true, error: null };
+      return { ...state, error: null };
 
     case AUTH_ACTIONS.FORGOT_PASSWORD_START:
     case AUTH_ACTIONS.RESET_PASSWORD_START:
@@ -117,11 +117,18 @@ const authReducer = (state, action) => {
 
 const AuthContext = createContext(null);
 
+/** Skip route-change / cross-tab revalidation briefly after a fresh session apply. */
+const sessionAppliedAtRef = { current: 0 };
+const SESSION_FRESH_MS = 3000;
+
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
   const revalidateInFlight = useRef(null);
+  const latestSessionRef = useRef(null);
 
   const applyAuthSession = useCallback((session) => {
+    sessionAppliedAtRef.current = Date.now();
+    latestSessionRef.current = session;
     if (session?.user) {
       localStorage.setItem("userData", JSON.stringify(session.user));
     } else {
@@ -147,12 +154,23 @@ export const AuthProvider = ({ children }) => {
             applyAuthSession(result.data);
             return { success: true, ...result.data };
           }
+          if (silent && latestSessionRef.current?.user) {
+            console.warn(
+              "Silent auth revalidation failed; keeping existing session",
+            );
+            return { success: false };
+          }
           localStorage.removeItem("userData");
+          latestSessionRef.current = null;
           dispatch({ type: AUTH_ACTIONS.LOGOUT });
           return { success: false };
         } catch (error) {
           console.error("Auth revalidation failed:", error);
+          if (silent && latestSessionRef.current?.user) {
+            return { success: false };
+          }
           localStorage.removeItem("userData");
+          latestSessionRef.current = null;
           dispatch({ type: AUTH_ACTIONS.LOGOUT });
           return { success: false };
         } finally {
@@ -185,6 +203,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     return subscribeAuthSync(() => {
+      if (Date.now() - sessionAppliedAtRef.current < SESSION_FRESH_MS) return;
       revalidateAuth({ silent: true });
     });
   }, [revalidateAuth]);
@@ -460,6 +479,7 @@ export const RouteChangeAuthSync = () => {
       return;
     }
     if (isLoading) return;
+    if (Date.now() - sessionAppliedAtRef.current < SESSION_FRESH_MS) return;
     revalidateAuth({ silent: true });
   }, [location.pathname, revalidateAuth, isLoading]);
 
