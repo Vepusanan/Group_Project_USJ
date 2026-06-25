@@ -7,6 +7,7 @@ import {
   Network,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { AUTH_STATUS } from "@shared/authStateMachine.mjs";
 import step01Image from "../assets/home/pipeline/step-01-create-profile.png";
 import step02Image from "../assets/home/pipeline/step-02-discover-connect.png";
 import step03Image from "../assets/home/pipeline/step-03-collaborate-grow.png";
@@ -50,12 +51,13 @@ const PIPELINE_STEPS = [
 ];
 
 const HomePage = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { authStatus, user } = useAuth();
   const roleLandingPath =
     user?.userType === "investor" ? "/startups" : "/investors";
 
-  const ctaLink = isAuthenticated && user ? roleLandingPath : "/signup";
-  const ctaLabel = isAuthenticated && user ? "Explore Matches" : "Get Started Free";
+  const isAppReady = authStatus === AUTH_STATUS.VERIFIED_READY;
+  const ctaLink = isAppReady ? roleLandingPath : "/signup";
+  const ctaLabel = isAppReady ? "Explore Matches" : "Get Started Free";
 
   return (
     <div className="overflow-x-hidden bg-slate-50 font-sans text-slate-900">

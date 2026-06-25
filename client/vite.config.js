@@ -1,10 +1,17 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   base: "/",
   plugins: [react()],
   resolve: {
+    alias: {
+      '@shared': path.resolve(__dirname, '../shared'),
+    },
     // react-pdf bundles pdfjs-dist@5.4.x — force a single copy so the
     // worker file always matches the API version used by <Document>.
     dedupe: ['pdfjs-dist'],

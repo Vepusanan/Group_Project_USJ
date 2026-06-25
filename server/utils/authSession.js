@@ -1,5 +1,9 @@
 import { getProfileCompletionStatus } from "../services/profileCompletionService.js";
 import { onboardingPathForUserType } from "./authRedirects.js";
+import {
+  buildAuthStatePayload,
+  validateAuthSessionContract,
+} from "../../shared/authStateMachine.mjs";
 
 export const verificationPathForEmail = (email) =>
   `/verify-email?email=${encodeURIComponent(email)}`;
@@ -12,29 +16,41 @@ export async function buildAuthSession(user, serializeUser) {
 
   if (!user.email_verified) {
     const requiredRoute = verificationPathForEmail(user.email);
-    return {
+    const authState = buildAuthStatePayload({
+      emailVerified: false,
+      onboardingComplete: false,
+      requiredRoute,
+    });
+    const session = {
       user: serialized,
       redirectPath: requiredRoute,
-      authState: {
-        emailVerified: false,
-        onboardingComplete: false,
-        requiredRoute,
-      },
+      authState,
     };
+    const { valid, errors } = validateAuthSessionContract(session);
+    if (!valid) {
+      throw new Error(`Invalid auth session contract: ${errors.join("; ")}`);
+    }
+    return session;
   }
 
   const status = await getProfileCompletionStatus(user.id, user.user_type);
   const onboardingComplete = Boolean(status.hasProfile && status.isComplete);
   const onboardingPath = onboardingPathForUserType(user.user_type);
   const redirectPath = onboardingComplete ? "/dashboard" : onboardingPath;
+  const authState = buildAuthStatePayload({
+    emailVerified: true,
+    onboardingComplete,
+    requiredRoute: onboardingComplete ? null : onboardingPath,
+  });
 
-  return {
+  const session = {
     user: serialized,
     redirectPath,
-    authState: {
-      emailVerified: true,
-      onboardingComplete,
-      requiredRoute: onboardingComplete ? null : onboardingPath,
-    },
+    authState,
   };
+  const { valid, errors } = validateAuthSessionContract(session);
+  if (!valid) {
+    throw new Error(`Invalid auth session contract: ${errors.join("; ")}`);
+  }
+  return session;
 }

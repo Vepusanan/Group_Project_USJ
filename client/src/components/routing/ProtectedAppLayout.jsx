@@ -1,11 +1,13 @@
 import React, { Suspense } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
 import PageLoader from "../common/PageLoader";
 import {
   getRoleHomePath,
   onboardingPathFor,
 } from "../../utils/roleUtils";
+import { useAuth } from "../../hooks/useAuth";
+import { useAuthRouteGuard } from "../../hooks/useAuthRouteGuard";
+import { GUARD_MODE, AUTH_STATUS } from "@shared/authStateMachine.mjs";
 
 const AuthSpinner = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
@@ -13,52 +15,53 @@ const AuthSpinner = () => (
   </div>
 );
 
-const isAuthPending = (isLoading, isRevalidating) =>
-  isLoading || isRevalidating;
+function AuthRouteGate({ guardMode, children, pendingFallback }) {
+  const { pending, decision } = useAuthRouteGuard(guardMode);
 
-export const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isLoading, isRevalidating, user, authState } =
-    useAuth();
-
-  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
-  if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
-
-  if (authState?.requiredRoute?.startsWith("/verify-email")) {
-    return <Navigate to={authState.requiredRoute} replace />;
+  if (pending) {
+    return pendingFallback ?? <AuthSpinner />;
   }
 
-  if (children) return children;
-  return <Outlet />;
-};
+  if (decision.redirect) {
+    return <Navigate to={decision.redirect} replace />;
+  }
+
+  return children ?? <Outlet />;
+}
+
+export const ProtectedRoute = ({ children }) => (
+  <AuthRouteGate guardMode={GUARD_MODE.PROTECTED}>{children}</AuthRouteGate>
+);
 
 export const RoleRoute = ({ allowedTypes, children }) => {
-  const { user, isLoading, isRevalidating } = useAuth();
+  const { user } = useAuth();
+  const { pending } = useAuthRouteGuard(GUARD_MODE.APP);
 
-  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
+  if (pending) return <AuthSpinner />;
   if (!user || !allowedTypes.includes(user.userType)) {
     return <Navigate to={getRoleHomePath(user?.userType)} replace />;
   }
 
-  if (children) return children;
-  return <Outlet />;
+  return children ?? <Outlet />;
 };
 
 export const AdminRoute = ({ children }) => {
-  const { user, isLoading, isRevalidating } = useAuth();
+  const { user } = useAuth();
+  const { pending } = useAuthRouteGuard(GUARD_MODE.APP);
 
-  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
+  if (pending) return <AuthSpinner />;
   if (!user?.isAdmin) {
     return <Navigate to="/settings" replace />;
   }
 
-  if (children) return children;
-  return <Outlet />;
+  return children ?? <Outlet />;
 };
 
 export const OnboardingRoleRoute = ({ requiredType, children }) => {
-  const { user, isLoading, isRevalidating } = useAuth();
+  const { user } = useAuth();
+  const { pending } = useAuthRouteGuard(GUARD_MODE.PROTECTED);
 
-  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
+  if (pending) return <AuthSpinner />;
   if (user?.userType && user.userType !== requiredType) {
     return <Navigate to={onboardingPathFor(user.userType)} replace />;
   }
@@ -66,57 +69,39 @@ export const OnboardingRoleRoute = ({ requiredType, children }) => {
   return children;
 };
 
-export const OnboardingGuard = ({ children }) => {
-  const { isAuthenticated, isLoading, isRevalidating, authState } = useAuth();
-
-  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
-  if (isAuthenticated && authState?.requiredRoute) {
-    return <Navigate to={authState.requiredRoute} replace />;
-  }
-
-  if (children) {
-    return (
+export const OnboardingGuard = ({ children }) => (
+  <AuthRouteGate
+    guardMode={GUARD_MODE.APP}
+    pendingFallback={<AuthSpinner />}
+  >
+    {children ? (
       <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>
         {children}
       </Suspense>
-    );
-  }
+    ) : (
+      <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>
+        <Outlet />
+      </Suspense>
+    )}
+  </AuthRouteGate>
+);
 
-  return (
-    <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>
-      <Outlet />
-    </Suspense>
-  );
-};
+export const VerifyEmailRoute = ({ children }) => (
+  <AuthRouteGate
+    guardMode={GUARD_MODE.VERIFY_EMAIL}
+    pendingFallback={<PageLoader className="min-h-screen" />}
+  >
+    {children}
+  </AuthRouteGate>
+);
 
-/** Redirect verified users away from /verify-email. */
-export const VerifyEmailRoute = ({ children }) => {
-  const { isLoading, isRevalidating, isAuthenticated, authState, redirectPath } =
-    useAuth();
+export const PublicRoute = ({ children }) => (
+  <AuthRouteGate
+    guardMode={GUARD_MODE.PUBLIC_AUTH}
+    pendingFallback={<PageLoader className="min-h-screen" />}
+  >
+    {children}
+  </AuthRouteGate>
+);
 
-  if (isAuthPending(isLoading, isRevalidating)) return <AuthSpinner />;
-  if (
-    isAuthenticated &&
-    authState?.emailVerified &&
-    !authState?.requiredRoute?.startsWith("/verify-email")
-  ) {
-    return <Navigate to={redirectPath || "/dashboard"} replace />;
-  }
-
-  return children;
-};
-
-/** Public routes that redirect authenticated users per /auth/me. */
-export const PublicRoute = ({ children }) => {
-  const { isAuthenticated, isLoading, isRevalidating, redirectPath } = useAuth();
-
-  if (isAuthPending(isLoading, isRevalidating)) {
-    return <PageLoader className="min-h-screen" />;
-  }
-
-  if (isAuthenticated) {
-    return <Navigate to={redirectPath || "/dashboard"} replace />;
-  }
-
-  return children;
-};
+export { AUTH_STATUS };

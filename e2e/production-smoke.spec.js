@@ -16,7 +16,11 @@ test.beforeEach(async ({ page }) => {
       return route.fulfill({
         status: 401,
         contentType: "application/json",
-        body: JSON.stringify({ success: false, error: "Not authenticated" }),
+        body: JSON.stringify({
+          success: false,
+          error: "Not authenticated",
+          authState: { status: "UNAUTHENTICATED" },
+        }),
       });
     }
     if (path === "/api/auth/token") {

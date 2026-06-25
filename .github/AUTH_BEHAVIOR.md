@@ -7,10 +7,10 @@ This document defines how auth and onboarding must behave in production. Code an
 | Rule | Implementation |
 |------|----------------|
 | Auth state authority | `GET /api/auth/me` only |
-| Route decisions | `authState.requiredRoute` and `redirectPath` from `/auth/me` |
-| Frontend context | Mirrors `/auth/me`; never decides auth independently |
-| Post-login redirect | Backend `redirectPath` from login/verify responses |
-| Onboarding gate | `authState.onboardingComplete` from `/auth/me` |
+| State interpretation | `getAuthState()` in `shared/authStateMachine.mjs` — **the only** way to derive auth status |
+| Route decisions | `resolveAuthRouteDecision()` + `useAuthRouteGuard()` — no scattered boolean checks |
+| Frontend context | Mirrors `/auth/me` via `authStatus` / `authMachine` from `getAuthState()` |
+| Post-auth redirect | Backend `redirectPath` from login/register/verify responses |
 
 The frontend `AuthContext` calls `/auth/me` on:
 
@@ -20,7 +20,16 @@ The frontend `AuthContext` calls `/auth/me` on:
 - Cross-tab sync (`storage` + `BroadcastChannel` via `auth:revision`)
 - After login, logout, verify, token refresh, onboarding submit
 
-`localStorage.userData` is a display cache only. It is **not** used for `isAuthenticated`.
+`localStorage.userData` is a display cache only. It is **not** used for auth decisions.
+
+## Canonical auth states
+
+| Status | Meaning | Default route |
+|--------|---------|---------------|
+| `UNAUTHENTICATED` | No session | Public routes only |
+| `UNVERIFIED` | Session exists, email not verified | `/verify-email?email=...` |
+| `ONBOARDING_INCOMPLETE` | Verified, profile incomplete | `/onboarding` or `/investor-onboarding` |
+| `VERIFIED_READY` | Fully onboarded | `/dashboard` and app routes |
 
 ## Auth session shape (`/auth/me`)
 
@@ -30,23 +39,37 @@ The frontend `AuthContext` calls `/auth/me` on:
   "user": { "id", "email", "fullName", "userType", "emailVerified", "isAdmin" },
   "redirectPath": "/onboarding | /investor-onboarding | /dashboard | /verify-email?email=...",
   "authState": {
+    "status": "UNVERIFIED | ONBOARDING_INCOMPLETE | VERIFIED_READY",
     "emailVerified": true,
     "onboardingComplete": false,
-    "requiredRoute": "/onboarding | null"
+    "requiredRoute": "/onboarding | /verify-email?email=... | null"
   }
 }
 ```
 
-## Route gating (deterministic)
+`buildAuthSession()` validates the contract via `validateAuthSessionContract()` before returning.
 
-| State | Allowed routes | Redirect |
-|-------|----------------|----------|
-| Anonymous | Public (`/login`, `/signup`, `/`, etc.) | Protected → `/login` |
-| Authenticated, unverified | `/verify-email` | Protected → `/verify-email?email=...` |
-| Verified, onboarding incomplete | Onboarding routes | App routes → `requiredRoute` |
-| Verified, onboarding complete | Full app | Public auth routes → `redirectPath` |
+## Route gating (state machine)
+
+All guards use `useAuthRouteGuard(guardMode)` — no independent `isVerified` / `isOnboarded` checks.
+
+| Guard mode | Used for |
+|------------|----------|
+| `PUBLIC_AUTH` | `/login`, `/signup`, password reset |
+| `VERIFY_EMAIL` | `/verify-email` |
+| `PROTECTED` | Onboarding routes (auth required) |
+| `APP` | Dashboard, connections, messages, etc. |
 
 Guards show a full-screen spinner until `/auth/me` resolves (`isLoading` or `isRevalidating`).
+
+## Session endpoints
+
+| Endpoint | Middleware | Notes |
+|----------|------------|-------|
+| `GET /auth/me` | `protectSession` | Allows unverified users (returns `UNVERIFIED`) |
+| Other protected APIs | `protect` | Blocks unverified users (403) |
+
+Register and login issue sessions for unverified users so `/auth/me` can return `UNVERIFIED`.
 
 ## Cookies (production)
 
@@ -60,30 +83,27 @@ Guards show a full-screen spinner until `/auth/me` resolves (`isLoading` or `isR
 
 Tokens are never exposed in JSON responses or `localStorage`.
 
-## URL configuration (fail-fast)
-
-| Environment | Rule |
-|-------------|------|
-| Production | `FRONTEND_URL` required, non-localhost |
-| Development | `FRONTEND_URL` or `http://localhost:3000` |
-
-No `BASE_URL` fallback, no `VERCEL_URL` guessing. `/api/health` reports `appUrl` and returns 503 if misconfigured.
-
 ## Multi-tab synchronization
 
-When auth changes in one tab (login, logout, verify), `notifyAuthChanged()` bumps `localStorage.auth:revision` and broadcasts on `BroadcastChannel`. Other tabs revalidate via `/auth/me`.
+When auth changes in one tab (login, logout, verify, register), `notifyAuthChanged()` bumps `localStorage.auth:revision` and broadcasts on `BroadcastChannel`. Other tabs revalidate via `/auth/me` and update `authStatus`.
 
-## CI/CD deployment
+## CI validation
 
-**Single path:** Vercel Git Integration (push to `main` → Vercel auto-deploy).
-
-GitHub Actions runs build + test only. Vercel deploy jobs in CI are disabled to avoid dual-deployment confusion. To use GitHub Actions deploy instead, configure `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` and re-enable the deploy workflow.
+| Check | Script / test |
+|-------|----------------|
+| Auth contract | `scripts/validate-auth-state-contract.mjs` |
+| State machine unit tests | `server/tests/authStateMachine.test.js` |
+| Auth flow integration | `server/tests/authStateFlow.test.js` |
+| E2E state transitions | `e2e/auth-state-machine.spec.js` |
+| Startup smoke | `e2e/production-smoke.spec.js` |
 
 ## E2E coverage
 
-See `e2e/auth.spec.js` and `e2e/auth-hardening.spec.js`:
+See `e2e/auth-state-machine.spec.js`, `e2e/auth-hardening.spec.js`, `e2e/auth.spec.js`:
 
-- Session persistence after refresh
-- Incomplete onboarding blocked from app routes
-- Multi-tab login sync
-- Invalid credentials rejected
+- Signup → `UNVERIFIED`
+- Email verification → `ONBOARDING_INCOMPLETE`
+- Onboarding complete → `VERIFIED_READY`
+- Refresh persistence
+- Multi-tab sync
+- Token refresh / revalidation

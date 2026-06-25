@@ -13,7 +13,7 @@ import {
   revokeSession,
   getCurrentUser,
 } from "../controllers/authController.js";
-import { protect } from "../middleware/auth.js";
+import { protect, protectSession } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
 
 const router = express.Router();
@@ -31,6 +31,6 @@ router.post("/logout", protect, logout);
 router.post("/logout-all", protect, logoutAll);
 router.get("/sessions", protect, getActiveSessions);
 router.delete("/sessions/:sessionId", protect, revokeSession);
-router.get("/me", protect, getCurrentUser);
+router.get("/me", protectSession, getCurrentUser);
 
 export default router;

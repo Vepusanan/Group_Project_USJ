@@ -159,17 +159,23 @@ export const register = async (req, res) => {
 
     await sendVerificationEmail(user.email, verificationToken);
 
+    const session = await createAuthUserSession(
+      { ...user, email_verified: false },
+      req,
+      res,
+      { isRemembered: true },
+    );
+
     res.status(201).json({
       success: true,
       message:
-        "User registered successfully. Please check your email to verify your account.", // <-- Updated message
+        "User registered successfully. Please check your email to verify your account.",
       user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name,
-        userType: user.user_type,
-        createdAt: user.created_at,
+        ...session.user,
+        sessionExpires: session.sessionExpires,
       },
+      redirectPath: session.redirectPath,
+      authState: session.authState,
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -190,10 +196,13 @@ const serializeAuthUser = (user) => ({
   isAdmin: isAdminUser(user),
 });
 
-const createVerifiedUserSession = async (user, req, res) => {
+const createAuthUserSession = async (user, req, res, { isRemembered = true } = {}) => {
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken();
-  const expiresAt = new Date(Date.now() + LONG_REFRESH_MAX_AGE_MS);
+  const sessionDuration = isRemembered
+    ? LONG_REFRESH_MAX_AGE_MS
+    : 24 * 60 * 60 * 1000;
+  const expiresAt = new Date(Date.now() + sessionDuration);
 
   let deviceInfo = "Email verification";
   const userAgent = req.headers["user-agent"];
@@ -212,7 +221,7 @@ const createVerifiedUserSession = async (user, req, res) => {
     [
       user.id,
       refreshToken,
-      true,
+      isRemembered,
       expiresAt,
       req.ip || req.connection?.remoteAddress || null,
       deviceInfo,
@@ -222,7 +231,7 @@ const createVerifiedUserSession = async (user, req, res) => {
   setAuthCookies(res, {
     accessToken,
     refreshToken,
-    isRemembered: true,
+    isRemembered,
   });
 
   await touchUserActivity(user.id);
@@ -285,7 +294,7 @@ export const verifyEmail = async (req, res) => {
         existing.rows[0].email_verified === true
       ) {
         const user = existing.rows[0];
-        const session = await createVerifiedUserSession(user, req, res);
+        const session = await createAuthUserSession(user, req, res);
         console.info("[auth] email_verified", {
           userId: user.id,
           userType: user.user_type,
@@ -334,7 +343,7 @@ export const verifyEmail = async (req, res) => {
       clientIp: getClientIp(req),
     });
     tryAwardIdentityVerification(userId).catch(() => undefined);
-    const session = await createVerifiedUserSession(user, req, res);
+    const session = await createAuthUserSession(user, req, res);
 
     console.info("[auth] email_verified", {
       userId: user.id,
@@ -529,15 +538,6 @@ export const login = async (req, res) => {
         `UPDATE users SET deleted_at = NULL, deletion_scheduled_at = NULL WHERE id = $1`,
         [user.id],
       );
-    }
-
-    if (!user.email_verified) {
-      return res.status(403).json({
-        success: false,
-        error:
-          "Account is not verified. Please check your email for the verification link.",
-        emailVerified: false,
-      });
     }
 
     const accessToken = generateAccessToken(user);

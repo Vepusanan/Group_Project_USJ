@@ -65,6 +65,9 @@ jobs:
       - name: Validate client bundle (startup dependencies)
         run: node scripts/validate-client-bundle.mjs
 
+      - name: Validate auth state contract
+        run: node scripts/validate-auth-state-contract.mjs
+
       - name: Install Playwright browser
         run: npx playwright install chromium --with-deps
 

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, User } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import { AUTH_STATUS } from "@shared/authStateMachine.mjs";
 import { apiService } from "../../services/apiService";
 import { useProfileData } from "../../hooks/useProfileCache";
 
@@ -19,7 +20,7 @@ const updateSlider = (container, activeEl, setSliderStyle) => {
 const FloatingNavBar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout, isLoading } = useAuth();
+  const { authStatus, user, logout, isLoading } = useAuth();
   const { profile } = useProfileData();
   const containerRef = useRef(null);
   const itemRefs = useRef({});
@@ -28,7 +29,7 @@ const FloatingNavBar = () => {
 
   const isInvestor = user?.userType === "investor";
   const profileImageUrl = isInvestor ? profile?.photo_url : profile?.logo_url;
-  const isLoggedIn = !isLoading && isAuthenticated && user;
+  const isLoggedIn = !isLoading && authStatus === AUTH_STATUS.VERIFIED_READY;
 
   const publicItems = useMemo(
     () => [

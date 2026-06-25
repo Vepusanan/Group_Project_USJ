@@ -54,6 +54,19 @@ const criticalModules = [
       },
     ],
   },
+  {
+    file: "client/src/components/routing/ProtectedAppLayout.jsx",
+    checks: [
+      {
+        pattern: /useAuthRouteGuard/,
+        message: "route guards must use useAuthRouteGuard (state machine)",
+      },
+      {
+        pattern: /@shared\/authStateMachine/,
+        message: "must import auth state machine from @shared",
+      },
+    ],
+  },
 ];
 
 for (const mod of criticalModules) {

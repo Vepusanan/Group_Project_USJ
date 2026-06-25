@@ -17,7 +17,7 @@ const getBearerToken = (req) => {
   return null;
 };
 
-const getUserFromToken = async (token) => {
+const loadUserFromToken = async (token, { allowUnverified = false } = {}) => {
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   const userResult = await pool.query(
     "SELECT id, email, user_type, full_name, email_verified, account_locked_until, created_at, deleted_at FROM users WHERE id = $1",
@@ -32,7 +32,7 @@ const getUserFromToken = async (token) => {
 
   const user = userResult.rows[0];
 
-  if (!user.email_verified) {
+  if (!allowUnverified && !user.email_verified) {
     const error = new Error("Access denied. Please verify your email address.");
     error.statusCode = 403;
     throw error;
@@ -69,7 +69,7 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    req.user = await getUserFromToken(token);
+    req.user = await loadUserFromToken(token, { allowUnverified: false });
     next();
   } catch (error) {
     console.error("JWT Auth Error:", error.message);
@@ -112,6 +112,44 @@ const withTimeout = (promise, timeoutMs, label) =>
     }),
   ]);
 
+/** Session probe — allows unverified users (for GET /auth/me). */
+export const protectSession = async (req, res, next) => {
+  const token = getBearerToken(req);
+
+  if (!token) {
+    return res
+      .status(401)
+      .json({ success: false, error: "Not authorized, no token provided." });
+  }
+
+  try {
+    req.user = await loadUserFromToken(token, { allowUnverified: true });
+    next();
+  } catch (error) {
+    console.error("JWT Session Auth Error:", error.message);
+
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        success: false,
+        error: "Token expired. Please use refresh token to renew.",
+      });
+    }
+
+    if (error.statusCode === 403) {
+      return res.status(403).json({
+        success: false,
+        error: error.message,
+        ...(error.lockedUntil ? { lockedUntil: error.lockedUntil } : {}),
+      });
+    }
+
+    return res.status(401).json({
+      success: false,
+      error: error.message || "Not authorized, token failed",
+    });
+  }
+};
+
 export const optionalAuth = async (req, res, next) => {
   const token = getBearerToken(req);
 
@@ -121,7 +159,7 @@ export const optionalAuth = async (req, res, next) => {
 
   try {
     req.user = await withTimeout(
-      getUserFromToken(token),
+      loadUserFromToken(token, { allowUnverified: false }),
       OPTIONAL_AUTH_LOOKUP_MS,
       "Optional auth lookup",
     );

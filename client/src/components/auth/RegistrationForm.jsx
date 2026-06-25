@@ -87,7 +87,10 @@ const RegistrationForm = () => {
         });
 
         if (result.success) {
-          navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+          const destination =
+            result.redirectPath ||
+            `/verify-email?email=${encodeURIComponent(formData.email)}`;
+          navigate(destination, { replace: true });
         } else {
           setErrors({
             general: result.error || "Registration failed. Please try again.",

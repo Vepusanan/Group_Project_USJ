@@ -13,6 +13,7 @@ import { apiService } from "../services/apiService";
 import { clearProfileCaches } from "../hooks/useProfileCache";
 import { clearListingCaches } from "../hooks/useListingCache";
 import { notifyAuthChanged, subscribeAuthSync } from "../utils/authSync";
+import { getAuthState, AUTH_STATUS } from "@shared/authStateMachine.mjs";
 
 const initialState = {
   user: null,
@@ -224,27 +225,46 @@ export const AuthProvider = ({ children }) => {
     [applyAuthSession],
   );
 
-  const register = useCallback(async (userData) => {
-    dispatch({ type: AUTH_ACTIONS.REGISTER_START });
-    try {
-      const response = await authService.register(userData);
+  const register = useCallback(
+    async (userData) => {
+      dispatch({ type: AUTH_ACTIONS.REGISTER_START });
+      try {
+        const response = await authService.register(userData);
 
-      if (response.success === false) {
-        dispatch({
-          type: AUTH_ACTIONS.REGISTER_FAILURE,
-          payload: response.error || "Registration failed",
-        });
-        return { success: false, error: response.error };
+        if (response.success === false) {
+          dispatch({
+            type: AUTH_ACTIONS.REGISTER_FAILURE,
+            payload: response.error || "Registration failed",
+          });
+          return { success: false, error: response.error };
+        }
+
+        if (response.user) {
+          const session = {
+            user: response.user,
+            redirectPath: response.redirectPath,
+            authState: response.authState,
+          };
+          applyAuthSession(session);
+          notifyAuthChanged();
+        } else {
+          dispatch({ type: AUTH_ACTIONS.REGISTER_SUCCESS });
+        }
+
+        return {
+          success: true,
+          redirectPath: response.redirectPath,
+          authState: response.authState,
+          user: response.user,
+        };
+      } catch (error) {
+        const errorMsg = error?.message || "Registration failed";
+        dispatch({ type: AUTH_ACTIONS.REGISTER_FAILURE, payload: errorMsg });
+        return { success: false, error: errorMsg };
       }
-
-      dispatch({ type: AUTH_ACTIONS.REGISTER_SUCCESS });
-      return { success: true };
-    } catch (error) {
-      const errorMsg = error?.message || "Registration failed";
-      dispatch({ type: AUTH_ACTIONS.REGISTER_FAILURE, payload: errorMsg });
-      return { success: false, error: errorMsg };
-    }
-  }, []);
+    },
+    [applyAuthSession],
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -381,9 +401,23 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
   }, []);
 
+  const sessionMachine = useMemo(
+    () =>
+      getAuthState({
+        user: state.user,
+        authState: state.authState,
+        redirectPath: state.redirectPath,
+      }),
+    [state.user, state.authState, state.redirectPath],
+  );
+
   const value = useMemo(
     () => ({
       ...state,
+      authStatus: sessionMachine.status,
+      authMachine: sessionMachine,
+      isAuthenticated:
+        sessionMachine.status !== AUTH_STATUS.UNAUTHENTICATED,
       login,
       register,
       logout,
@@ -397,6 +431,7 @@ export const AuthProvider = ({ children }) => {
     }),
     [
       state,
+      sessionMachine,
       login,
       register,
       logout,

@@ -129,7 +129,8 @@ The server ignores localhost values in production and falls back to `BASE_URL` o
 1. **Output Directory** must be `client/dist` (not `dist`)
 2. **Build logs** should end with `Vercel build verified` and `Client bundle validation passed`
 3. **CI smoke test** must pass (`production-smoke.spec.js`)
-4. **DevTools → Network** — `/assets/*.js` must return `200` + `application/javascript` (not HTML)
+4. **Auth state contract** must pass (`validate-auth-state-contract.mjs`)
+5. **DevTools → Network** — `/assets/*.js` must return `200` + `application/javascript` (not HTML)
 5. **DevTools → Console** — check for `ReferenceError` / `is not defined` (common cause: missing imports in `apiClient.js`)
 6. **API check:** `curl https://your-app.vercel.app/api/health`
 

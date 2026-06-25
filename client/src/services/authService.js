@@ -6,9 +6,15 @@ const authService = {
       const response = await api.post("/auth/register", userData);
 
       if (response.data.success) {
+        if (response.data.user) {
+          localStorage.setItem("userData", JSON.stringify(response.data.user));
+        }
         return {
           success: true,
           message: response.data.message,
+          user: response.data.user,
+          redirectPath: response.data.redirectPath,
+          authState: response.data.authState,
         };
       }
 
