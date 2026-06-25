@@ -22,7 +22,7 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-    strictPort: false,
+    strictPort: true,
     host: true,
     fs: {
       // Allow imports from repo-root shared/ (auth state machine).

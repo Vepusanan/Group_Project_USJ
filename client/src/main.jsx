@@ -6,6 +6,12 @@ import App from './App';
 
 installStartupMonitoring();
 
+try {
+  sessionStorage.removeItem("app:chunk-reload-attempted");
+} catch {
+  // ignore
+}
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Root element #root not found — cannot mount React app.');

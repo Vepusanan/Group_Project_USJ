@@ -1,15 +1,5 @@
 import { lazyWithRetry } from "../utils/lazyWithRetry";
 
-// Public marketing & auth — loaded on demand after the shell.
-export const HomePage = lazyWithRetry(() => import("../pages/HomePage"));
-export const LoginPage = lazyWithRetry(() => import("../pages/LoginPage"));
-export const RegistrationPage = lazyWithRetry(() => import("../pages/RegistrationPage"));
-export const ForgotPasswordPage = lazyWithRetry(() => import("../pages/ForgotPasswordPage"));
-export const ResetPasswordPage = lazyWithRetry(() => import("../pages/ResetPasswordPage"));
-export const EmailVerificationPage = lazyWithRetry(() => import("../pages/EmailVerificationPage"));
-export const TermsPage = lazyWithRetry(() => import("../pages/TermsPage"));
-export const PrivacyPolicyPage = lazyWithRetry(() => import("../pages/PrivacyPolicyPage"));
-
 // Onboarding
 export const OnboardingPage = lazyWithRetry(() => import("../pages/OnboardingPage"));
 export const InvestorOnboardingPage = lazyWithRetry(() => import("../pages/InvestorOnboardingPage"));
