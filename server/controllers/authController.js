@@ -11,9 +11,9 @@ import {
   sendPasswordResetEmail,
   sendPasswordChangeConfirmationEmail,
 } from "../utils/emailServices.js";
+import { getFrontendBaseUrl } from "../utils/appUrls.js";
+import { resolvePostAuthRedirectPath } from "../utils/authRedirects.js";
 import { UAParser } from "ua-parser-js";
-import { getStartupProfileByUserId } from "../repositories/StartupProfileRepository.js";
-import { getInvestorProfileByUserId } from "../repositories/InvestorProfileRepository.js";
 import { tryAwardIdentityVerification } from "../services/identityVerificationService.js";
 import {
   getClientIp,
@@ -37,11 +37,6 @@ const generateAccessToken = (user) => {
     process.env.JWT_SECRET,
     { expiresIn: "15m" }, // Standard short-lived access token
   );
-};
-
-const getFrontendBaseUrl = () => {
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-  return frontendUrl.replace(/\/+$/, "");
 };
 
 // Cookie attributes shared by every auth-related response. HttpOnly so JS
@@ -191,15 +186,7 @@ const serializeAuthUser = (user) => ({
   isAdmin: isAdminUser(user),
 });
 
-const resolvePostVerificationPath = async (user) => {
-  const profile =
-    user.user_type === "investor"
-      ? await getInvestorProfileByUserId(user.id)
-      : await getStartupProfileByUserId(user.id);
-
-  if (profile) return "/dashboard";
-  return user.user_type === "investor" ? "/investor-onboarding" : "/onboarding";
-};
+const resolvePostVerificationPath = (user) => resolvePostAuthRedirectPath(user);
 
 const createVerifiedUserSession = async (user, req, res) => {
   const accessToken = generateAccessToken(user);
@@ -312,6 +299,14 @@ export const verifyEmail = async (req, res) => {
     });
     tryAwardIdentityVerification(userId).catch(() => undefined);
     const session = await createVerifiedUserSession(user, req, res);
+
+    console.info("[auth] email_verified", {
+      userId: user.id,
+      userType: user.user_type,
+      redirectPath: session.redirectPath,
+      format: wantsJson ? "json" : "redirect",
+      clientIp: getClientIp(req),
+    });
 
     if (wantsJson) {
       return res.json({
@@ -539,6 +534,13 @@ export const login = async (req, res) => {
       eventType: "login_success",
       clientIp,
     });
+    const redirectPath = await resolvePostAuthRedirectPath(user);
+    console.info("[auth] login_success", {
+      userId: user.id,
+      userType: user.user_type,
+      redirectPath,
+      clientIp,
+    });
     res.json({
       success: true,
       message: "Login successful",
@@ -546,6 +548,7 @@ export const login = async (req, res) => {
         ...serializeAuthUser(user),
         sessionExpires: expiresAt.toISOString(),
       },
+      redirectPath,
     });
   } catch (error) {
     console.error("Login error:", error);

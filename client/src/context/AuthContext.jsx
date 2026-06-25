@@ -324,6 +324,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (response.user) {
+        clearProfileCaches();
         dispatch({
           type: AUTH_ACTIONS.LOGIN_SUCCESS,
           payload: { user: response.user },

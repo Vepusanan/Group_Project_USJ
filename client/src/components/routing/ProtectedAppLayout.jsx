@@ -7,6 +7,7 @@ import {
   getRoleHomePath,
   onboardingPathFor,
 } from "../../utils/roleUtils";
+import { verificationRequiredPath } from "../../utils/authRedirects";
 
 const AuthSpinner = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">
@@ -19,6 +20,12 @@ export const ProtectedRoute = ({ children }) => {
 
   if (isLoading) return <AuthSpinner />;
   if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
+
+  if (user.emailVerified === false) {
+    return (
+      <Navigate to={verificationRequiredPath(user.email)} replace />
+    );
+  }
 
   if (children) return children;
   return <Outlet />;

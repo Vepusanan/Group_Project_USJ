@@ -4,18 +4,9 @@ import {
   getEmailFromAddress,
   hasEmailCredentials,
 } from "./emailTransport.js";
+import { buildVerifyEmailCallbackUrl, getBackendBaseUrl, getFrontendBaseUrl } from "./appUrls.js";
 
-export const getFrontendBaseUrl = () => {
-  const url =
-    process.env.FRONTEND_URL || process.env.BASE_URL || "http://localhost:5173";
-  return url.replace(/\/+$/, "");
-};
-
-const getBackendBaseUrl = () => {
-  const url =
-    process.env.BASE_URL || process.env.FRONTEND_URL || "http://localhost:5000";
-  return url.replace(/\/+$/, "");
-};
+export { getFrontendBaseUrl } from "./appUrls.js";
 
 const isDev = process.env.NODE_ENV === "development";
 const devLogOnly = process.env.EMAIL_DEV_LOG_ONLY === "true";
@@ -23,8 +14,7 @@ const devLogOnly = process.env.EMAIL_DEV_LOG_ONLY === "true";
 const transporter = createEmailTransporter();
 const emailFrom = () => `"Startup Connect" <${getEmailFromAddress()}>`;
 
-const buildVerificationLink = (token) =>
-  `${getFrontendBaseUrl()}/verify-email?token=${encodeURIComponent(token)}`;
+const buildVerificationLink = (token) => buildVerifyEmailCallbackUrl(token);
 
 const logDevVerificationLink = (email, link) => {
   if (!isDev) return;

@@ -49,6 +49,7 @@ const authService = {
         return {
           success: true,
           user: response.data.user,
+          redirectPath: response.data.redirectPath,
         };
       }
 
@@ -80,12 +81,12 @@ const authService = {
         if (response.data.user) {
           localStorage.setItem("userData", JSON.stringify(response.data.user));
         }
-        return {
-          success: true,
-          message: response.data.message || "Email verified successfully!",
-          user: response.data.user,
-          redirectPath: response.data.redirectPath,
-        };
+      return {
+        success: true,
+        message: response.data.message || "Email verified successfully!",
+        user: response.data.user,
+        redirectPath: response.data.redirectPath,
+      };
       }
 
       return {

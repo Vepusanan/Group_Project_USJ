@@ -188,13 +188,11 @@ const AppContent = () => {
           <Route
             path="/verify-email"
             element={
-              <PublicRoute>
-                <LazyPage>
-                  <AuthLayout>
-                    <EmailVerificationPage />
-                  </AuthLayout>
-                </LazyPage>
-              </PublicRoute>
+              <LazyPage>
+                <AuthLayout>
+                  <EmailVerificationPage />
+                </AuthLayout>
+              </LazyPage>
             }
           />
 

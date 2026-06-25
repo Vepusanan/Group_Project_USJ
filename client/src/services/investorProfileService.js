@@ -112,6 +112,22 @@ export const investorProfileService = {
     }
   },
 
+  getProfileCompletion: async () => {
+    try {
+      const response = await api.get("/investors/profile/completion");
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      console.error("Get investor profile completion error:", error);
+      return {
+        success: false,
+        error: error.response?.data?.error || "Failed to get completion status",
+      };
+    }
+  },
+
   /**
    * Check if investor has completed onboarding
    * @returns {Promise}

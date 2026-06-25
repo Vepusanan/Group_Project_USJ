@@ -6,7 +6,7 @@ import { investorProfileService } from "../services/investorProfileService";
 // Module-local caches. One per concern so consumers that only need
 // "does this user have a profile?" don't pay for fetching the full object.
 //
-// existenceCache: userId -> { hasProfile, onboardingPath }
+// existenceCache: userId -> { hasProfile, isOnboardingComplete, onboardingPath }
 // dataCache:      userId -> { profile, error }
 // inFlight:       cacheKey -> Promise  (de-dupes concurrent reads of the same
 //                 underlying request — keyed by `${cacheTier}:${userId}`)
@@ -44,11 +44,13 @@ const profileHasId = (profile) =>
       profile?.id,
   );
 
-// Imperative: fetch & cache existence. Safe to call from event handlers.
-// Returns the cached entry. If a fetch is already in flight for this user,
-// awaits the same promise rather than issuing a duplicate request.
+const extractCompletion = (result) => result?.data?.data ?? result?.data ?? null;
+
+// Imperative: fetch & cache onboarding status. Safe to call from event handlers.
 export const checkProfileExistence = async (user) => {
-  if (!user?.id) return { hasProfile: false, onboardingPath: null };
+  if (!user?.id) {
+    return { hasProfile: false, isOnboardingComplete: false, onboardingPath: null };
+  }
 
   const cached = existenceCache.get(user.id);
   if (cached) return cached;
@@ -58,12 +60,33 @@ export const checkProfileExistence = async (user) => {
   if (!promise) {
     promise = (async () => {
       const service = getServiceFor(user.userType);
-      const result = await service.getMyProfile();
-      const profile = extractProfile(result);
+      const profileResult = await service.getMyProfile();
+      const profile = extractProfile(profileResult);
       const has = profileHasId(profile);
+
+      if (!has) {
+        const entry = {
+          hasProfile: false,
+          isOnboardingComplete: false,
+          onboardingPath: onboardingPathFor(user.userType),
+        };
+        existenceCache.set(user.id, entry);
+        return entry;
+      }
+
+      let isOnboardingComplete = false;
+      if (typeof service.getProfileCompletion === "function") {
+        const completionResult = await service.getProfileCompletion();
+        const completion = extractCompletion(completionResult);
+        isOnboardingComplete = Boolean(completion?.isComplete);
+      }
+
       const entry = {
-        hasProfile: has,
-        onboardingPath: has ? null : onboardingPathFor(user.userType),
+        hasProfile: true,
+        isOnboardingComplete,
+        onboardingPath: isOnboardingComplete
+          ? null
+          : onboardingPathFor(user.userType),
       };
       existenceCache.set(user.id, entry);
       return entry;
@@ -143,7 +166,11 @@ export const useProfileExistence = () => {
     onboardingPath: cached?.onboardingPath ?? null,
     markComplete: (id = userId) => {
       if (!id) return;
-      existenceCache.set(id, { hasProfile: true, onboardingPath: null });
+      existenceCache.set(id, {
+        hasProfile: true,
+        isOnboardingComplete: true,
+        onboardingPath: null,
+      });
       // The data cache may hold a stale {profile: null, error: null} from
       // before onboarding (returned by the 404 path of getMyProfile). Drop
       // it so the next read fetches the freshly-created profile.

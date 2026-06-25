@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { checkProfileExistence } from "../../hooks/useProfileCache";
+import { resolvePostAuthRedirect } from "../../utils/authRedirects";
 import Input from "../common/Input";
 import PasswordInput from "../common/PasswordInput";
 import Checkbox from "../common/Checkbox";
@@ -52,17 +52,14 @@ const LoginForm = () => {
         );
 
         if (result.success) {
-          // Fetches once and caches; OnboardingGuard reads from the same cache
-          // so the next route transition does not re-fetch.
-          const { hasProfile, onboardingPath } = await checkProfileExistence(
-            result.user,
-          ).catch(() => ({ hasProfile: false, onboardingPath: null }));
-
-          if (!hasProfile && onboardingPath) {
-            navigate(onboardingPath, { replace: true });
-          } else {
-            navigate("/dashboard", { replace: true });
-          }
+          const destination = await resolvePostAuthRedirect(result.user).catch(
+            () => "/dashboard",
+          );
+          console.info("[auth] login_redirect", {
+            destination,
+            userType: result.user?.userType,
+          });
+          navigate(destination, { replace: true });
         } else {
           setErrors({
             general: result.error || "Login failed. Please try again.",

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { clearProfileCaches } from "../../hooks/useProfileCache";
+import { onboardingPathFor } from "../../utils/roleUtils";
 import Button from "../common/Button";
 
 const EmailVerification = () => {
@@ -27,10 +29,18 @@ const EmailVerification = () => {
       const result = await verifyEmail(tokenParam);
       if (cancelled) return;
       if (result?.success) {
+        clearProfileCaches();
         setStatus("verified");
         setFeedback(result.message || "Email verified successfully!");
-        const destination = result.redirectPath || "/login?verified=success";
-        setTimeout(() => navigate(destination, { replace: true }), 1200);
+        const destination =
+          result.redirectPath ||
+          onboardingPathFor(result.user?.userType) ||
+          "/dashboard";
+        console.info("[auth] verification_redirect", {
+          destination,
+          userType: result.user?.userType,
+        });
+        navigate(destination, { replace: true });
         return;
       }
       setStatus("error");
