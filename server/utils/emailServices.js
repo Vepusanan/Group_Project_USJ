@@ -104,7 +104,7 @@ export const sendPasswordChangeConfirmationEmail = async (email) => {
 };
 
 export const sendEmailChangeVerificationEmail = async (newEmail, token) => {
-  const verificationLink = `${process.env.BASE_URL}/api/account/verify-email-change?token=${token}`;
+  const verificationLink = `${getBackendBaseUrl()}/api/account/verify-email-change?token=${encodeURIComponent(token)}`;
 
   const mailOptions = {
     from: emailFrom(),

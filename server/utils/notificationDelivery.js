@@ -4,6 +4,7 @@ import {
   createEmailTransporter,
   getEmailFromAddress,
 } from "./emailTransport.js";
+import { getFrontendBaseUrl } from "./appUrls.js";
 
 const transporter = createEmailTransporter();
 const emailFrom = () => `"Startup Connect" <${getEmailFromAddress()}>`;
@@ -220,7 +221,7 @@ async function sendNotificationEmail(userId, notificationType, data) {
             <h2>Hello ${full_name}!</h2>
             <p>You have a new connection request from <strong>${data.senderName}</strong>.</p>
             <p>Log in to your account to view and respond to this request.</p>
-            <p><a href="${process.env.BASE_URL}/connections">View Connection Request</a></p>
+            <p><a href="${getFrontendBaseUrl()}/connections">View Connection Request</a></p>
           `,
         };
         break;
@@ -234,7 +235,7 @@ async function sendNotificationEmail(userId, notificationType, data) {
             <h2>Hello ${full_name}!</h2>
             <p>You have a new message from <strong>${data.senderName}</strong>.</p>
             <p>Log in to your account to read and reply to this message.</p>
-            <p><a href="${process.env.BASE_URL}/messages">View Messages</a></p>
+            <p><a href="${getFrontendBaseUrl()}/messages">View Messages</a></p>
           `,
         };
         break;
@@ -248,7 +249,7 @@ async function sendNotificationEmail(userId, notificationType, data) {
             <h2>Hello ${full_name}!</h2>
             <p><strong>${data.viewerName}</strong> viewed your profile.</p>
             <p>Log in to your account to see who's interested in connecting with you.</p>
-            <p><a href="${process.env.BASE_URL}/profile">View Your Profile</a></p>
+            <p><a href="${getFrontendBaseUrl()}/profile">View Your Profile</a></p>
           `,
         };
         break;
@@ -408,7 +409,7 @@ async function sendBatchedDigest(userId, email, fullName, frequency) {
     }
     
     digestHtml += `
-      <p><a href="${process.env.BASE_URL}/dashboard">Visit Your Dashboard</a></p>
+      <p><a href="${getFrontendBaseUrl()}/dashboard">Visit Your Dashboard</a></p>
     `;
     
     const mailOptions = {

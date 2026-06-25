@@ -49,8 +49,8 @@ Set in **Vercel → Settings → Environment Variables** for **Production** and 
 | `SUPABASE_JWT_SECRET` | Yes | Supabase → Settings → API → JWT Secret |
 | `JWT_SECRET` | Yes | App auth |
 | `JWT_VERIFY_SECRET` | Yes | Email verification |
-| `BASE_URL` | Yes | `https://your-app.vercel.app` |
-| `FRONTEND_URL` | Yes | Same as `BASE_URL` |
+| `BASE_URL` | Yes | `https://your-app.vercel.app` (same as `FRONTEND_URL` on Vercel) |
+| `FRONTEND_URL` | Yes | `https://your-app.vercel.app` — **single source of truth** for auth email links |
 | `CRON_SECRET` | Yes | Random string for `/api/cron/cleanup` |
 | `ADMIN_EMAILS` | Yes | Comma-separated |
 | `EMAIL_SMTP_*` / `EMAIL_FROM` | Recommended | Auth emails |

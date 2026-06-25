@@ -35,6 +35,7 @@ import { generalLimiter } from "./middleware/rateLimiter.js";
 import { requestTiming } from "./middleware/requestTiming.js";
 import { hasEmailCredentials } from "./utils/emailTransport.js";
 import { getCorsOrigins } from "./utils/corsOrigins.js";
+import { getAppUrlConfig } from "./utils/appUrls.js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -82,6 +83,13 @@ export function createApp() {
   }
 
   app.get("/api/health", async (req, res) => {
+    let appUrl;
+    try {
+      appUrl = getAppUrlConfig();
+    } catch (error) {
+      appUrl = { productionSafe: false, error: error.message };
+    }
+
     const checks = {
       database: process.env.DATABASE_URL
         ? "configured"
@@ -92,14 +100,27 @@ export function createApp() {
       gemini: process.env.GEMINI_API_KEY ? "configured" : "not_configured",
       storage: process.env.SUPABASE_URL ? "configured" : "not_configured",
       jwt: process.env.JWT_SECRET ? "configured" : "not_configured",
+      appUrl: appUrl.productionSafe === false ? "misconfigured" : "configured",
     };
 
     if (checks.database === "not_configured") {
       return res.status(503).json({
         status: "error",
         checks,
+        appUrl,
         error:
           "DATABASE_URL is not set. Add it in Vercel → Settings → Environment Variables, then redeploy.",
+      });
+    }
+
+    if (checks.appUrl === "misconfigured") {
+      return res.status(503).json({
+        status: "error",
+        checks,
+        appUrl,
+        error:
+          appUrl.error ||
+          "FRONTEND_URL or BASE_URL must be set for production email links.",
       });
     }
 
@@ -109,6 +130,7 @@ export function createApp() {
       res.json({
         status: "ok",
         checks,
+        appUrl,
         timestamp: result.rows[0].now,
       });
     } catch (error) {
@@ -116,6 +138,7 @@ export function createApp() {
       res.status(500).json({
         status: "error",
         checks,
+        appUrl,
         error: error.message,
       });
     }
