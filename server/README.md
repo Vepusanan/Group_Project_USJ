@@ -6,7 +6,7 @@
 
 ### Prerequisites
 
-- Node.js (v18 or v20)
+- Node.js 24.x (see `.nvmrc`)
 - Git
 - Supabase account
 

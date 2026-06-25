@@ -52,6 +52,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify Node.js version
+        run: |
+          node --version
+          node -e "const v=process.versions.node; if(!v.startsWith('24.')) { console.error('Expected Node 24, got', v); process.exit(1); }"
+
       - name: Build client
         run: npm run build --prefix client
         env:
@@ -100,6 +105,22 @@ jobs:
 
           if (!config.rewrites?.some((rule) => rule.source.includes("/api/"))) {
             throw new Error("API rewrite rule is missing from vercel.json");
+          }
+
+          const pkg = JSON.parse(
+            fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8"),
+          );
+          if (!pkg.engines?.node?.startsWith("24")) {
+            throw new Error(
+              `package.json engines.node must be 24.x (got ${pkg.engines?.node})`,
+            );
+          }
+
+          const nvmrc = fs
+            .readFileSync(path.join(process.cwd(), ".nvmrc"), "utf8")
+            .trim();
+          if (!nvmrc.startsWith("24")) {
+            throw new Error(`.nvmrc must pin Node 24 (got ${nvmrc})`);
           }
 
           console.log("Vercel monorepo config looks valid.");

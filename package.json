@@ -21,7 +21,7 @@
     "ci:e2e": "npm run seed:e2e && npm run test:e2e:qa && SKIP_E2E_WEBSERVER=1 npm run test:e2e"
   },
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "type": "module",
   "overrides": {

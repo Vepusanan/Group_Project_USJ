@@ -19,7 +19,7 @@ https://your-app.vercel.app
 1. [vercel.com/new](https://vercel.com/new) → import GitHub repo
 2. **Root Directory:** `.` (repository root — **not** `client/`)
 3. **Framework:** Other (uses `vercel.json`)
-4. **Node.js:** 20
+4. **Node.js:** 24
 
 ### Critical dashboard settings
 
