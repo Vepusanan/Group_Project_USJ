@@ -3,6 +3,7 @@ import { afterEach, test } from "node:test";
 
 const ENV_KEYS = [
   "NODE_ENV",
+  "VERCEL",
   "FRONTEND_URL",
   "CLIENT_URL",
   "APP_URL",
@@ -26,6 +27,25 @@ function restoreEnv(snapshot) {
 async function loadAppUrls() {
   return import(`../utils/appUrls.js?test=${Date.now()}`);
 }
+
+test("getFrontendBaseUrl skips localhost FRONTEND_URL on Vercel", async () => {
+  const saved = snapshotEnv();
+  try {
+    process.env.VERCEL = "1";
+    delete process.env.NODE_ENV;
+    process.env.FRONTEND_URL = "http://localhost:3000";
+    process.env.BASE_URL = "https://group-project-usj-client.vercel.app";
+    delete process.env.VERCEL_URL;
+
+    const { getFrontendBaseUrl } = await loadAppUrls();
+    assert.equal(
+      getFrontendBaseUrl(),
+      "https://group-project-usj-client.vercel.app",
+    );
+  } finally {
+    restoreEnv(saved);
+  }
+});
 
 test("getFrontendBaseUrl skips localhost FRONTEND_URL in production", async () => {
   const saved = snapshotEnv();

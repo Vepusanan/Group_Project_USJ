@@ -1,15 +1,16 @@
 /**
  * Centralized URL configuration for auth redirects and email links.
  *
- * Production: FRONTEND_URL (preferred) → CLIENT_URL / APP_URL / BASE_URL →
- * Vercel deployment metadata. Never falls back to localhost.
- * Development: explicit env vars, then localhost defaults.
+ * Deployed runtimes: FRONTEND_URL (preferred) → CLIENT_URL / APP_URL / BASE_URL →
+ * Vercel deployment metadata. Localhost env values are ignored; never falls back to localhost.
+ * Local development: explicit env vars, then localhost defaults.
  */
 
 const LOCAL_FRONTEND = "http://localhost:3000";
 const LOCAL_BACKEND = "http://localhost:5001";
 
-const isProduction = () => process.env.NODE_ENV === "production";
+const isLocalDev = () =>
+  process.env.NODE_ENV !== "production" && process.env.VERCEL !== "1";
 
 const isLocalhostUrl = (url) =>
   /:\/\/(localhost|127\.0\.0\.1)(:\d+)?(?:\/|$)/i.test(url);
@@ -28,7 +29,7 @@ function firstNormalizedUrl(keys) {
   for (const key of keys) {
     const url = normalizeBaseUrl(process.env[key]);
     if (!url) continue;
-    if (isProduction() && isLocalhostUrl(url)) continue;
+    if (!isLocalDev() && isLocalhostUrl(url)) continue;
     return { url, source: key };
   }
   return null;
@@ -53,7 +54,7 @@ function resolveFrontendUrl() {
   const explicit = firstNormalizedUrl(FRONTEND_ENV_KEYS);
   if (explicit) return explicit;
 
-  if (isProduction()) {
+  if (!isLocalDev()) {
     const vercel = firstNormalizedUrl(VERCEL_ENV_KEYS);
     if (vercel) return vercel;
     throw new Error(
@@ -68,7 +69,7 @@ function resolveBackendUrl() {
   const explicit = firstNormalizedUrl(BACKEND_ENV_KEYS);
   if (explicit) return explicit;
 
-  if (isProduction()) {
+  if (!isLocalDev()) {
     const vercel = firstNormalizedUrl(VERCEL_ENV_KEYS);
     if (vercel) return vercel;
     throw new Error(
@@ -96,7 +97,7 @@ export const getAppUrlConfig = () => {
     backend: backend.url,
     frontendSource: frontend.source,
     backendSource: backend.source,
-    productionSafe: isProduction() ? !usesLocalhost : true,
+    productionSafe: isLocalDev() ? true : !usesLocalhost,
   };
 };
 
