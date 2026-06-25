@@ -127,16 +127,39 @@ The server ignores localhost values in production and falls back to `BASE_URL` o
 ### White screen (frontend)
 
 1. **Output Directory** must be `client/dist` (not `dist`)
-2. **Build logs** should end with `Vercel build verified`
-3. **DevTools → Network** — `/assets/*.js` must return `200` + `application/javascript` (not HTML)
-4. **DevTools → Console** — check for chunk load or env errors
-5. **API check:** `curl https://your-app.vercel.app/api/health`
+2. **Build logs** should end with `Vercel build verified` and `Client bundle validation passed`
+3. **CI smoke test** must pass (`production-smoke.spec.js`)
+4. **DevTools → Network** — `/assets/*.js` must return `200` + `application/javascript` (not HTML)
+5. **DevTools → Console** — check for `ReferenceError` / `is not defined` (common cause: missing imports in `apiClient.js`)
+6. **API check:** `curl https://your-app.vercel.app/api/health`
 
 ## 7. Verify after deploy
 
+**Required before considering a release healthy:**
+
+1. GitHub Actions `Build client and test server` job passes (includes production smoke test).
+2. `curl https://your-app.vercel.app/api/health` returns `"status":"ok"`.
+3. Homepage renders (not a blank `#root`) — smoke test covers this in CI; manually verify if needed.
+
 ```bash
-curl https://your-app.vercel.app/api/health
+curl -s https://your-app.vercel.app/api/health | python3 -m json.tool
+npm run test:smoke:production   # local: build client first
 ```
+
+### Production smoke test (CI)
+
+On every push/PR, CI will:
+
+1. Build `client/dist`
+2. Run `scripts/validate-client-bundle.mjs` (critical imports, axios chunk linkage)
+3. Serve the production build via `vite preview`
+4. Run Playwright `e2e/production-smoke.spec.js` — fails on:
+   - Empty `#root` / blank screen
+   - `pageerror` (e.g. `ReferenceError: axios is not defined`)
+   - Uncaught promise rejections
+   - Application `console.error` crashes
+
+**Do not deploy** if the smoke test job fails.
 
 Test: login, messaging (instant via Realtime), file uploads (Supabase storage).
 
