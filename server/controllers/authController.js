@@ -272,6 +272,38 @@ export const verifyEmail = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      const existing = await pool.query(
+        `SELECT id, email, full_name, user_type, email_verified, created_at
+         FROM users WHERE email = $1`,
+        [userEmail],
+      );
+      if (
+        existing.rows.length > 0 &&
+        existing.rows[0].email_verified === true
+      ) {
+        const user = existing.rows[0];
+        const session = await createVerifiedUserSession(user, req, res);
+        console.info("[auth] email_verified", {
+          userId: user.id,
+          userType: user.user_type,
+          redirectPath: session.redirectPath,
+          format: wantsJson ? "json" : "redirect",
+          clientIp: getClientIp(req),
+          idempotent: true,
+        });
+        if (wantsJson) {
+          return res.json({
+            success: true,
+            message: "Email already verified",
+            user: session.user,
+            redirectPath: session.redirectPath,
+            sessionExpires: session.sessionExpires,
+          });
+        }
+        return res.redirect(
+          `${getFrontendBaseUrl()}${session.redirectPath}?verified=success`,
+        );
+      }
       return fail("invalid_or_expired");
     }
 

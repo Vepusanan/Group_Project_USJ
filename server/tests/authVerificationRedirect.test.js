@@ -105,6 +105,50 @@ test("verify email json callback redirects new investor to investor onboarding",
   }
 });
 
+test("verify email json callback is idempotent when token already consumed", async () => {
+  const email = randomEmail("idempotent");
+  const verifyToken = jwt.sign(
+    { email },
+    process.env.JWT_VERIFY_SECRET,
+    { expiresIn: "1h" },
+  );
+  const passwordHash = await bcrypt.hash("VerifyTest123!", 10);
+  const insert = await pool.query(
+    `
+      INSERT INTO public.users (
+        email, password_hash, full_name, user_type, email_verified,
+        email_verification_token, email_verification_token_expires
+      )
+      VALUES ($1, $2, 'Idempotent Verify', 'startup', false, $3, NOW() + interval '1 hour')
+      RETURNING id
+    `,
+    [email, passwordHash, verifyToken],
+  );
+  const userId = insert.rows[0].id;
+
+  const srv = await startServer();
+  try {
+    const first = await fetch(
+      `${srv.baseUrl}/api/auth/verify-email?token=${encodeURIComponent(verifyToken)}&format=json`,
+    );
+    const firstData = await first.json();
+    assert.equal(first.status, 200, JSON.stringify(firstData));
+
+    const second = await fetch(
+      `${srv.baseUrl}/api/auth/verify-email?token=${encodeURIComponent(verifyToken)}&format=json`,
+    );
+    const secondData = await second.json();
+    assert.equal(second.status, 200, JSON.stringify(secondData));
+    assert.equal(secondData.success, true);
+    assert.equal(secondData.redirectPath, "/onboarding");
+    assert.equal(secondData.user.emailVerified, true);
+  } finally {
+    await srv.close();
+    await pool.query("DELETE FROM public.sessions WHERE user_id = $1", [userId]).catch(() => undefined);
+    await pool.query("DELETE FROM public.users WHERE id = $1", [userId]).catch(() => undefined);
+  }
+});
+
 test("verify email rejects expired token", async () => {
   const email = randomEmail("expired");
   const verifyToken = jwt.sign(

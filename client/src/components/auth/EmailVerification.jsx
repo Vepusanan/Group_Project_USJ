@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { clearProfileCaches } from "../../hooks/useProfileCache";
@@ -18,9 +18,12 @@ const EmailVerification = () => {
   const [cooldown, setCooldown] = useState(0);
   const [status, setStatus] = useState("idle");
   const [feedback, setFeedback] = useState("");
+  const verificationStarted = useRef(null);
 
   useEffect(() => {
     if (!tokenParam) return;
+    if (verificationStarted.current === tokenParam) return;
+    verificationStarted.current = tokenParam;
 
     let cancelled = false;
     const runVerification = async () => {
