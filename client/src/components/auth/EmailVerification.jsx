@@ -25,12 +25,10 @@ const EmailVerification = () => {
     if (verificationStarted.current === tokenParam) return;
     verificationStarted.current = tokenParam;
 
-    let cancelled = false;
     const runVerification = async () => {
       setStatus("verifying");
       setFeedback("");
       const result = await verifyEmail(tokenParam);
-      if (cancelled) return;
       if (result?.success) {
         clearProfileCaches();
         setStatus("verified");
@@ -51,9 +49,6 @@ const EmailVerification = () => {
     };
 
     runVerification();
-    return () => {
-      cancelled = true;
-    };
   }, [tokenParam, verifyEmail, navigate]);
 
   useEffect(() => {
