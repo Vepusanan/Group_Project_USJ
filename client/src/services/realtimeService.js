@@ -44,7 +44,7 @@ const ensureRealtimeAuth = async () => {
 
 const sendPresenceHeartbeat = async () => {
   try {
-    await api.post("/realtime/presence", null, { _silentAuth: true });
+    await api.post("/realtime/presence", undefined, { _silentAuth: true });
   } catch {
     // Presence is best-effort; polling still works if this fails.
   }

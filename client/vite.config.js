@@ -9,11 +9,6 @@ export default defineConfig({
   base: "/",
   plugins: [react()],
   resolve: {
-    alias: {
-      '@shared': path.resolve(__dirname, '../shared'),
-    },
-    // react-pdf bundles pdfjs-dist@5.4.x — force a single copy so the
-    // worker file always matches the API version used by <Document>.
     dedupe: ['pdfjs-dist'],
   },
   optimizeDeps: {

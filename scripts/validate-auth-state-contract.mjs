@@ -105,8 +105,16 @@ for (const { file, patterns } of frontendFiles) {
   requirePattern(
     file,
     source,
-    /@shared\/authStateMachine/,
-    "must import from @shared/authStateMachine",
+    /authStateMachine/,
+    "must import authStateMachine",
+  );
+}
+
+const sharedMachine = read("shared/authStateMachine.mjs").replace(/\r\n/g, "\n");
+const clientMachine = read("client/src/utils/authStateMachine.js").replace(/\r\n/g, "\n");
+if (sharedMachine !== clientMachine) {
+  errors.push(
+    "client/src/utils/authStateMachine.js must stay in sync with shared/authStateMachine.mjs",
   );
 }
 

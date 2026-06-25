@@ -7,7 +7,7 @@ import {
   Network,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { AUTH_STATUS } from "@shared/authStateMachine.mjs";
+import { AUTH_STATUS } from "../utils/authStateMachine.js";
 import step01Image from "../assets/home/pipeline/step-01-create-profile.png";
 import step02Image from "../assets/home/pipeline/step-02-discover-connect.png";
 import step03Image from "../assets/home/pipeline/step-03-collaborate-grow.png";

@@ -67,7 +67,7 @@ export function createApp() {
     }),
   );
   app.use(cookieParser());
-  app.use(express.json());
+  app.use(express.json({ strict: false }));
   app.use(express.urlencoded({ extended: true }));
   app.use(requestTiming);
 

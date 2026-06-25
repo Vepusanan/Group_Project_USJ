@@ -62,8 +62,8 @@ const criticalModules = [
         message: "route guards must use useAuthRouteGuard (state machine)",
       },
       {
-        pattern: /@shared\/authStateMachine/,
-        message: "must import auth state machine from @shared",
+        pattern: /authStateMachine/,
+        message: "must import auth state machine from client utils",
       },
     ],
   },

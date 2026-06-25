@@ -13,7 +13,7 @@ import { apiService } from "../services/apiService";
 import { clearProfileCaches } from "../hooks/useProfileCache";
 import { clearListingCaches } from "../hooks/useListingCache";
 import { notifyAuthChanged, subscribeAuthSync } from "../utils/authSync";
-import { getAuthState, AUTH_STATUS } from "@shared/authStateMachine.mjs";
+import { getAuthState, AUTH_STATUS } from "../utils/authStateMachine.js";
 
 const initialState = {
   user: null,

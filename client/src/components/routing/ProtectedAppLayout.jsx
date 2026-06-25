@@ -7,7 +7,7 @@ import {
 } from "../../utils/roleUtils";
 import { useAuth } from "../../hooks/useAuth";
 import { useAuthRouteGuard } from "../../hooks/useAuthRouteGuard";
-import { GUARD_MODE, AUTH_STATUS } from "@shared/authStateMachine.mjs";
+import { GUARD_MODE, AUTH_STATUS } from "../../utils/authStateMachine.js";
 
 const AuthSpinner = () => (
   <div className="flex min-h-screen items-center justify-center bg-background">

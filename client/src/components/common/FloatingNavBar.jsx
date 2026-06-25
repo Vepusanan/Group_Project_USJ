@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, User } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { AUTH_STATUS } from "@shared/authStateMachine.mjs";
+import { AUTH_STATUS } from "../../utils/authStateMachine.js";
 import { apiService } from "../../services/apiService";
 import { useProfileData } from "../../hooks/useProfileCache";
 

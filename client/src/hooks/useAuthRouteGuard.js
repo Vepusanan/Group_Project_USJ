@@ -4,13 +4,13 @@ import { useAuth } from "./useAuth";
 import {
   getAuthState,
   resolveAuthRouteDecision,
-} from "@shared/authStateMachine.mjs";
+} from "../utils/authStateMachine.js";
 
 const isAuthPending = (isLoading) => isLoading;
 
 /**
  * State-machine route guard — all auth routing decisions flow through here.
- * @param {import('@shared/authStateMachine.mjs').GUARD_MODE[keyof import('@shared/authStateMachine.mjs').GUARD_MODE]} guardMode
+ * @param {string} guardMode
  */
 export function useAuthRouteGuard(guardMode) {
   const { user, authState, redirectPath, isLoading } = useAuth();
