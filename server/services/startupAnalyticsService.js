@@ -1,3 +1,4 @@
+import { runWithConcurrency } from "../utils/runWithConcurrency.js";
 import { StartupProfile } from "../models/StartupProfiles.js";
 import { getStartupProfileByUserId } from "../repositories/StartupProfileRepository.js";
 import {
@@ -255,6 +256,8 @@ export async function getStartupAnalyticsDashboard(userId, periodKey = "30d") {
 
   await ensureAnalyticsTables();
 
+  const analyticsConcurrency = Number(process.env.ANALYTICS_DB_CONCURRENCY || 4);
+
   const [
     profileViews,
     prevProfileViews,
@@ -278,83 +281,103 @@ export async function getStartupAnalyticsDashboard(userId, periodKey = "30d") {
     pendingConnections,
     dataRoomDocuments,
     platformAvgCompletion,
-  ] = await Promise.all([
-    countProfileViews(startupProfileId, { since: sinceIso, until: untilIso }),
-    prevSinceIso
-      ? countProfileViews(startupProfileId, {
-          since: prevSinceIso,
-          until: prevUntilIso,
-        })
-      : Promise.resolve({ total_views: 0, unique_investors: 0 }),
-    countPitchDeckViews(startupProfileId, { since: sinceIso, until: untilIso }),
-    prevSinceIso
-      ? countPitchDeckViews(startupProfileId, {
-          since: prevSinceIso,
-          until: prevUntilIso,
-        })
-      : Promise.resolve({ total_views: 0, unique_investors: 0, avg_duration_ms: null }),
-    countConnectionMetrics(userId, { since: sinceIso, until: untilIso }),
-    prevSinceIso
-      ? countConnectionMetrics(userId, {
-          since: prevSinceIso,
-          until: prevUntilIso,
-        })
-      : Promise.resolve({
-          received: 0,
-          accepted: 0,
-          active_connected: 0,
-          newly_accepted: 0,
+  ] = await runWithConcurrency(
+    [
+      () => countProfileViews(startupProfileId, { since: sinceIso, until: untilIso }),
+      () =>
+        prevSinceIso
+          ? countProfileViews(startupProfileId, {
+              since: prevSinceIso,
+              until: prevUntilIso,
+            })
+          : Promise.resolve({ total_views: 0, unique_investors: 0 }),
+      () => countPitchDeckViews(startupProfileId, { since: sinceIso, until: untilIso }),
+      () =>
+        prevSinceIso
+          ? countPitchDeckViews(startupProfileId, {
+              since: prevSinceIso,
+              until: prevUntilIso,
+            })
+          : Promise.resolve({
+              total_views: 0,
+              unique_investors: 0,
+              avg_duration_ms: null,
+            }),
+      () => countConnectionMetrics(userId, { since: sinceIso, until: untilIso }),
+      () =>
+        prevSinceIso
+          ? countConnectionMetrics(userId, {
+              since: prevSinceIso,
+              until: prevUntilIso,
+            })
+          : Promise.resolve({
+              received: 0,
+              accepted: 0,
+              active_connected: 0,
+              newly_accepted: 0,
+            }),
+      () =>
+        countDataRoomAccessRequests(startupProfileId, {
+          since: sinceIso,
+          until: untilIso,
         }),
-    countDataRoomAccessRequests(startupProfileId, {
-      since: sinceIso,
-      until: untilIso,
-    }),
-    prevSinceIso
-      ? countDataRoomAccessRequests(startupProfileId, {
-          since: prevSinceIso,
-          until: prevUntilIso,
-        })
-      : Promise.resolve({ total_requests: 0, granted_count: 0 }),
-    countDataRoomGrants(startupProfileId, { since: sinceIso, until: untilIso }),
-    profileViewTrendBuckets(startupProfileId, {
-      since: sinceIso,
-      bucket: config.bucket,
-    }),
-    pitchDeckViewTrendBuckets(startupProfileId, {
-      since: sinceIso,
-      bucket: config.bucket,
-    }),
-    connectionTrendBuckets(userId, {
-      since: sinceIso,
-      bucket: config.bucket,
-      metric: "received",
-    }),
-    connectionTrendBuckets(userId, {
-      since: sinceIso,
-      bucket: config.bucket,
-      metric: "accepted",
-    }),
-    dataRoomRequestTrendBuckets(startupProfileId, {
-      since: sinceIso,
-      bucket: config.bucket,
-    }),
-    dataRoomGrantTrendBuckets(startupProfileId, {
-      since: sinceIso,
-      bucket: config.bucket,
-    }),
-    pitchDeckViewsByConnectedInvestor(startupProfileId, userId, {
-      since: sinceIso,
-    }),
-    listPitchDeckSessionsForStartup(startupProfileId, { since: sinceIso }),
-    getLastPitchDeckViewDate(startupProfileId),
-    countPendingConnectionRequests(userId),
-    countDataRoomDocuments(startupProfileId),
-    getPlatformAverageProfileCompletion(),
-    countProfileViewToConnectionConversion(startupProfileId, userId, {
-      since: sinceIso,
-      until: untilIso,
-    }),
-  ]);
+      () =>
+        prevSinceIso
+          ? countDataRoomAccessRequests(startupProfileId, {
+              since: prevSinceIso,
+              until: prevUntilIso,
+            })
+          : Promise.resolve({ total_requests: 0, granted_count: 0 }),
+      () => countDataRoomGrants(startupProfileId, { since: sinceIso, until: untilIso }),
+      () =>
+        profileViewTrendBuckets(startupProfileId, {
+          since: sinceIso,
+          bucket: config.bucket,
+        }),
+      () =>
+        pitchDeckViewTrendBuckets(startupProfileId, {
+          since: sinceIso,
+          bucket: config.bucket,
+        }),
+      () =>
+        connectionTrendBuckets(userId, {
+          since: sinceIso,
+          bucket: config.bucket,
+          metric: "received",
+        }),
+      () =>
+        connectionTrendBuckets(userId, {
+          since: sinceIso,
+          bucket: config.bucket,
+          metric: "accepted",
+        }),
+      () =>
+        dataRoomRequestTrendBuckets(startupProfileId, {
+          since: sinceIso,
+          bucket: config.bucket,
+        }),
+      () =>
+        dataRoomGrantTrendBuckets(startupProfileId, {
+          since: sinceIso,
+          bucket: config.bucket,
+        }),
+      () =>
+        countProfileViewToConnectionConversion(startupProfileId, userId, {
+          since: sinceIso,
+          until: untilIso,
+        }),
+      () =>
+        pitchDeckViewsByConnectedInvestor(startupProfileId, userId, {
+          since: sinceIso,
+        }),
+      () => listPitchDeckSessionsForStartup(startupProfileId, { since: sinceIso }),
+      () => getLastPitchDeckViewDate(startupProfileId),
+      () => countPendingConnectionRequests(userId),
+      () => countDataRoomDocuments(startupProfileId),
+      () => getPlatformAverageProfileCompletion(),
+    ],
+    analyticsConcurrency,
+  );
 
   const startupModel = new StartupProfile(profile);
   startupModel.parseJsonFields();

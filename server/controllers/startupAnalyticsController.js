@@ -19,12 +19,26 @@ export const getMyStartupAnalytics = async (req, res, next) => {
       });
     }
 
+    if (process.env.AUTH_DEBUG === "1") {
+      console.info("[analytics] getMyStartupAnalytics", {
+        userId: req.user.id,
+        period,
+      });
+    }
+
     const data = await getStartupAnalyticsDashboard(req.user.id, period);
 
     res.json({ success: true, data });
   } catch (error) {
     if (error.statusCode === 404) {
       return res.status(404).json({ success: false, error: error.message });
+    }
+    if (process.env.AUTH_DEBUG === "1") {
+      console.error("[analytics] dashboard failed", {
+        userId: req.user?.id,
+        message: error.message,
+        stack: error.stack,
+      });
     }
     next(error);
   }

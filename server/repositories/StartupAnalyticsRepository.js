@@ -202,29 +202,6 @@ export async function countConnectionMetrics(
     idx += 1;
   }
 
-  const result = await pool.query(
-    `
-      SELECT
-        COUNT(*)::int AS received,
-        COUNT(*) FILTER (
-          WHERE LOWER(c.status) IN ('accepted', 'connected')
-        )::int AS accepted
-      FROM public.connections c
-      WHERE ${receivedConditions.join(" AND ")}
-    `,
-    values,
-  );
-
-  const activeResult = await pool.query(
-    `
-      SELECT COUNT(*)::int AS active
-      FROM public.connections c
-      WHERE c.startup_id = $1
-        AND LOWER(c.status) IN ('accepted', 'connected')
-    `,
-    [startupUserId],
-  );
-
   const newlyAcceptedConditions = [
     "c.startup_id = $1",
     "LOWER(c.status) IN ('accepted', 'connected')",
@@ -243,18 +220,41 @@ export async function countConnectionMetrics(
     newlyIdx += 1;
   }
 
-  const newlyAcceptedResult = await pool.query(
-    `
-      SELECT COUNT(*)::int AS newly_accepted
-      FROM public.connections c
-      WHERE ${newlyAcceptedConditions.join(" AND ")}
-    `,
-    newlyValues,
-  );
+  const [receivedResult, activeResult, newlyAcceptedResult] = await Promise.all([
+    pool.query(
+      `
+        SELECT
+          COUNT(*)::int AS received,
+          COUNT(*) FILTER (
+            WHERE LOWER(c.status) IN ('accepted', 'connected')
+          )::int AS accepted
+        FROM public.connections c
+        WHERE ${receivedConditions.join(" AND ")}
+      `,
+      values,
+    ),
+    pool.query(
+      `
+        SELECT COUNT(*)::int AS active
+        FROM public.connections c
+        WHERE c.startup_id = $1
+          AND LOWER(c.status) IN ('accepted', 'connected')
+      `,
+      [startupUserId],
+    ),
+    pool.query(
+      `
+        SELECT COUNT(*)::int AS newly_accepted
+        FROM public.connections c
+        WHERE ${newlyAcceptedConditions.join(" AND ")}
+      `,
+      newlyValues,
+    ),
+  ]);
 
   return {
-    received: result.rows[0]?.received || 0,
-    accepted: result.rows[0]?.accepted || 0,
+    received: receivedResult.rows[0]?.received || 0,
+    accepted: receivedResult.rows[0]?.accepted || 0,
     active_connected: activeResult.rows[0]?.active || 0,
     newly_accepted: newlyAcceptedResult.rows[0]?.newly_accepted || 0,
   };

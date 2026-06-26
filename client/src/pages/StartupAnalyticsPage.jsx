@@ -10,6 +10,8 @@ import {
   Users,
   Lightbulb,
 } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { AUTH_STATUS } from "../utils/authStateMachine.js";
 import PageLayout from "../components/layout/PageLayout";
 import { SectionCard } from "../components/common/SectionCard";
 import TrendChart from "../components/analytics/TrendChart";
@@ -61,12 +63,19 @@ const severityStyles = {
 };
 
 const StartupAnalyticsPage = () => {
+  const { authStatus, isLoading: authLoading } = useAuth();
   const [period, setPeriod] = useState("30d");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
+    if (authStatus !== AUTH_STATUS.AUTHENTICATED_READY) {
+      setLoading(false);
+      setData(null);
+      return;
+    }
+
     setLoading(true);
     setError("");
     const result = await startupAnalyticsService.getDashboard(period);
@@ -78,11 +87,24 @@ const StartupAnalyticsPage = () => {
     }
     setData(result.data);
     setLoading(false);
-  }, [period]);
+  }, [period, authStatus]);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (authStatus !== AUTH_STATUS.AUTHENTICATED_READY) {
+      setLoading(false);
+      setData(null);
+      setError(
+        authStatus === AUTH_STATUS.ONBOARDING_REQUIRED
+          ? "Complete onboarding to view analytics."
+          : authStatus === AUTH_STATUS.EMAIL_UNVERIFIED
+            ? "Verify your email to view analytics."
+            : "Sign in to view analytics.",
+      );
+      return;
+    }
     load();
-  }, [load]);
+  }, [load, authLoading, authStatus]);
 
   const metrics = data?.metrics;
   const trends = data?.trends;
@@ -172,7 +194,7 @@ const StartupAnalyticsPage = () => {
           </div>
         )}
 
-        {loading ? (
+        {authLoading || loading ? (
           <div className="flex justify-center py-24">
             <div className="w-10 h-10 border-4 border-primary-light border-t-primary rounded-full animate-spin" />
           </div>
