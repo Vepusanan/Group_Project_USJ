@@ -44,6 +44,15 @@ import {
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
+const ensureAbsoluteUrl = (url) => {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+};
+
 const fmtDate = (ds) => {
   if (!ds) return null;
   return new Date(ds).toLocaleDateString([], { month: "short", year: "numeric" });
@@ -88,7 +97,7 @@ const DocLink = ({ href, icon: Icon, label }) => {
   if (!href) return null;
   return (
     <a
-      href={href}
+      href={ensureAbsoluteUrl(href)}
       target="_blank"
       rel="noreferrer"
       className="flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-surface-alt hover:bg-surface-alt hover:border-line transition-all group"
@@ -527,12 +536,12 @@ const StartupProfilePage = () => {
                 <Pill><Users className="w-3 h-3" />{profile.team_size} people</Pill>
               )}
               {profile.website_url && (
-                <a href={profile.website_url} target="_blank" rel="noreferrer">
+                <a href={ensureAbsoluteUrl(profile.website_url)} target="_blank" rel="noreferrer">
                   <Pill color="emerald"><Globe className="w-3 h-3" />Website</Pill>
                 </a>
               )}
               {profile.linkedin_url && (
-                <a href={profile.linkedin_url} target="_blank" rel="noreferrer">
+                <a href={ensureAbsoluteUrl(profile.linkedin_url)} target="_blank" rel="noreferrer">
                   <Pill><Linkedin className="w-3 h-3" />LinkedIn</Pill>
                 </a>
               )}
@@ -793,18 +802,18 @@ const StartupProfilePage = () => {
             {/* Public social links */}
             <div className="flex flex-wrap gap-2">
               {profile.website_url && (
-                <a href={profile.website_url} target="_blank" rel="noreferrer">
+                <a href={ensureAbsoluteUrl(profile.website_url)} target="_blank" rel="noreferrer">
                   <Pill color="blue"><Globe className="w-3 h-3" />Website</Pill>
                 </a>
               )}
               {profile.linkedin_url && (
-                <a href={profile.linkedin_url} target="_blank" rel="noreferrer">
+                <a href={ensureAbsoluteUrl(profile.linkedin_url)} target="_blank" rel="noreferrer">
                   <Pill><Linkedin className="w-3 h-3" />LinkedIn</Pill>
                 </a>
               )}
               {Object.entries(socialLinks).map(([k, v]) =>
                 v ? (
-                  <a key={k} href={v} target="_blank" rel="noreferrer">
+                  <a key={k} href={ensureAbsoluteUrl(v)} target="_blank" rel="noreferrer">
                     <Pill><Globe className="w-3 h-3" />{k}</Pill>
                   </a>
                 ) : null
@@ -812,7 +821,7 @@ const StartupProfilePage = () => {
             </div>
 
             {/* Private */}
-            {relationship.canViewPrivate ? (
+            {(relationship.canViewPrivate || user?.userType === "startup") ? (
               <div className="rounded-xl bg-surface-alt border border-line p-4 space-y-3">
                 {profile.primary_contact_name && (
                   <div>

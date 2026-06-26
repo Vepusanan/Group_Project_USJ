@@ -32,6 +32,15 @@ import ReportProfileButton from "../components/trust/ReportProfileButton";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
+const ensureAbsoluteUrl = (url) => {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+};
+
 const fmtDate = (ds) => {
   if (!ds) return null;
   return new Date(ds).toLocaleDateString([], { month: "short", year: "numeric" });
@@ -329,10 +338,10 @@ const InvestorProfilePage = () => {
                 <Pill color="emerald"><DollarSign className="w-3 h-3" />{checkRange}</Pill>
               )}
               {profile.website_url && (
-                <Pill color="blue" href={profile.website_url}><Globe className="w-3 h-3" />Website</Pill>
+                <Pill color="blue" href={ensureAbsoluteUrl(profile.website_url)}><Globe className="w-3 h-3" />Website</Pill>
               )}
               {profile.linkedin_url && (
-                <Pill href={profile.linkedin_url}><Linkedin className="w-3 h-3" />LinkedIn</Pill>
+                <Pill href={ensureAbsoluteUrl(profile.linkedin_url)}><Linkedin className="w-3 h-3" />LinkedIn</Pill>
               )}
             </div>
         </div>
@@ -500,21 +509,21 @@ const InvestorProfilePage = () => {
             {/* public links */}
             <div className="flex flex-wrap gap-2">
               {profile.website_url && (
-                <Pill color="blue" href={profile.website_url}><Globe className="w-3 h-3" />Website</Pill>
+                <Pill color="blue" href={ensureAbsoluteUrl(profile.website_url)}><Globe className="w-3 h-3" />Website</Pill>
               )}
               {profile.linkedin_url && (
-                <Pill href={profile.linkedin_url}><Linkedin className="w-3 h-3" />LinkedIn</Pill>
+                <Pill href={ensureAbsoluteUrl(profile.linkedin_url)}><Linkedin className="w-3 h-3" />LinkedIn</Pill>
               )}
               {social.website && !profile.website_url && (
-                <Pill color="blue" href={social.website}><Globe className="w-3 h-3" />Website</Pill>
+                <Pill color="blue" href={ensureAbsoluteUrl(social.website)}><Globe className="w-3 h-3" />Website</Pill>
               )}
               {social.linkedin && !profile.linkedin_url && (
-                <Pill href={social.linkedin}><Linkedin className="w-3 h-3" />LinkedIn</Pill>
+                <Pill href={ensureAbsoluteUrl(social.linkedin)}><Linkedin className="w-3 h-3" />LinkedIn</Pill>
               )}
               {Object.entries(social)
                 .filter(([k]) => !["website", "linkedin"].includes(k))
                 .map(([k, v]) =>
-                  v ? <Pill key={k} href={v}><Globe className="w-3 h-3" />{k}</Pill> : null
+                  v ? <Pill key={k} href={ensureAbsoluteUrl(v)}><Globe className="w-3 h-3" />{k}</Pill> : null
                 )}
             </div>
 
