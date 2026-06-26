@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "./useAuth";
 import {
@@ -25,6 +25,24 @@ export function useAuthRouteGuard(guardMode) {
     () => resolveAuthRouteDecision(machine, pathname, guardMode),
     [machine, pathname, guardMode],
   );
+
+  useEffect(() => {
+    if (
+      import.meta.env.DEV &&
+      import.meta.env.VITE_AUTH_DEBUG === "1" &&
+      !isAuthPending(isLoading)
+    ) {
+      console.info("[auth/guard]", {
+        userId: machine.user?.id,
+        pathname,
+        guardMode,
+        authStatus: machine.status,
+        emailVerified: machine.emailVerified,
+        onboardingComplete: machine.onboardingComplete,
+        decision,
+      });
+    }
+  }, [machine, pathname, guardMode, decision, isLoading]);
 
   return {
     pending: isAuthPending(isLoading),

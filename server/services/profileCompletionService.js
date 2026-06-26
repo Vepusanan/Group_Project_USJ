@@ -3,14 +3,20 @@ import { InvestorProfile } from "../models/InvestorProfile.js";
 import { getStartupProfileByUserId } from "../repositories/StartupProfileRepository.js";
 import { getInvestorProfileByUserId } from "../repositories/InvestorProfileRepository.js";
 
+/**
+ * Profile field completion — used only for feature gating and analytics.
+ * Must NOT be used for auth routing or onboarding state.
+ */
 export const getProfileCompletionStatus = async (userId, userType) => {
   if (userType === "startup") {
     const profile = await getStartupProfileByUserId(userId);
     if (!profile) {
       return {
         hasProfile: false,
-        isComplete: false,
+        completionPercent: 0,
         completionPercentage: 0,
+        isFullyComplete: false,
+        isComplete: false,
         incompleteSections: [],
       };
     }
@@ -18,7 +24,14 @@ export const getProfileCompletionStatus = async (userId, userType) => {
     const model = new StartupProfile(profile);
     model.parseJsonFields();
     const completion = model.calculateCompletion();
-    return { hasProfile: true, ...completion };
+    return {
+      hasProfile: true,
+      completionPercent: completion.completionPercentage,
+      completionPercentage: completion.completionPercentage,
+      isFullyComplete: completion.isComplete,
+      isComplete: completion.isComplete,
+      incompleteSections: completion.incompleteSections,
+    };
   }
 
   if (userType === "investor") {
@@ -26,8 +39,10 @@ export const getProfileCompletionStatus = async (userId, userType) => {
     if (!profile) {
       return {
         hasProfile: false,
-        isComplete: false,
+        completionPercent: 0,
         completionPercentage: 0,
+        isFullyComplete: false,
+        isComplete: false,
         incompleteSections: [],
       };
     }
@@ -35,13 +50,22 @@ export const getProfileCompletionStatus = async (userId, userType) => {
     const model = new InvestorProfile(profile);
     model.parseJsonFields();
     const completion = model.calculateCompletion();
-    return { hasProfile: true, ...completion };
+    return {
+      hasProfile: true,
+      completionPercent: completion.completionPercentage,
+      completionPercentage: completion.completionPercentage,
+      isFullyComplete: completion.isComplete,
+      isComplete: completion.isComplete,
+      incompleteSections: completion.incompleteSections,
+    };
   }
 
   return {
     hasProfile: false,
-    isComplete: false,
+    completionPercent: 0,
     completionPercentage: 0,
+    isFullyComplete: false,
+    isComplete: false,
     incompleteSections: [],
   };
 };

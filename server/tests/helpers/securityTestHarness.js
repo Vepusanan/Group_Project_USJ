@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import pool from "../../config/database.js";
 import { createApp } from "../../app.js";
+import { markOnboardingCompleted } from "../../services/onboardingService.js";
 
 export function uid(prefix) {
   return `${prefix}_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
@@ -97,12 +98,17 @@ export async function createStartupProfile(userId, { pitchDeckUrl = null, comple
   );
   const row = profile.rows[0];
   if (complete) {
-    await markStartupOnboardingComplete(userId);
+    await markStartupProfileFieldsComplete(userId);
+    await markOnboardingCompleted(userId);
   }
   return row;
 }
 
-export async function markStartupOnboardingComplete(userId) {
+export async function markUserOnboardingComplete(userId) {
+  return markOnboardingCompleted(userId);
+}
+
+export async function markStartupProfileFieldsComplete(userId) {
   await pool.query(
     `
       UPDATE public.startup_profiles
@@ -163,12 +169,13 @@ export async function createInvestorProfile(userId, { complete = false } = {}) {
     [userId, `SecTest Investor ${Date.now()}`, `e2e-investor-${userId.slice(0, 8)}@test.com`],
   );
   if (complete) {
-    await markInvestorOnboardingComplete(userId);
+    await markInvestorProfileFieldsComplete(userId);
+    await markOnboardingCompleted(userId);
   }
   return result.rows[0];
 }
 
-export async function markInvestorOnboardingComplete(userId) {
+export async function markInvestorProfileFieldsComplete(userId) {
   await pool.query(
     `
       UPDATE public.investor_profiles

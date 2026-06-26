@@ -10,21 +10,23 @@ import {
   GUARD_MODE,
 } from "../../shared/authStateMachine.mjs";
 
+const ONBOARDED_AT = "2024-06-01T12:00:00.000Z";
+
 test("deriveAuthStatus maps flags to canonical states", () => {
   assert.equal(
-    deriveAuthStatus({ emailVerified: false, onboardingComplete: false }, true),
-    AUTH_STATUS.UNVERIFIED,
+    deriveAuthStatus({ emailVerified: false, onboardingCompletedAt: null }, true),
+    AUTH_STATUS.EMAIL_UNVERIFIED,
   );
   assert.equal(
-    deriveAuthStatus({ emailVerified: true, onboardingComplete: false }, true),
-    AUTH_STATUS.ONBOARDING_INCOMPLETE,
+    deriveAuthStatus({ emailVerified: true, onboardingCompletedAt: null }, true),
+    AUTH_STATUS.ONBOARDING_REQUIRED,
   );
   assert.equal(
-    deriveAuthStatus({ emailVerified: true, onboardingComplete: true }, true),
-    AUTH_STATUS.VERIFIED_READY,
+    deriveAuthStatus({ emailVerified: true, onboardingCompletedAt: ONBOARDED_AT }, true),
+    AUTH_STATUS.AUTHENTICATED_READY,
   );
   assert.equal(
-    deriveAuthStatus({ emailVerified: true, onboardingComplete: true }, false),
+    deriveAuthStatus({ emailVerified: true, onboardingCompletedAt: ONBOARDED_AT }, false),
     AUTH_STATUS.UNAUTHENTICATED,
   );
 });
@@ -38,33 +40,33 @@ test("getAuthState is the only interpretation of session payloads", () => {
     redirectPath: "/verify-email?email=a%40test.com",
     authState: buildAuthStatePayload({
       emailVerified: false,
-      onboardingComplete: false,
+      onboardingCompletedAt: null,
       requiredRoute: "/verify-email?email=a%40test.com",
     }),
   });
-  assert.equal(unverified.status, AUTH_STATUS.UNVERIFIED);
+  assert.equal(unverified.status, AUTH_STATUS.EMAIL_UNVERIFIED);
 
   const onboarding = getAuthState({
     user: { id: "1" },
     redirectPath: "/onboarding",
     authState: buildAuthStatePayload({
       emailVerified: true,
-      onboardingComplete: false,
+      onboardingCompletedAt: null,
       requiredRoute: "/onboarding",
     }),
   });
-  assert.equal(onboarding.status, AUTH_STATUS.ONBOARDING_INCOMPLETE);
+  assert.equal(onboarding.status, AUTH_STATUS.ONBOARDING_REQUIRED);
 
   const ready = getAuthState({
     user: { id: "1" },
     redirectPath: "/dashboard",
     authState: buildAuthStatePayload({
       emailVerified: true,
-      onboardingComplete: true,
+      onboardingCompletedAt: ONBOARDED_AT,
       requiredRoute: null,
     }),
   });
-  assert.equal(ready.status, AUTH_STATUS.VERIFIED_READY);
+  assert.equal(ready.status, AUTH_STATUS.AUTHENTICATED_READY);
 });
 
 test("validateAuthSessionContract rejects ambiguous states", () => {
@@ -72,9 +74,10 @@ test("validateAuthSessionContract rejects ambiguous states", () => {
     user: { id: "1" },
     redirectPath: "/dashboard",
     authState: {
-      status: AUTH_STATUS.VERIFIED_READY,
+      status: AUTH_STATUS.AUTHENTICATED_READY,
       emailVerified: false,
       onboardingComplete: true,
+      onboardingCompletedAt: ONBOARDED_AT,
       requiredRoute: null,
     },
   });
@@ -88,7 +91,7 @@ test("route decisions are deterministic per guard mode", () => {
     redirectPath: "/verify-email?email=a%40test.com",
     authState: buildAuthStatePayload({
       emailVerified: false,
-      onboardingComplete: false,
+      onboardingCompletedAt: null,
       requiredRoute: "/verify-email?email=a%40test.com",
     }),
   });
@@ -107,7 +110,7 @@ test("route decisions are deterministic per guard mode", () => {
     redirectPath: "/dashboard",
     authState: buildAuthStatePayload({
       emailVerified: true,
-      onboardingComplete: true,
+      onboardingCompletedAt: ONBOARDED_AT,
       requiredRoute: null,
     }),
   });

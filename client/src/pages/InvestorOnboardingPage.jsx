@@ -1,19 +1,20 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import InvestorOnboardingWizard from "../components/onboarding/InvestorOnboardingWizard";
-import { useProfileExistence } from "../hooks/useProfileCache";
+import { useAuth } from "../hooks/useAuth";
+import { AUTH_STATUS } from "../utils/authStateMachine.js";
 
 const InvestorOnboardingPage = () => {
   const navigate = useNavigate();
-  const { isReady, hasProfile } = useProfileExistence();
+  const { authStatus, isLoading } = useAuth();
 
   useEffect(() => {
-    if (isReady && hasProfile) {
-      navigate("/startups", { replace: true });
+    if (!isLoading && authStatus === AUTH_STATUS.AUTHENTICATED_READY) {
+      navigate("/dashboard", { replace: true });
     }
-  }, [isReady, hasProfile, navigate]);
+  }, [authStatus, isLoading, navigate]);
 
-  if (!isReady) {
+  if (isLoading) {
     return (
       <div className="min-h-screen px-6 py-10 text-content-secondary">
         Checking profile status...

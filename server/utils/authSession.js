@@ -1,4 +1,4 @@
-import { getProfileCompletionStatus } from "../services/profileCompletionService.js";
+import { hasCompletedOnboarding } from "../services/onboardingService.js";
 import { onboardingPathForUserType } from "./authRedirects.js";
 import {
   buildAuthStatePayload,
@@ -7,6 +7,9 @@ import {
 
 export const verificationPathForEmail = (email) =>
   `/verify-email?email=${encodeURIComponent(email)}`;
+
+const toIsoTimestamp = (value) =>
+  value instanceof Date ? value.toISOString() : value ?? null;
 
 /**
  * Authoritative auth session payload returned by /auth/me and post-auth endpoints.
@@ -18,7 +21,7 @@ export async function buildAuthSession(user, serializeUser) {
     const requiredRoute = verificationPathForEmail(user.email);
     const authState = buildAuthStatePayload({
       emailVerified: false,
-      onboardingComplete: false,
+      onboardingCompletedAt: null,
       requiredRoute,
     });
     const session = {
@@ -33,15 +36,26 @@ export async function buildAuthSession(user, serializeUser) {
     return session;
   }
 
-  const status = await getProfileCompletionStatus(user.id, user.user_type);
-  const onboardingComplete = Boolean(status.hasProfile && status.isComplete);
+  const onboardingComplete = hasCompletedOnboarding(user);
   const onboardingPath = onboardingPathForUserType(user.user_type);
   const redirectPath = onboardingComplete ? "/dashboard" : onboardingPath;
+  const onboardingCompletedAt = toIsoTimestamp(user.onboarding_completed_at);
   const authState = buildAuthStatePayload({
     emailVerified: true,
-    onboardingComplete,
+    onboardingCompletedAt,
     requiredRoute: onboardingComplete ? null : onboardingPath,
   });
+
+  if (process.env.AUTH_DEBUG === "1") {
+    console.info("[auth/session] buildAuthSession", {
+      userId: user.id,
+      emailVerified: true,
+      onboardingCompletedAt,
+      onboardingComplete,
+      authStatus: authState.status,
+      redirectPath,
+    });
+  }
 
   const session = {
     user: serialized,

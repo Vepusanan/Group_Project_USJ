@@ -35,55 +35,57 @@ async function registerUser(page, { email, password, userType = "startup" }) {
 }
 
 test.describe("Auth state machine (E2E)", () => {
-  test("signup → UNVERIFIED via /auth/me", async ({ page }) => {
+  test("signup → EMAIL_UNVERIFIED via /auth/me", async ({ page }) => {
     const email = `e2e_state_${crypto.randomBytes(4).toString("hex")}@test.com`;
     const password = "E2eStateTest123!";
 
     const register = await registerUser(page, { email, password });
     expect(register.status).toBe(201);
-    expect(register.data.authState.status).toBe(AUTH_STATUS.UNVERIFIED);
+    expect(register.data.authState.status).toBe(AUTH_STATUS.EMAIL_UNVERIFIED);
 
     const me = await fetchAuthMe(page);
     expect(me.status).toBe(200);
-    expect(me.data.authState.status).toBe(AUTH_STATUS.UNVERIFIED);
+    expect(me.data.authState.status).toBe(AUTH_STATUS.EMAIL_UNVERIFIED);
   });
 
   test.describe("verified startup", () => {
     test.use({ storageState: "e2e/.auth/startup.json" });
 
-    test("session is VERIFIED_READY after onboarding", async ({ page }) => {
+    test("session is AUTHENTICATED_READY after onboarding", async ({ page }) => {
       loadFixtures();
       await page.goto("/connections");
       const me = await fetchAuthMe(page);
       expect(me.status).toBe(200);
-      expect(me.data.authState.status).toBe(AUTH_STATUS.VERIFIED_READY);
+      expect(me.data.authState.status).toBe(AUTH_STATUS.AUTHENTICATED_READY);
+      expect(me.data.authState.onboardingCompletedAt).toBeTruthy();
     });
 
-    test("refresh preserves VERIFIED_READY", async ({ page }) => {
+    test("refresh preserves AUTHENTICATED_READY", async ({ page }) => {
       loadFixtures();
       await page.goto("/connections");
       await page.reload();
       const me = await fetchAuthMe(page);
-      expect(me.data.authState.status).toBe(AUTH_STATUS.VERIFIED_READY);
+      expect(me.data.authState.status).toBe(AUTH_STATUS.AUTHENTICATED_READY);
     });
   });
 
   test.describe("incomplete onboarding", () => {
     test.use({ storageState: "e2e/.auth/startupPending.json" });
 
-    test("session is ONBOARDING_INCOMPLETE", async ({ page }) => {
+    test("session is ONBOARDING_REQUIRED", async ({ page }) => {
       loadFixtures();
       await page.goto("/onboarding");
       const me = await fetchAuthMe(page);
-      expect(me.data.authState.status).toBe(AUTH_STATUS.ONBOARDING_INCOMPLETE);
+      expect(me.data.authState.status).toBe(AUTH_STATUS.ONBOARDING_REQUIRED);
+      expect(me.data.authState.onboardingCompletedAt).toBeNull();
     });
 
-    test("refresh preserves ONBOARDING_INCOMPLETE", async ({ page }) => {
+    test("refresh preserves ONBOARDING_REQUIRED", async ({ page }) => {
       loadFixtures();
       await page.goto("/onboarding");
       await page.reload();
       const me = await fetchAuthMe(page);
-      expect(me.data.authState.status).toBe(AUTH_STATUS.ONBOARDING_INCOMPLETE);
+      expect(me.data.authState.status).toBe(AUTH_STATUS.ONBOARDING_REQUIRED);
       await expect(page).toHaveURL(/\/onboarding/);
     });
   });
@@ -131,6 +133,6 @@ test.describe("Auth state machine (E2E)", () => {
     });
     await expect(page).not.toHaveURL(/\/login/, { timeout: 30000 });
     const me = await fetchAuthMe(page);
-    expect(me.data.authState.status).toBe(AUTH_STATUS.VERIFIED_READY);
+    expect(me.data.authState.status).toBe(AUTH_STATUS.AUTHENTICATED_READY);
   });
 });

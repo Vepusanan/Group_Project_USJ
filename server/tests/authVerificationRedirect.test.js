@@ -58,7 +58,7 @@ test("verify email json callback redirects new startup to onboarding", async () 
     assert.equal(res.status, 200, JSON.stringify(data));
     assert.equal(data.success, true);
     assert.equal(data.redirectPath, "/onboarding");
-    assert.equal(data.authState.status, "ONBOARDING_INCOMPLETE");
+    assert.equal(data.authState.status, "ONBOARDING_REQUIRED");
     assert.equal(data.user.emailVerified, true);
 
     const cookies = res.headers.get("set-cookie") || "";

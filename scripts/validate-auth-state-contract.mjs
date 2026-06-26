@@ -13,6 +13,8 @@ import {
 const root = process.cwd();
 const errors = [];
 
+const ONBOARDED_AT = "2024-06-01T12:00:00.000Z";
+
 function read(rel) {
   return fs.readFileSync(path.join(root, rel), "utf8");
 }
@@ -25,43 +27,43 @@ function requirePattern(label, source, pattern, message) {
 
 const samples = [
   {
-    label: "UNVERIFIED",
+    label: "EMAIL_UNVERIFIED",
     session: {
       user: { id: "1", email: "a@test.com" },
       redirectPath: "/verify-email?email=a%40test.com",
       authState: buildAuthStatePayload({
         emailVerified: false,
-        onboardingComplete: false,
+        onboardingCompletedAt: null,
         requiredRoute: "/verify-email?email=a%40test.com",
       }),
     },
-    expected: AUTH_STATUS.UNVERIFIED,
+    expected: AUTH_STATUS.EMAIL_UNVERIFIED,
   },
   {
-    label: "ONBOARDING_INCOMPLETE",
+    label: "ONBOARDING_REQUIRED",
     session: {
       user: { id: "1" },
       redirectPath: "/onboarding",
       authState: buildAuthStatePayload({
         emailVerified: true,
-        onboardingComplete: false,
+        onboardingCompletedAt: null,
         requiredRoute: "/onboarding",
       }),
     },
-    expected: AUTH_STATUS.ONBOARDING_INCOMPLETE,
+    expected: AUTH_STATUS.ONBOARDING_REQUIRED,
   },
   {
-    label: "VERIFIED_READY",
+    label: "AUTHENTICATED_READY",
     session: {
       user: { id: "1" },
       redirectPath: "/dashboard",
       authState: buildAuthStatePayload({
         emailVerified: true,
-        onboardingComplete: true,
+        onboardingCompletedAt: ONBOARDED_AT,
         requiredRoute: null,
       }),
     },
-    expected: AUTH_STATUS.VERIFIED_READY,
+    expected: AUTH_STATUS.AUTHENTICATED_READY,
   },
 ];
 
@@ -123,6 +125,13 @@ requirePattern(
   read("server/utils/authSession.js"),
   /validateAuthSessionContract/,
   "must validate session contract in buildAuthSession",
+);
+
+requirePattern(
+  "server/utils/authSession.js",
+  read("server/utils/authSession.js"),
+  /onboarding_completed_at|hasCompletedOnboarding/,
+  "must derive onboarding from users.onboarding_completed_at",
 );
 
 requirePattern(

@@ -44,8 +44,6 @@ const profileHasId = (profile) =>
       profile?.id,
   );
 
-const extractCompletion = (result) => result?.data?.data ?? result?.data ?? null;
-
 // Imperative: fetch & cache onboarding status. Safe to call from event handlers.
 export const checkProfileExistence = async (user) => {
   if (!user?.id) {
@@ -74,19 +72,10 @@ export const checkProfileExistence = async (user) => {
         return entry;
       }
 
-      let isOnboardingComplete = false;
-      if (typeof service.getProfileCompletion === "function") {
-        const completionResult = await service.getProfileCompletion();
-        const completion = extractCompletion(completionResult);
-        isOnboardingComplete = Boolean(completion?.isComplete);
-      }
-
       const entry = {
         hasProfile: true,
-        isOnboardingComplete,
-        onboardingPath: isOnboardingComplete
-          ? null
-          : onboardingPathFor(user.userType),
+        isOnboardingComplete: true,
+        onboardingPath: null,
       };
       existenceCache.set(user.id, entry);
       return entry;

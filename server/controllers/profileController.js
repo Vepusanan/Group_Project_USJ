@@ -28,6 +28,7 @@ import { getIntentMapForInvestor } from "../repositories/InvestorIntentRepositor
 import { calculateCompatibilityScore } from "../utils/compatibilityScore.js";
 import { buildMatchExplanationAsync } from "../utils/matchExplanation.js";
 import { recordStartupProfileView } from "../repositories/StartupProfileViewRepository.js";
+import { markOnboardingCompleted } from "../services/onboardingService.js";
 import { notifyProfileView } from "../utils/notificationDelivery.js";
 import { getUserVerification } from "../repositories/VerificationRepository.js";
 import { getCredibilitySignals } from "../services/credibilityService.js";
@@ -310,7 +311,12 @@ export const createProfile = async (req, res, next) => {
     }
 
     const profile = await createStartupProfile(req.user.id, req.body);
-    res.status(201).json({ success: true, data: profile });
+    const onboardingCompletedAt = await markOnboardingCompleted(req.user.id);
+    res.status(201).json({
+      success: true,
+      data: profile,
+      onboardingCompletedAt,
+    });
   } catch (err) {
     next(err);
   }
@@ -631,7 +637,12 @@ export const createInvestorProfileController = async (req, res, next) => {
     Object.assign(req.body, fileUploads);
 
     const profile = await createInvestorProfile(req.user.id, req.body);
-    res.status(201).json({ success: true, data: profile });
+    const onboardingCompletedAt = await markOnboardingCompleted(req.user.id);
+    res.status(201).json({
+      success: true,
+      data: profile,
+      onboardingCompletedAt,
+    });
   } catch (err) {
     next(err);
   }

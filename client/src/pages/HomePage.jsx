@@ -55,7 +55,7 @@ const HomePage = () => {
   const roleLandingPath =
     user?.userType === "investor" ? "/startups" : "/investors";
 
-  const isAppReady = authStatus === AUTH_STATUS.VERIFIED_READY;
+  const isAppReady = authStatus === AUTH_STATUS.AUTHENTICATED_READY;
   const ctaLink = isAppReady ? roleLandingPath : "/signup";
   const ctaLabel = isAppReady ? "Explore Matches" : "Get Started Free";
 

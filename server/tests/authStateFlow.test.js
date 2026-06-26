@@ -39,7 +39,7 @@ async function cleanupUser(userId) {
   await pool.query("DELETE FROM public.users WHERE id = $1", [userId]).catch(() => undefined);
 }
 
-test("register then /auth/me returns UNVERIFIED", async () => {
+test("register then /auth/me returns EMAIL_UNVERIFIED", async () => {
   const email = randomEmail("register");
   const password = "StateTest123!";
   const srv = await startServer();
@@ -59,7 +59,7 @@ test("register then /auth/me returns UNVERIFIED", async () => {
     });
     const registerData = await registerRes.json();
     assert.equal(registerRes.status, 201, JSON.stringify(registerData));
-    assert.equal(registerData.authState.status, AUTH_STATUS.UNVERIFIED);
+    assert.equal(registerData.authState.status, AUTH_STATUS.EMAIL_UNVERIFIED);
     userId = registerData.user?.id;
 
     const cookies = parseCookies(registerRes.headers.get("set-cookie"));
@@ -68,7 +68,7 @@ test("register then /auth/me returns UNVERIFIED", async () => {
     });
     const meData = await meRes.json();
     assert.equal(meRes.status, 200, JSON.stringify(meData));
-    assert.equal(meData.authState.status, AUTH_STATUS.UNVERIFIED);
+    assert.equal(meData.authState.status, AUTH_STATUS.EMAIL_UNVERIFIED);
     assert.ok(meData.authState.requiredRoute?.startsWith("/verify-email"));
   } finally {
     await srv.close();
@@ -76,7 +76,7 @@ test("register then /auth/me returns UNVERIFIED", async () => {
   }
 });
 
-test("email verification transitions to ONBOARDING_INCOMPLETE", async () => {
+test("email verification transitions to ONBOARDING_REQUIRED", async () => {
   assert.ok(process.env.JWT_VERIFY_SECRET, "JWT_VERIFY_SECRET required");
 
   const email = randomEmail("verify-state");
@@ -106,7 +106,7 @@ test("email verification transitions to ONBOARDING_INCOMPLETE", async () => {
     );
     const data = await res.json();
     assert.equal(res.status, 200, JSON.stringify(data));
-    assert.equal(data.authState.status, AUTH_STATUS.ONBOARDING_INCOMPLETE);
+    assert.equal(data.authState.status, AUTH_STATUS.ONBOARDING_REQUIRED);
     assert.equal(data.redirectPath, "/onboarding");
 
     const cookies = parseCookies(res.headers.get("set-cookie"));
@@ -114,14 +114,14 @@ test("email verification transitions to ONBOARDING_INCOMPLETE", async () => {
       headers: { Cookie: cookies },
     });
     const meData = await meRes.json();
-    assert.equal(meData.authState.status, AUTH_STATUS.ONBOARDING_INCOMPLETE);
+    assert.equal(meData.authState.status, AUTH_STATUS.ONBOARDING_REQUIRED);
   } finally {
     await srv.close();
     await cleanupUser(userId);
   }
 });
 
-test("unverified login creates UNVERIFIED session", async () => {
+test("unverified login creates EMAIL_UNVERIFIED session", async () => {
   const email = randomEmail("login-unverified");
   const password = "StateTest123!";
   const passwordHash = await bcrypt.hash(password, 10);
@@ -144,14 +144,14 @@ test("unverified login creates UNVERIFIED session", async () => {
     });
     const loginData = await loginRes.json();
     assert.equal(loginRes.status, 200, JSON.stringify(loginData));
-    assert.equal(loginData.authState.status, AUTH_STATUS.UNVERIFIED);
+    assert.equal(loginData.authState.status, AUTH_STATUS.EMAIL_UNVERIFIED);
 
     const cookies = parseCookies(loginRes.headers.get("set-cookie"));
     const meRes = await fetch(`${srv.baseUrl}/api/auth/me`, {
       headers: { Cookie: cookies },
     });
     const meData = await meRes.json();
-    assert.equal(meData.authState.status, AUTH_STATUS.UNVERIFIED);
+    assert.equal(meData.authState.status, AUTH_STATUS.EMAIL_UNVERIFIED);
   } finally {
     await srv.close();
     await cleanupUser(userId);

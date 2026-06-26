@@ -11,6 +11,7 @@ This document defines how auth and onboarding must behave in production. Code an
 | Route decisions | `resolveAuthRouteDecision()` + `useAuthRouteGuard()` — no scattered boolean checks |
 | Frontend context | Mirrors `/auth/me` via `authStatus` / `authMachine` from `getAuthState()` |
 | Post-auth redirect | Backend `redirectPath` from login/register/verify responses |
+| Onboarding completion | `users.onboarding_completed_at` — set when wizard is submitted |
 
 The frontend `AuthContext` calls `/auth/me` on:
 
@@ -22,32 +23,51 @@ The frontend `AuthContext` calls `/auth/me` on:
 
 `localStorage.userData` is a display cache only. It is **not** used for auth decisions.
 
+The client must **not** infer onboarding state from profile APIs or completion percentage.
+
 ## Canonical auth states
 
 | Status | Meaning | Default route |
 |--------|---------|---------------|
 | `UNAUTHENTICATED` | No session | Public routes only |
-| `UNVERIFIED` | Session exists, email not verified | `/verify-email?email=...` |
-| `ONBOARDING_INCOMPLETE` | Verified, profile incomplete | `/onboarding` or `/investor-onboarding` |
-| `VERIFIED_READY` | Fully onboarded | `/dashboard` and app routes |
+| `EMAIL_UNVERIFIED` | Session exists, email not verified | `/verify-email?email=...` |
+| `ONBOARDING_REQUIRED` | Verified, wizard not completed (`onboarding_completed_at` is null) | `/onboarding` or `/investor-onboarding` |
+| `AUTHENTICATED_READY` | Verified and onboarding completed | `/dashboard` and app routes |
+
+`authState.onboardingComplete` is derived from `authState.onboardingCompletedAt` (boolean convenience). Profile field completion % is a **separate** concern for API gating via `requireProfileComplete`.
 
 ## Auth session shape (`/auth/me`)
 
 ```json
 {
   "success": true,
-  "user": { "id", "email", "fullName", "userType", "emailVerified", "isAdmin" },
+  "user": {
+    "id", "email", "fullName", "userType", "emailVerified",
+    "onboardingCompletedAt", "isAdmin"
+  },
   "redirectPath": "/onboarding | /investor-onboarding | /dashboard | /verify-email?email=...",
   "authState": {
-    "status": "UNVERIFIED | ONBOARDING_INCOMPLETE | VERIFIED_READY",
+    "status": "EMAIL_UNVERIFIED | ONBOARDING_REQUIRED | AUTHENTICATED_READY",
     "emailVerified": true,
     "onboardingComplete": false,
+    "onboardingCompletedAt": null,
     "requiredRoute": "/onboarding | /verify-email?email=... | null"
   }
 }
 ```
 
 `buildAuthSession()` validates the contract via `validateAuthSessionContract()` before returning.
+
+## Profile completeness (separate from auth)
+
+Used only for feature gating, analytics, and API restrictions — **never** for routing:
+
+```json
+{
+  "completionPercent": 59,
+  "isFullyComplete": false
+}
+```
 
 ## Route gating (state machine)
 
@@ -60,16 +80,24 @@ All guards use `useAuthRouteGuard(guardMode)` — no independent `isVerified` / 
 | `PROTECTED` | Onboarding routes (auth required) |
 | `APP` | Dashboard, connections, messages, etc. |
 
-Guards show a full-screen spinner until `/auth/me` resolves (`isLoading` or `isRevalidating`).
+Guards show a full-screen spinner until initial `/auth/me` resolves (`isLoading`).
 
 ## Session endpoints
 
 | Endpoint | Middleware | Notes |
 |----------|------------|-------|
-| `GET /auth/me` | `protectSession` | Allows unverified users (returns `UNVERIFIED`) |
+| `GET /auth/me` | `protectSession` | Allows unverified users (returns `EMAIL_UNVERIFIED`) |
 | Other protected APIs | `protect` | Blocks unverified users (403) |
 
-Register and login issue sessions for unverified users so `/auth/me` can return `UNVERIFIED`.
+Register and login issue sessions for unverified users so `/auth/me` can return `EMAIL_UNVERIFIED`.
+
+## Database
+
+| Column | Table | Purpose |
+|--------|-------|---------|
+| `onboarding_completed_at` | `users` | Set once when onboarding wizard is submitted |
+
+Legacy users with existing profiles are backfilled via migration (`20260628_add_onboarding_completed_at.sql`).
 
 ## Cookies (production)
 
@@ -94,6 +122,7 @@ When auth changes in one tab (login, logout, verify, register), `notifyAuthChang
 | Auth contract | `scripts/validate-auth-state-contract.mjs` |
 | State machine unit tests | `server/tests/authStateMachine.test.js` |
 | Auth flow integration | `server/tests/authStateFlow.test.js` |
+| Onboarding routing | `server/tests/authOnboardingRouting.test.js` |
 | E2E state transitions | `e2e/auth-state-machine.spec.js` |
 | Startup smoke | `e2e/production-smoke.spec.js` |
 
@@ -101,9 +130,9 @@ When auth changes in one tab (login, logout, verify, register), `notifyAuthChang
 
 See `e2e/auth-state-machine.spec.js`, `e2e/auth-hardening.spec.js`, `e2e/auth.spec.js`:
 
-- Signup → `UNVERIFIED`
-- Email verification → `ONBOARDING_INCOMPLETE`
-- Onboarding complete → `VERIFIED_READY`
+- Signup → `EMAIL_UNVERIFIED`
+- Email verification → `ONBOARDING_REQUIRED`
+- Onboarding wizard submit → `AUTHENTICATED_READY`
 - Refresh persistence
 - Multi-tab sync
 - Token refresh / revalidation

@@ -1,25 +1,38 @@
 /**
  * Canonical authentication state machine — single source of truth for interpreting
  * `/auth/me` (and equivalent post-auth) responses on both server and client.
+ *
+ * Onboarding routing uses `onboardingCompletedAt` (wizard submitted once).
+ * Profile completion % is never used for auth state.
  */
 
 export const AUTH_STATUS = Object.freeze({
   UNAUTHENTICATED: "UNAUTHENTICATED",
-  UNVERIFIED: "UNVERIFIED",
-  ONBOARDING_INCOMPLETE: "ONBOARDING_INCOMPLETE",
-  VERIFIED_READY: "VERIFIED_READY",
+  EMAIL_UNVERIFIED: "EMAIL_UNVERIFIED",
+  ONBOARDING_REQUIRED: "ONBOARDING_REQUIRED",
+  AUTHENTICATED_READY: "AUTHENTICATED_READY",
 });
 
 const VALID_STATUSES = new Set(Object.values(AUTH_STATUS));
 
+export const onboardingCompleteFromTimestamp = (onboardingCompletedAt) =>
+  onboardingCompletedAt != null && onboardingCompletedAt !== "";
+
 /**
- * Derive status from boolean flags (used when `authState.status` is absent).
+ * Derive status from session flags (used when `authState.status` is absent).
  */
-export function deriveAuthStatus({ emailVerified, onboardingComplete }, hasUser) {
+export function deriveAuthStatus(
+  { emailVerified, onboardingCompletedAt, onboardingComplete },
+  hasUser,
+) {
   if (!hasUser) return AUTH_STATUS.UNAUTHENTICATED;
-  if (!emailVerified) return AUTH_STATUS.UNVERIFIED;
-  if (!onboardingComplete) return AUTH_STATUS.ONBOARDING_INCOMPLETE;
-  return AUTH_STATUS.VERIFIED_READY;
+  if (!emailVerified) return AUTH_STATUS.EMAIL_UNVERIFIED;
+  const onboarded =
+    onboardingComplete !== undefined
+      ? Boolean(onboardingComplete)
+      : onboardingCompleteFromTimestamp(onboardingCompletedAt);
+  if (!onboarded) return AUTH_STATUS.ONBOARDING_REQUIRED;
+  return AUTH_STATUS.AUTHENTICATED_READY;
 }
 
 /**
@@ -36,6 +49,7 @@ export function getAuthState(session) {
       user: null,
       emailVerified: false,
       onboardingComplete: false,
+      onboardingCompletedAt: null,
       requiredRoute: null,
       redirectPath: "/login",
     };
@@ -43,17 +57,25 @@ export function getAuthState(session) {
 
   const raw = session?.authState ?? {};
   const emailVerified = Boolean(raw.emailVerified);
-  const onboardingComplete = Boolean(raw.onboardingComplete);
+  const onboardingCompletedAt = raw.onboardingCompletedAt ?? null;
+  const onboardingComplete =
+    raw.onboardingComplete !== undefined
+      ? Boolean(raw.onboardingComplete)
+      : onboardingCompleteFromTimestamp(onboardingCompletedAt);
   const status =
     raw.status && VALID_STATUSES.has(raw.status)
       ? raw.status
-      : deriveAuthStatus({ emailVerified, onboardingComplete }, true);
+      : deriveAuthStatus(
+          { emailVerified, onboardingCompletedAt, onboardingComplete },
+          true,
+        );
 
   return {
     status,
     user,
     emailVerified,
     onboardingComplete,
+    onboardingCompletedAt,
     requiredRoute: raw.requiredRoute ?? null,
     redirectPath: session?.redirectPath ?? null,
   };
@@ -106,13 +128,13 @@ export function resolveAuthRouteDecision(machine, pathname, guardMode) {
       }
       return { allow: true };
 
-    case AUTH_STATUS.UNVERIFIED:
+    case AUTH_STATUS.EMAIL_UNVERIFIED:
       if (guardMode === GUARD_MODE.VERIFY_EMAIL || routeKind === "verify_email") {
         return { allow: true };
       }
       return { redirect: requiredRoute || "/verify-email" };
 
-    case AUTH_STATUS.ONBOARDING_INCOMPLETE:
+    case AUTH_STATUS.ONBOARDING_REQUIRED:
       if (guardMode === GUARD_MODE.VERIFY_EMAIL) {
         return { redirect: redirectPath || requiredRoute || "/onboarding" };
       }
@@ -130,7 +152,7 @@ export function resolveAuthRouteDecision(machine, pathname, guardMode) {
       }
       return { allow: true };
 
-    case AUTH_STATUS.VERIFIED_READY:
+    case AUTH_STATUS.AUTHENTICATED_READY:
       if (
         guardMode === GUARD_MODE.PUBLIC_AUTH ||
         guardMode === GUARD_MODE.VERIFY_EMAIL ||
@@ -175,6 +197,13 @@ export function validateAuthSessionContract(session) {
     errors.push("authState.onboardingComplete must be a boolean");
   }
   if (
+    authState.onboardingCompletedAt !== null &&
+    authState.onboardingCompletedAt !== undefined &&
+    typeof authState.onboardingCompletedAt !== "string"
+  ) {
+    errors.push("authState.onboardingCompletedAt must be an ISO string or null");
+  }
+  if (
     authState.requiredRoute !== null &&
     typeof authState.requiredRoute !== "string"
   ) {
@@ -196,30 +225,33 @@ export function validateAuthSessionContract(session) {
     );
   }
 
-  if (machine.status === AUTH_STATUS.UNVERIFIED) {
+  if (machine.status === AUTH_STATUS.EMAIL_UNVERIFIED) {
     if (!authState.requiredRoute?.startsWith("/verify-email")) {
-      errors.push("UNVERIFIED requires requiredRoute starting with /verify-email");
+      errors.push("EMAIL_UNVERIFIED requires requiredRoute starting with /verify-email");
     }
     if (authState.onboardingComplete !== false) {
-      errors.push("UNVERIFIED requires onboardingComplete === false");
+      errors.push("EMAIL_UNVERIFIED requires onboardingComplete === false");
     }
   }
 
-  if (machine.status === AUTH_STATUS.ONBOARDING_INCOMPLETE) {
+  if (machine.status === AUTH_STATUS.ONBOARDING_REQUIRED) {
     if (!authState.requiredRoute) {
-      errors.push("ONBOARDING_INCOMPLETE requires a non-null requiredRoute");
+      errors.push("ONBOARDING_REQUIRED requires a non-null requiredRoute");
     }
     if (authState.emailVerified !== true) {
-      errors.push("ONBOARDING_INCOMPLETE requires emailVerified === true");
+      errors.push("ONBOARDING_REQUIRED requires emailVerified === true");
     }
   }
 
-  if (machine.status === AUTH_STATUS.VERIFIED_READY) {
+  if (machine.status === AUTH_STATUS.AUTHENTICATED_READY) {
     if (authState.requiredRoute !== null) {
-      errors.push("VERIFIED_READY requires requiredRoute === null");
+      errors.push("AUTHENTICATED_READY requires requiredRoute === null");
     }
     if (authState.onboardingComplete !== true) {
-      errors.push("VERIFIED_READY requires onboardingComplete === true");
+      errors.push("AUTHENTICATED_READY requires onboardingComplete === true");
+    }
+    if (!authState.onboardingCompletedAt) {
+      errors.push("AUTHENTICATED_READY requires onboardingCompletedAt to be set");
     }
   }
 
@@ -235,14 +267,19 @@ export function validateAuthSessionContract(session) {
  */
 export function buildAuthStatePayload({
   emailVerified,
-  onboardingComplete,
+  onboardingCompletedAt = null,
   requiredRoute,
 }) {
-  const status = deriveAuthStatus({ emailVerified, onboardingComplete }, true);
+  const onboardingComplete = onboardingCompleteFromTimestamp(onboardingCompletedAt);
+  const status = deriveAuthStatus(
+    { emailVerified, onboardingCompletedAt, onboardingComplete },
+    true,
+  );
   return {
     status,
     emailVerified: Boolean(emailVerified),
-    onboardingComplete: Boolean(onboardingComplete),
+    onboardingComplete,
+    onboardingCompletedAt: onboardingCompletedAt ?? null,
     requiredRoute: requiredRoute ?? null,
   };
 }

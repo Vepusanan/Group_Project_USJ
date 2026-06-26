@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { getSupabase, BUCKETS } from "../utils/supabaseStorage.js";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import { markOnboardingCompleted } from "../services/onboardingService.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_PATH = path.join(__dirname, "../../e2e/.fixtures.json");
@@ -98,6 +99,42 @@ async function ensureSession(userId) {
   );
 
   return { refreshToken, expiresAt };
+}
+
+async function completeStartupProfileForE2e(userId) {
+  await pool.query(
+    `
+      UPDATE public.startup_profiles
+      SET
+        key_team_members = $2,
+        previous_funding = COALESCE(previous_funding, 0),
+        key_metrics = $3,
+        major_achievements = $4,
+        customer_testimonials = $5,
+        team_photo_url = $6,
+        pitch_deck_url = COALESCE(pitch_deck_url, $7),
+        business_plan_url = $8,
+        product_demo_url = $9,
+        founder_video_url = $10,
+        phone_number = $11,
+        social_media_links = $12
+      WHERE user_id = $1
+    `,
+    [
+      userId,
+      JSON.stringify([{ name: "CTO", role: "CTO" }]),
+      "Monthly active users growing 20% MoM",
+      "Launched MVP with first paying customers",
+      "Best startup we have seen this year",
+      "https://example.com/team.jpg",
+      "https://example.com/deck.pdf",
+      "https://example.com/plan.pdf",
+      "https://example.com/demo",
+      "https://example.com/video.mp4",
+      "+15551234567",
+      JSON.stringify({ linkedin: "https://linkedin.com/company/test" }),
+    ],
+  );
 }
 
 async function upsertStartupProfile(userId, companyName) {
@@ -268,21 +305,41 @@ export async function seedE2eFixtures() {
     const { refreshToken } = await ensureSession(user.id);
 
     if (spec.userType === "startup") {
-      const profile = await upsertStartupProfile(user.id, spec.companyName);
-      const pitchDeckUrl = await ensurePitchDeck(profile.startup_profile_id);
-      fixtures.users[spec.key] = {
-        ...user,
-        profileId: profile.startup_profile_id,
-        displayName: profile.company_name,
-        pitchDeckUrl,
-        auth: { access_token: accessToken, refresh_token: refreshToken },
-      };
-      fixtures.pitchDecks[spec.key] = {
-        startupProfileId: profile.startup_profile_id,
-        url: pitchDeckUrl,
-      };
+      if (spec.key === "startupPending") {
+        await pool.query(
+          "DELETE FROM public.startup_profiles WHERE user_id = $1",
+          [user.id],
+        );
+        await pool.query(
+          "UPDATE public.users SET onboarding_completed_at = NULL WHERE id = $1",
+          [user.id],
+        );
+        fixtures.users[spec.key] = {
+          ...user,
+          auth: { access_token: accessToken, refresh_token: refreshToken },
+        };
+      } else {
+        const profile = await upsertStartupProfile(user.id, spec.companyName);
+        const pitchDeckUrl = await ensurePitchDeck(profile.startup_profile_id);
+        if (spec.key === "startup") {
+          await completeStartupProfileForE2e(user.id);
+        }
+        await markOnboardingCompleted(user.id);
+        fixtures.users[spec.key] = {
+          ...user,
+          profileId: profile.startup_profile_id,
+          displayName: profile.company_name,
+          pitchDeckUrl,
+          auth: { access_token: accessToken, refresh_token: refreshToken },
+        };
+        fixtures.pitchDecks[spec.key] = {
+          startupProfileId: profile.startup_profile_id,
+          url: pitchDeckUrl,
+        };
+      }
     } else {
       const profile = await upsertInvestorProfile(user.id, spec.firmName);
+      await markOnboardingCompleted(user.id);
       fixtures.users[spec.key] = {
         ...user,
         profileId: profile.investor_profile_id,

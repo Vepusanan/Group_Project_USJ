@@ -192,6 +192,9 @@ const serializeAuthUser = (user) => ({
   fullName: user.full_name,
   userType: user.user_type,
   emailVerified: user.email_verified,
+  onboardingCompletedAt: user.onboarding_completed_at
+    ? new Date(user.onboarding_completed_at).toISOString()
+    : null,
   createdAt: user.created_at,
   isAdmin: isAdminUser(user),
 });
@@ -332,7 +335,7 @@ export const verifyEmail = async (req, res) => {
     );
 
     const freshUserResult = await pool.query(
-      `SELECT id, email, full_name, user_type, email_verified, created_at
+      `SELECT id, email, full_name, user_type, email_verified, created_at, onboarding_completed_at
        FROM users WHERE id = $1`,
       [userId],
     );
@@ -463,7 +466,7 @@ export const login = async (req, res) => {
     const userAgent = req.headers["user-agent"] || null;
 
     const result = await pool.query(
-      "SELECT id, email, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until, created_at, deleted_at FROM users WHERE email = $1",
+      "SELECT id, email, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until, created_at, deleted_at, onboarding_completed_at FROM users WHERE email = $1",
       [email.toLowerCase()],
     );
 

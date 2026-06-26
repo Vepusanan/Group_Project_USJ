@@ -29,7 +29,7 @@ const FloatingNavBar = () => {
 
   const isInvestor = user?.userType === "investor";
   const profileImageUrl = isInvestor ? profile?.photo_url : profile?.logo_url;
-  const isLoggedIn = !isLoading && authStatus === AUTH_STATUS.VERIFIED_READY;
+  const isLoggedIn = !isLoading && authStatus === AUTH_STATUS.AUTHENTICATED_READY;
 
   const publicItems = useMemo(
     () => [
