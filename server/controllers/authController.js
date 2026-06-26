@@ -50,7 +50,7 @@ const cookieBase = () => {
   return {
     httpOnly: true,
     secure: deployed,
-    sameSite: process.env.AUTH_COOKIE_SAME_SITE || (deployed ? "lax" : "strict"),
+    sameSite: process.env.AUTH_COOKIE_SAME_SITE || "lax",
     path: "/",
   };
 };
@@ -623,7 +623,8 @@ export const refreshToken = async (req, res) => {
     // surfaced (each retry hit /auth/token again).
     const sessionResult = await pool.query(
       `SELECT s.user_id AS id, s.expires_at, s.is_remembered,
-              u.email, u.user_type, u.full_name
+              u.email, u.user_type, u.full_name, u.email_verified,
+              u.onboarding_completed_at
        FROM sessions s
        JOIN users u ON s.user_id = u.id
        WHERE s.refresh_token = $1 AND s.expires_at > NOW()`,

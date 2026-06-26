@@ -317,12 +317,18 @@ const InvestorCard = React.memo(({
 
       <div className="mb-3 flex flex-wrap gap-1.5">
         {industries.map((ind) => (
-          <span key={ind} className={discoveryTagPillClass}>
+          <span
+            key={`${investor.investor_profile_id || investor.user_id}-ind-${ind}`}
+            className={discoveryTagPillClass}
+          >
             {formatDiscoveryTagLabel(ind)}
           </span>
         ))}
         {stages.map((s) => (
-          <span key={s} className={discoveryTagPillClass}>
+          <span
+            key={`${investor.investor_profile_id || investor.user_id}-stage-${s}`}
+            className={discoveryTagPillClass}
+          >
             {s}
           </span>
         ))}
@@ -727,9 +733,12 @@ const InvestorsPage = () => {
                   <div className="h-8 w-28 rounded-xl bg-surface-container" />
                 </div>
               ))
-            : investors.map((investor) => (
+            : investors.map((investor) => {
+                const investorKey =
+                  investor.investor_profile_id || investor.user_id;
+                return (
                 <InvestorCard
-                  key={investor.id}
+                  key={investorKey}
                   investor={investor}
                   onConnect={handleConnect}
                   onAccept={handleAccept}
@@ -749,7 +758,8 @@ const InvestorsPage = () => {
                     connectionDeclinedAt: investor.connection_declined_at,
                   })}
                 />
-              ))}
+              );
+              })}
         </div>
 
         {!loading && (

@@ -7,6 +7,7 @@ import {
   createUser,
   createStartupProfile,
   createInvestorProfile,
+  markUserOnboardingComplete,
   authCookies,
 } from "./helpers/securityTestHarness.js";
 
@@ -53,6 +54,42 @@ test("incomplete startup is blocked from gated features with onboarding_required
       { cookies: authCookies(startupUser) },
     );
     assert.equal(completion.res.status, 200);
+    assert.equal(completion.data?.data?.isComplete, false);
+  } finally {
+    await srv.close();
+  }
+});
+
+test("onboarded startup with partial profile can access gated features", async () => {
+  const startupUser = await createUser({
+    email: `${uid("startup")}@test.com`,
+    userType: "startup",
+    fullName: "Partial Onboarded Startup",
+  });
+  await createStartupProfile(startupUser.id);
+  await markUserOnboardingComplete(startupUser.id);
+
+  const srv = await startServer();
+  try {
+    const connections = await jsonRequest(srv.baseUrl, "GET", "/api/connections", {
+      cookies: authCookies(startupUser),
+    });
+    assert.equal(connections.res.status, 200, JSON.stringify(connections.data));
+
+    const messages = await jsonRequest(
+      srv.baseUrl,
+      "GET",
+      "/api/messages/conversations",
+      { cookies: authCookies(startupUser) },
+    );
+    assert.equal(messages.res.status, 200, JSON.stringify(messages.data));
+
+    const completion = await jsonRequest(
+      srv.baseUrl,
+      "GET",
+      "/api/startups/profile/completion",
+      { cookies: authCookies(startupUser) },
+    );
     assert.equal(completion.data?.data?.isComplete, false);
   } finally {
     await srv.close();

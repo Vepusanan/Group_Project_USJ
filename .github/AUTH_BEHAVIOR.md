@@ -34,7 +34,7 @@ The client must **not** infer onboarding state from profile APIs or completion p
 | `ONBOARDING_REQUIRED` | Verified, wizard not completed (`onboarding_completed_at` is null) | `/onboarding` or `/investor-onboarding` |
 | `AUTHENTICATED_READY` | Verified and onboarding completed | `/dashboard` and app routes |
 
-`authState.onboardingComplete` is derived from `authState.onboardingCompletedAt` (boolean convenience). Profile field completion % is a **separate** concern for API gating via `requireProfileComplete`.
+`authState.onboardingComplete` is derived from `authState.onboardingCompletedAt` (boolean convenience). API route gating (`requireProfileComplete`) also uses `onboarding_completed_at` — **not** profile field completion %.
 
 ## Auth session shape (`/auth/me`)
 
