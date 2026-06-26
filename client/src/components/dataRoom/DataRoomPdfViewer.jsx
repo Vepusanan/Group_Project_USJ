@@ -15,6 +15,12 @@ import "react-pdf/dist/Page/TextLayer.css";
 
 setupPdfWorker();
 
+// Computed once at module load. react-pdf reloads the document whenever the
+// `options` prop changes by reference, so this must be a stable object — a fresh
+// object on every render makes <Document> reload mid-parse and surface
+// "Failed to load PDF file".
+const PDF_DOCUMENT_OPTIONS = getPdfDocumentOptions();
+
 const SESSION_CACHE_PREFIX = "dataroom-ai-summary:";
 
 const readCachedAnalysis = (documentId) => {
@@ -281,8 +287,16 @@ const DataRoomPdfViewer = ({
           ) : pdfFile ? (
             <Document
               file={pdfFile}
-              options={getPdfDocumentOptions()}
+              options={PDF_DOCUMENT_OPTIONS}
               onLoadSuccess={(pdf) => setNumPages(pdf.numPages)}
+              onLoadError={(err) => {
+                console.error("PDF load error:", err);
+                setError(
+                  err?.message
+                    ? `Failed to load PDF: ${err.message}`
+                    : "Failed to load PDF file.",
+                );
+              }}
               loading={
                 <div className="flex justify-center py-20">
                   <Loader2 className="w-8 h-8 text-primary animate-spin" />
