@@ -1,12 +1,10 @@
 import React from "react";
 import { Users } from "lucide-react";
-import {
-  onboardingIconInputClass,
-  onboardingTextareaClass,
-} from "./onboardingStyles";
+import TeamMembersEditor from "../profile/TeamMembersEditor";
+import { onboardingIconInputClass, onboardingTextareaClass } from "./onboardingStyles";
 
-const textareaCls = onboardingTextareaClass;
 const iconInputCls = onboardingIconInputClass;
+const textareaCls = onboardingTextareaClass;
 
 const Field = ({ label, required, error, hint, children }) => (
   <div>
@@ -32,8 +30,11 @@ const Step3TeamInfo = ({ formData, updateFormData, errors }) => (
         <div className="relative">
           <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
+            id="onboarding-team-size"
+            name="team_size"
             type="number"
             min="1"
+            autoComplete="off"
             placeholder="e.g., 8"
             value={formData.team_size}
             onChange={(e) => updateFormData({ team_size: e.target.value })}
@@ -43,13 +44,10 @@ const Step3TeamInfo = ({ formData, updateFormData, errors }) => (
       </Field>
     </div>
 
-    <Field label="Key Team Members">
-      <textarea
-        rows={3}
-        placeholder="Describe leadership roles — e.g., CTO: 10 yrs ML experience at Google"
-        value={formData.key_team_members}
-        onChange={(e) => updateFormData({ key_team_members: e.target.value })}
-        className={textareaCls}
+    <Field label="Key Team Members" hint="optional">
+      <TeamMembersEditor
+        members={formData.team_members}
+        onChange={(team_members) => updateFormData({ team_members })}
       />
     </Field>
 

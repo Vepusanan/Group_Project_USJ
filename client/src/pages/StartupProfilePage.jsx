@@ -27,6 +27,7 @@ import {
   PROFILE_OWNER_TYPES,
   shouldShowPrivateSection,
 } from "../utils/profileRelationship";
+import TeamMembersDisplay from "../components/profile/TeamMembersDisplay";
 import {
   SectionCard,
   Pill,
@@ -616,9 +617,7 @@ const StartupProfilePage = () => {
                 </div>
               )}
               {profile.key_team_members && (
-                <p className="text-content-secondary text-sm leading-relaxed whitespace-pre-line">
-                  {profile.key_team_members}
-                </p>
+                <TeamMembersDisplay value={profile.key_team_members} />
               )}
               {profile.team_photo_url && (
                 <img src={profile.team_photo_url} alt="Team"

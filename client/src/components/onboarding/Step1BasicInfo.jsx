@@ -109,7 +109,10 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
         <div className="relative">
           <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
+            id="onboarding-company-name"
+            name="company_name"
             type="text"
+            autoComplete="organization"
             placeholder="e.g., Acme Technologies"
             value={formData.company_name}
             onChange={(e) => updateFormData({ company_name: e.target.value })}
@@ -126,7 +129,10 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
               <div className="relative flex-1">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
                 <input
+                  id={`onboarding-founder-name-${idx}`}
+                  name={`founder_name_${idx}`}
                   type="text"
+                  autoComplete="name"
                   placeholder={`Founder ${idx + 1} full name`}
                   value={name}
                   onChange={(e) => updateFounder(idx, e.target.value)}
@@ -163,6 +169,9 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
           <div className="relative">
             <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px] pointer-events-none" />
             <select
+              id="onboarding-country"
+              name="location_country"
+              autoComplete="country-name"
               value={formData.location_country || ""}
               onChange={(e) => updateFormData({ location_country: e.target.value })}
               className={`${iconInputCls} appearance-none`}
@@ -179,7 +188,10 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
           <div className="relative">
             <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
             <input
+              id="onboarding-city"
+              name="location_city"
               type="text"
+              autoComplete="address-level2"
               placeholder="e.g., San Francisco"
               value={formData.location_city || ""}
               onChange={(e) => updateFormData({ location_city: e.target.value })}
@@ -194,7 +206,10 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
           <div className="relative">
             <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
             <input
+              id="onboarding-website"
+              name="website_url"
               type="url"
+              autoComplete="url"
               placeholder="https://yourcompany.com"
               value={formData.website_url || ""}
               onChange={(e) => updateFormData({ website_url: e.target.value })}
@@ -207,7 +222,10 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
           <div className="relative">
             <Linkedin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
             <input
+              id="onboarding-linkedin"
+              name="linkedin_url"
               type="url"
+              autoComplete="url"
               placeholder="https://linkedin.com/company/your-company"
               value={formData.linkedin_url || ""}
               onChange={(e) => updateFormData({ linkedin_url: e.target.value })}

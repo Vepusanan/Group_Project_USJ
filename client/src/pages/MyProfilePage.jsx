@@ -17,6 +17,7 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import { useProfileData } from "../hooks/useProfileCache";
 import MilestoneManageSection from "../components/milestones/MilestoneManageSection";
+import TeamMembersDisplay from "../components/profile/TeamMembersDisplay";
 
 const parseJson = (value, fallback = null) => {
   if (value == null) return fallback;
@@ -309,7 +310,12 @@ const MyProfilePage = () => {
 
         <Section title="Team & Traction">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Key Team Members" value={profile.key_team_members} wide />
+            {profile.key_team_members ? (
+              <div className="col-span-full">
+                <p className="text-xs text-content-muted mb-1">Key Team Members</p>
+                <TeamMembersDisplay value={profile.key_team_members} />
+              </div>
+            ) : null}
             <Field label="Key Metrics" value={profile.key_metrics} wide />
             <Field label="Major Achievements" value={profile.major_achievements} wide />
             <Field label="Customer Testimonials" value={profile.customer_testimonials} wide />

@@ -41,6 +41,9 @@ const UrlField = ({ label, value, onChange, placeholder }) => (
       <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
       <input
         type="url"
+        id={`onboarding-funding-url-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+        name={`funding_url_${label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`}
+        autoComplete="url"
         value={value}
         onChange={onChange}
         placeholder={placeholder}
@@ -96,8 +99,11 @@ const Step4FundingDetails = ({ formData, updateFormData, errors }) => (
         <div className="relative">
           <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
+            id="onboarding-amount-seeking"
+            name="amount_seeking"
             type="number"
             min="1"
+            autoComplete="off"
             placeholder="e.g., 500000"
             value={formData.amount_seeking}
             onChange={(e) => updateFormData({ amount_seeking: e.target.value })}
@@ -110,8 +116,11 @@ const Step4FundingDetails = ({ formData, updateFormData, errors }) => (
         <div className="relative">
           <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
+            id="onboarding-previous-funding"
+            name="previous_funding"
             type="number"
             min="0"
+            autoComplete="off"
             placeholder="e.g., 0"
             value={formData.previous_funding}
             onChange={(e) => updateFormData({ previous_funding: e.target.value })}

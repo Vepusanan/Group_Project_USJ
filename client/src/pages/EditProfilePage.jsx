@@ -6,6 +6,12 @@ import { useProfileData } from "../hooks/useProfileCache";
 import profileService from "../services/profileService";
 import investorProfileService from "../services/investorProfileService";
 import { pageContainerClass, pageContentClass } from "../styles/theme";
+import TeamMembersEditor from "../components/profile/TeamMembersEditor";
+import {
+  EMPTY_MEMBER,
+  parseTeamMembersFromProfile,
+  serializeTeamMembers,
+} from "../../../shared/teamMembers.mjs";
 
 /* ─── helpers ──────────────────────────────────────────────────────────────── */
 const parseJson = (value, fallback) => {
@@ -38,9 +44,9 @@ const Section = ({ title, id, children }) => (
 );
 
 /* ─── shared field wrapper ─────────────────────────────────────────────────── */
-const Field = ({ label, required, hint, children }) => (
+const Field = ({ label, required, hint, htmlFor, children }) => (
   <div>
-    <label className="block text-xs font-medium text-content-secondary mb-1.5">
+    <label htmlFor={htmlFor} className="block text-xs font-medium text-content-secondary mb-1.5">
       {label}{required && <span className="text-error ml-1">*</span>}
       {hint && <span className="text-content-secondary ml-2 font-normal">{hint}</span>}
     </label>
@@ -101,7 +107,7 @@ const EditProfilePage = () => {
   const [sf, setSf] = useState({
     company_name: "", tagline: "", detailed_description: "",
     industry: "", founded_date: "", current_stage: "", team_size: "",
-    founder_names: "", key_team_members: "", funding_stage: "",
+    founder_names: "", team_members: [EMPTY_MEMBER()], funding_stage: "",
     amount_seeking: "", previous_funding: "", use_of_funds: "",
     revenue_status: "", key_metrics: "", major_achievements: "",
     customer_testimonials: "", pitch_deck_url: "", business_plan_url: "",
@@ -217,7 +223,7 @@ const EditProfilePage = () => {
           current_stage: p.current_stage || "",
           team_size: p.team_size || "",
           founder_names: founderStr,
-          key_team_members: p.key_team_members || "",
+          team_members: parseTeamMembersFromProfile(p.key_team_members),
           funding_stage: p.funding_stage || p.stage || "",
           amount_seeking: p.amount_seeking || "",
           previous_funding: p.previous_funding || "",
@@ -399,7 +405,8 @@ const EditProfilePage = () => {
         appendIfPresent(fd, "location_country", sf.location_country);
         appendIfPresent(fd, "location_city", sf.location_city);
         appendIfPresent(fd, "website_url", sf.website_url);
-        appendIfPresent(fd, "key_team_members", sf.key_team_members);
+        const teamPayload = serializeTeamMembers(sf.team_members);
+        if (teamPayload) fd.append("key_team_members", teamPayload);
 
         const founders = csvToArray(sf.founder_names);
         if (founders.length) fd.append("founder_names", JSON.stringify(founders));
@@ -586,41 +593,46 @@ const EditProfilePage = () => {
 
               <Section title="Company Identity">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="Company Name" required>
-                    <input value={sf.company_name} onChange={sf2("company_name")} placeholder="e.g., Acme Technologies" className={inputCls} required />
+                  <Field label="Company Name" required htmlFor="edit-company-name">
+                    <input id="edit-company-name" name="company_name" autoComplete="organization" value={sf.company_name} onChange={sf2("company_name")} placeholder="e.g., Acme Technologies" className={inputCls} required />
                   </Field>
-                  <Field label="Tagline">
-                    <input value={sf.tagline} onChange={sf2("tagline")} placeholder="A punchy one-liner..." className={inputCls} />
+                  <Field label="Tagline" htmlFor="edit-tagline">
+                    <input id="edit-tagline" name="tagline" autoComplete="off" value={sf.tagline} onChange={sf2("tagline")} placeholder="A punchy one-liner..." className={inputCls} />
                   </Field>
                 </div>
-                <Field label="Detailed Description">
-                  <textarea rows={4} value={sf.detailed_description} onChange={sf2("detailed_description")} placeholder="Describe the problem, solution, and traction..." className={textareaCls} />
+                <Field label="Detailed Description" htmlFor="edit-description">
+                  <textarea id="edit-description" name="detailed_description" autoComplete="off" rows={4} value={sf.detailed_description} onChange={sf2("detailed_description")} placeholder="Describe the problem, solution, and traction..." className={textareaCls} />
                 </Field>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="Industry">
-                    <select value={sf.industry} onChange={sf2("industry")} className={inputCls}>
+                  <Field label="Industry" htmlFor="edit-industry">
+                    <select id="edit-industry" name="industry" autoComplete="off" value={sf.industry} onChange={sf2("industry")} className={inputCls}>
                       <option value="" className="bg-surface">Select industry</option>
                       {INDUSTRIES.map((i) => <option key={i} value={i} className="bg-surface">{i}</option>)}
                     </select>
                   </Field>
-                  <Field label="Founded Date">
-                    <input type="date" value={sf.founded_date} max={new Date().toISOString().split("T")[0]} onChange={sf2("founded_date")} className={inputCls} />
+                  <Field label="Founded Date" htmlFor="edit-founded-date">
+                    <input id="edit-founded-date" name="founded_date" type="date" autoComplete="off" value={sf.founded_date} max={new Date().toISOString().split("T")[0]} onChange={sf2("founded_date")} className={inputCls} />
                   </Field>
-                  <Field label="Current Stage">
-                    <select value={sf.current_stage} onChange={sf2("current_stage")} className={inputCls}>
+                  <Field label="Current Stage" htmlFor="edit-current-stage">
+                    <select id="edit-current-stage" name="current_stage" autoComplete="off" value={sf.current_stage} onChange={sf2("current_stage")} className={inputCls}>
                       <option value="" className="bg-surface">Select stage</option>
                       {STAGES.map((s) => <option key={s.value} value={s.value} className="bg-surface">{s.label}</option>)}
                     </select>
                   </Field>
-                  <Field label="Team Size">
-                    <input type="number" min="1" value={sf.team_size} onChange={sf2("team_size")} placeholder="e.g., 8" className={inputCls} />
+                  <Field label="Team Size" htmlFor="edit-team-size">
+                    <input id="edit-team-size" name="team_size" type="number" min="1" autoComplete="off" value={sf.team_size} onChange={sf2("team_size")} placeholder="e.g., 8" className={inputCls} />
                   </Field>
                 </div>
-                <Field label="Founder Names" hint="comma-separated">
-                  <input value={sf.founder_names} onChange={sf2("founder_names")} placeholder="Jane Doe, John Smith" className={inputCls} />
+                <Field label="Founder Names" hint="comma-separated" htmlFor="edit-founder-names">
+                  <input id="edit-founder-names" name="founder_names" autoComplete="name" value={sf.founder_names} onChange={sf2("founder_names")} placeholder="Jane Doe, John Smith" className={inputCls} />
                 </Field>
                 <Field label="Key Team Members">
-                  <textarea rows={3} value={sf.key_team_members} onChange={sf2("key_team_members")} placeholder="CTO: 10 yrs ML at Google..." className={textareaCls} />
+                  <TeamMembersEditor
+                    members={sf.team_members}
+                    onChange={(team_members) => setSf((p) => ({ ...p, team_members }))}
+                    nameInputClass={inputCls}
+                    roleInputClass={inputCls}
+                  />
                 </Field>
               </Section>
 
@@ -719,37 +731,37 @@ const EditProfilePage = () => {
 
               <Section title="Contact">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="Primary Contact Name">
-                    <input value={sf.primary_contact_name} onChange={sf2("primary_contact_name")} placeholder="Full name" className={inputCls} />
+                  <Field label="Primary Contact Name" htmlFor="edit-primary-contact">
+                    <input id="edit-primary-contact" name="primary_contact_name" autoComplete="name" value={sf.primary_contact_name} onChange={sf2("primary_contact_name")} placeholder="Full name" className={inputCls} />
                   </Field>
-                  <Field label="Contact Email">
-                    <input type="email" value={sf.contact_email} onChange={sf2("contact_email")} placeholder="contact@company.com" className={inputCls} />
+                  <Field label="Contact Email" htmlFor="edit-contact-email">
+                    <input id="edit-contact-email" name="contact_email" type="email" autoComplete="email" value={sf.contact_email} onChange={sf2("contact_email")} placeholder="contact@company.com" className={inputCls} />
                   </Field>
-                  <Field label="Phone Number">
-                    <input type="tel" value={sf.phone_number} onChange={sf2("phone_number")} placeholder="+1 555 000 0000" className={inputCls} />
+                  <Field label="Phone Number" htmlFor="edit-phone">
+                    <input id="edit-phone" name="phone_number" type="tel" autoComplete="tel" value={sf.phone_number} onChange={sf2("phone_number")} placeholder="+1 555 000 0000" className={inputCls} />
                   </Field>
-                  <Field label="Country">
-                    <input value={sf.location_country} onChange={sf2("location_country")} placeholder="e.g., United States" className={inputCls} />
+                  <Field label="Country" htmlFor="edit-country">
+                    <input id="edit-country" name="location_country" autoComplete="country-name" value={sf.location_country} onChange={sf2("location_country")} placeholder="e.g., United States" className={inputCls} />
                   </Field>
-                  <Field label="City">
-                    <input value={sf.location_city} onChange={sf2("location_city")} placeholder="e.g., San Francisco" className={inputCls} />
+                  <Field label="City" htmlFor="edit-city">
+                    <input id="edit-city" name="location_city" autoComplete="address-level2" value={sf.location_city} onChange={sf2("location_city")} placeholder="e.g., San Francisco" className={inputCls} />
                   </Field>
-                  <Field label="Website URL">
-                    <input type="url" value={sf.website_url} onChange={sf2("website_url")} placeholder="https://yourcompany.com" className={inputCls} />
+                  <Field label="Website URL" htmlFor="edit-website">
+                    <input id="edit-website" name="website_url" type="url" autoComplete="url" value={sf.website_url} onChange={sf2("website_url")} placeholder="https://yourcompany.com" className={inputCls} />
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field label="LinkedIn URL">
-                    <input type="url" value={sf.social_linkedin} onChange={sf2("social_linkedin")} placeholder="https://linkedin.com/company/..." className={inputCls} />
+                  <Field label="LinkedIn URL" htmlFor="edit-linkedin">
+                    <input id="edit-linkedin" name="social_linkedin" type="url" autoComplete="url" value={sf.social_linkedin} onChange={sf2("social_linkedin")} placeholder="https://linkedin.com/company/..." className={inputCls} />
                   </Field>
-                  <Field label="Twitter / X URL">
-                    <input type="url" value={sf.social_twitter} onChange={sf2("social_twitter")} placeholder="https://x.com/..." className={inputCls} />
+                  <Field label="Twitter / X URL" htmlFor="edit-twitter">
+                    <input id="edit-twitter" name="social_twitter" type="url" autoComplete="url" value={sf.social_twitter} onChange={sf2("social_twitter")} placeholder="https://x.com/..." className={inputCls} />
                   </Field>
-                  <Field label="Facebook URL">
-                    <input type="url" value={sf.social_facebook} onChange={sf2("social_facebook")} placeholder="https://facebook.com/..." className={inputCls} />
+                  <Field label="Facebook URL" htmlFor="edit-facebook">
+                    <input id="edit-facebook" name="social_facebook" type="url" autoComplete="url" value={sf.social_facebook} onChange={sf2("social_facebook")} placeholder="https://facebook.com/..." className={inputCls} />
                   </Field>
-                  <Field label="Instagram URL">
-                    <input type="url" value={sf.social_instagram} onChange={sf2("social_instagram")} placeholder="https://instagram.com/..." className={inputCls} />
+                  <Field label="Instagram URL" htmlFor="edit-instagram">
+                    <input id="edit-instagram" name="social_instagram" type="url" autoComplete="url" value={sf.social_instagram} onChange={sf2("social_instagram")} placeholder="https://instagram.com/..." className={inputCls} />
                   </Field>
                 </div>
               </Section>

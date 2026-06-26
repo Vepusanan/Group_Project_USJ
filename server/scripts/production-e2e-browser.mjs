@@ -98,7 +98,7 @@ async function completeStartupProfileForUser(userId, email) {
     `,
     [
       userId,
-      JSON.stringify([{ name: "CTO", role: "CTO" }]),
+      JSON.stringify([{ name: "John Doe", role: "CTO" }]),
       "20% MoM growth",
       "Launched MVP",
       "Strong early traction",

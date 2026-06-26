@@ -19,9 +19,12 @@ const Field = ({ label, required, error, hint, children }) => (
 const SocialField = ({ label, icon: Icon, value, onChange, placeholder }) => (
   <div className="relative">
     <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
-    <input
-      type="url"
-      placeholder={placeholder}
+      <input
+        type="url"
+        id={`onboarding-social-${label.toLowerCase().replace(/\s+/g, "-")}`}
+        name={`social_${label.toLowerCase().replace(/\s+/g, "_")}`}
+        autoComplete="url"
+        placeholder={placeholder}
       value={value}
       onChange={onChange}
       aria-label={label}
@@ -41,7 +44,10 @@ const Step7Contact = ({ formData, updateFormData, errors }) => (
       <div className="relative">
         <UserRound className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
         <input
+          id="onboarding-primary-contact"
+          name="primary_contact_name"
           type="text"
+          autoComplete="name"
           placeholder="Full name of main point of contact"
           value={formData.primary_contact_name}
           onChange={(e) => updateFormData({ primary_contact_name: e.target.value })}
@@ -55,7 +61,10 @@ const Step7Contact = ({ formData, updateFormData, errors }) => (
         <div className="relative">
           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
+            id="onboarding-contact-email"
+            name="contact_email"
             type="email"
+            autoComplete="email"
             placeholder="contact@company.com"
             value={formData.contact_email}
             onChange={(e) => updateFormData({ contact_email: e.target.value })}
@@ -68,7 +77,10 @@ const Step7Contact = ({ formData, updateFormData, errors }) => (
         <div className="relative">
           <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
+            id="onboarding-phone"
+            name="phone_number"
             type="tel"
+            autoComplete="tel"
             placeholder="+1 555 000 0000"
             value={formData.phone_number}
             onChange={(e) => updateFormData({ phone_number: e.target.value })}

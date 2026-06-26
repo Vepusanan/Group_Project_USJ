@@ -48,7 +48,10 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
         <div className="relative">
           <Sparkles className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
+            id="onboarding-tagline"
+            name="tagline"
             type="text"
+            autoComplete="off"
             placeholder="A punchy one-liner that captures your value"
             value={formData.tagline}
             maxLength={maxTagline}
@@ -60,6 +63,9 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
 
       <Field label="Detailed Description" required error={errors.detailed_description} hint={`${formData.detailed_description.length}/${maxDesc}`}>
         <textarea
+          id="onboarding-description"
+          name="detailed_description"
+          autoComplete="off"
           placeholder="Describe the problem, your solution, the product, and early traction..."
           value={formData.detailed_description}
           maxLength={maxDesc}
@@ -73,6 +79,9 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
         <div className="relative">
           <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px] pointer-events-none" />
           <select
+            id="onboarding-industry"
+            name="industry"
+            autoComplete="off"
             value={formData.industry}
             onChange={(e) => updateFormData({ industry: e.target.value })}
             className={iconInputCls}
@@ -90,7 +99,10 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
           <div className="relative">
             <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px] pointer-events-none" />
             <input
+              id="onboarding-founded-date"
+              name="founded_date"
               type="date"
+              autoComplete="off"
               value={formData.founded_date}
               max={new Date().toISOString().split("T")[0]}
               onChange={(e) => updateFormData({ founded_date: e.target.value })}
@@ -103,6 +115,9 @@ const Step2BusinessDescription = ({ formData, updateFormData, errors }) => {
           <div className="relative">
             <TrendingUp className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px] pointer-events-none" />
             <select
+              id="onboarding-current-stage"
+              name="current_stage"
+              autoComplete="off"
               value={formData.current_stage}
               onChange={(e) => updateFormData({ current_stage: e.target.value })}
               className={iconInputCls}

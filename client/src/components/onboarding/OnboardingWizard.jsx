@@ -9,6 +9,7 @@ import Step7Contact from "./Step7Contact";
 import profileService from "../../services/profileService";
 import { useAuth } from "../../hooks/useAuth";
 import { clearProfileCaches } from "../../hooks/useProfileCache";
+import { EMPTY_MEMBER, serializeTeamMembers } from "../../../../shared/teamMembers.mjs";
 
 const STEPS = [
   { number: 1, title: "Identity",  short: "Who you are",    component: Step1BasicInfo },
@@ -37,7 +38,7 @@ const OnboardingWizard = () => {
     founded_date: "",
     current_stage: "",
     team_size: "",
-    key_team_members: "",
+    team_members: [EMPTY_MEMBER()],
     key_metrics: "",
     major_achievements: "",
     customer_testimonials: "",
@@ -145,6 +146,11 @@ const OnboardingWizard = () => {
         if (key === "founder_names") {
           const filtered = (Array.isArray(value) ? value : [value]).map((n) => n.trim()).filter(Boolean);
           if (filtered.length) fd.append("founder_names", JSON.stringify(filtered));
+          continue;
+        }
+        if (key === "team_members") {
+          const serialized = serializeTeamMembers(value);
+          if (serialized) fd.append("key_team_members", serialized);
           continue;
         }
         if (typeof value === "object") {

@@ -122,7 +122,7 @@ async function completeStartupProfileForE2e(userId) {
     `,
     [
       userId,
-      JSON.stringify([{ name: "CTO", role: "CTO" }]),
+      JSON.stringify([{ name: "John Doe", role: "CTO" }]),
       "Monthly active users growing 20% MoM",
       "Launched MVP with first paying customers",
       "Best startup we have seen this year",
