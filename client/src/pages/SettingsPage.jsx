@@ -166,7 +166,7 @@ const SettingsPage = () => {
       return;
     }
     await logout();
-    navigate("/login");
+    navigate("/");
   };
 
   const revokeSession = async (sessionId) => {

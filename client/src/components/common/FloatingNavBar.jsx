@@ -181,7 +181,7 @@ const FloatingNavBar = () => {
     } catch {
       localStorage.removeItem("userData");
     }
-    navigate("/login");
+    navigate("/");
   };
 
   const linkClass = (active) =>
