@@ -130,9 +130,9 @@ async function cleanupUser(email) {
 
 async function main() {
   const suffix = `${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
-  const email = `prod_browser_${suffix}@starthub-e2e.test`;
+  const email = `prod_browser_${suffix}@startupconnect-e2e.test`;
   const password = "ProdE2eTest123!";
-  const unverifiedEmail = `prod_unverified_${suffix}@starthub-e2e.test`;
+  const unverifiedEmail = `prod_unverified_${suffix}@startupconnect-e2e.test`;
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ baseURL: PROD_URL });

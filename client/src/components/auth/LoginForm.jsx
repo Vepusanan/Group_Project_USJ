@@ -132,7 +132,7 @@ const LoginForm = () => {
         disabled={isLoading}
         className="!py-4"
       >
-        Sign In to StartHub
+        Sign In to StartupConnect
       </Button>
     </form>
   );

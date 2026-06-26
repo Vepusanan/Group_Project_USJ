@@ -1,4 +1,4 @@
-const CHANNEL_NAME = "starthub-auth-sync";
+const CHANNEL_NAME = "startupconnect-auth-sync";
 const REVISION_KEY = "auth:revision";
 
 let channel = null;

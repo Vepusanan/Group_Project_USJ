@@ -148,7 +148,7 @@ async function upsertStartupProfile(userId, companyName) {
       )
       VALUES (
         $1, $2, 'E2E Founder', 'E2E test startup tagline',
-        'Automated end-to-end test startup profile for StartHub Capital.',
+        'Automated end-to-end test startup profile for StartupConnect.',
         'Technology', '2024-01-01', 'MVP', 5, 'SEED',
         500000, 0, 'Product development and go-to-market', 'PRE_REVENUE',
         'E2E Founder', $3

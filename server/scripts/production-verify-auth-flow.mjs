@@ -32,7 +32,7 @@ async function main() {
   }
 
   const suffix = `${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
-  const email = `prod_e2e_${suffix}@starthub-e2e.test`;
+  const email = `prod_e2e_${suffix}@startupconnect-e2e.test`;
   const password = "ProdE2eTest123!";
 
   try {

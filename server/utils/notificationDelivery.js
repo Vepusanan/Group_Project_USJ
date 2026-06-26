@@ -7,7 +7,7 @@ import {
 import { getFrontendBaseUrl } from "./appUrls.js";
 
 const transporter = createEmailTransporter();
-const emailFrom = () => `"Startup Connect" <${getEmailFromAddress()}>`;
+const emailFrom = () => `"StartupConnect" <${getEmailFromAddress()}>`;
 
 /**
  * Notification types enum

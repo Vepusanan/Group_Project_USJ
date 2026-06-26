@@ -45,7 +45,7 @@ export const REGEX_PATTERNS = {
  * Application constants
  */
 export const APP_CONSTANTS = {
-  APP_NAME: "StartHub Capital",
+  APP_NAME: "StartupConnect",
   APP_VERSION: "1.0.0",
   TOKEN_KEY: "accessToken",
   USER_KEY: "user",

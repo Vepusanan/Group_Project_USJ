@@ -1,6 +1,6 @@
 # Vercel deployment
 
-Production hosting for **StartHub Capital** — React SPA + Express API + Supabase Realtime.
+Production hosting for **StartupConnect** — React SPA + Express API + Supabase Realtime.
 
 ## Architecture
 

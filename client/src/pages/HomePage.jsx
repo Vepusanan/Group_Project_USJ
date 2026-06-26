@@ -130,7 +130,7 @@ const HomePage = () => {
               Expanding Horizons
             </h2>
             <p className="relative mb-8 text-base leading-relaxed text-slate-600 sm:text-lg">
-              StartHub bridges the gap between ambitious founders and strategic
+              StartupConnect bridges the gap between ambitious founders and strategic
               investors. We believe the next generation of deep tech and software
               innovations shouldn&apos;t be stalled by access to capital.
             </p>
