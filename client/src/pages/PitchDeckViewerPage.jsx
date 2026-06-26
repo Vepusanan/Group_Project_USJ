@@ -154,13 +154,12 @@ const PitchDeckViewerPage = () => {
       <div className="min-h-screen px-4 py-10 bg-page">
         <div className="mx-auto max-w-lg rounded-2xl border border-line bg-surface-alt p-6 text-center">
           <p className="text-error">{displayError || "Unable to open pitch deck"}</p>
-          <button
-            type="button"
-            onClick={() => navigate(`/startups/${id}`)}
-            className="mt-4 px-4 py-2 rounded-lg border border-line text-content-secondary hover:text-content"
+          <Link
+            to={user?.userType === "startup" ? "/profile" : `/startups/${id}`}
+            className="mt-4 inline-block px-4 py-2 rounded-lg border border-line text-content-secondary hover:text-content"
           >
             Back to profile
-          </button>
+          </Link>
         </div>
       </div>
     );
@@ -176,7 +175,7 @@ const PitchDeckViewerPage = () => {
           {/* Compact single-line header */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Link
-              to={`/startups/${id}`}
+              to={user?.userType === "startup" ? "/profile" : `/startups/${id}`}
               className="inline-flex items-center gap-1 text-sm leading-none text-content-secondary hover:text-content shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />

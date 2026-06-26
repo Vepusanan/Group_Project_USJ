@@ -12,7 +12,7 @@ import {
 import {
   Building2, Calendar, DollarSign, Edit3, ExternalLink,
   Facebook, Globe, Instagram, Linkedin, Mail, MapPin,
-  Phone, Twitter, User, Users,
+  Phone, Twitter, User, Users, Video,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useProfileData } from "../hooks/useProfileCache";
@@ -364,7 +364,7 @@ const MyProfilePage = () => {
           </Section>
         )}
 
-        {(profile.pitch_deck_url || profile.business_plan_url || profile.product_demo_url) && (
+        {(profile.pitch_deck_url || profile.business_plan_url || profile.product_demo_url || profile.founder_video_url) && (
           <Section title="Investor Materials">
             <div className="flex flex-wrap gap-3">
               {profile.pitch_deck_url && (
@@ -388,6 +388,21 @@ const MyProfilePage = () => {
                 </a>
               )}
             </div>
+            {profile.founder_video_url && (
+              <div className="mt-4 rounded-xl border border-line bg-surface p-3 max-w-xl">
+                <p className="text-sm font-medium text-content mb-2 flex items-center gap-2">
+                  <Video className="w-4 h-4 text-primary" />
+                  Founder Video Introduction
+                </p>
+                <video
+                  src={profile.founder_video_url}
+                  controls
+                  playsInline
+                  poster={profile.founder_video_thumbnail_url || undefined}
+                  className="w-full rounded-lg border border-line max-h-80 bg-black"
+                />
+              </div>
+            )}
           </Section>
         )}
 
