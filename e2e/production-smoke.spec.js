@@ -55,7 +55,7 @@ test.describe("Production build smoke", () => {
     await page.goto("/login", { waitUntil: "networkidle" });
     await assertAppMounted(page);
     await expect(
-      page.getByRole("button", { name: /sign in to starthub/i }),
+      page.getByRole("button", { name: /sign in to startupconnect/i }),
     ).toBeVisible();
   });
 

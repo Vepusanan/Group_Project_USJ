@@ -11,7 +11,7 @@ const RegistrationPage = () => {
         <div className="inline-flex items-center gap-2 mb-2">
           <Rocket className="w-8 h-8 text-primary fill-primary/20" />
           <span className="font-display text-headline-md font-bold text-primary tracking-tight">
-            StartHub Capital
+            StartupConnect
           </span>
         </div>
         <p className="text-body-md text-on-surface-variant">
@@ -26,7 +26,7 @@ const RegistrationPage = () => {
             Create your account
           </h1>
           <p className="text-body-md text-on-surface-variant">
-            Join StartHub and start connecting.
+            Join StartupConnect and start connecting.
           </p>
         </div>
 

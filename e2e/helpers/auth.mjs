@@ -2,7 +2,7 @@ export async function loginViaUi(page, { email, password }) {
   await page.goto("/login");
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
-  await page.getByRole("button", { name: "Sign In to StartHub" }).click();
+  await page.getByRole("button", { name: "Sign In to StartupConnect" }).click();
 }
 
 export async function waitForAuthenticatedShell(page) {

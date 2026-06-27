@@ -1,4 +1,4 @@
-starthub-capital/
+startupconnect/
 ├── public/
 │   ├── favicon.ico
 │   ├── index.html

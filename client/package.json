@@ -1,7 +1,7 @@
 {
-  "name": "starthub-capital",
+  "name": "startupconnect",
   "version": "1.0.0",
-  "description": "StartHub Capital - Connect Startups with the Right Investors",
+  "description": "StartupConnect - Connect Startups with the Right Investors",
   "private": true,
   "type": "module",
   "dependencies": {

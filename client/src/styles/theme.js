@@ -1,4 +1,4 @@
-/** Semantic class helpers — StartHub Capital design system (UI_inspiration) */
+/** Semantic class helpers — StartupConnect design system (UI_inspiration) */
 
 export const navLinkClass = (isActive) =>
   `px-3 py-2 text-label-caps font-label uppercase tracking-wider transition-colors duration-200 ${

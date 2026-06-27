@@ -110,7 +110,7 @@ test.describe("Auth state machine (E2E)", () => {
           credentials: "include",
         });
         localStorage.setItem("auth:revision", String(Date.now()));
-        new BroadcastChannel("starthub-auth-sync").postMessage({
+        new BroadcastChannel("startupconnect-auth-sync").postMessage({
           type: "auth-changed",
         });
       });

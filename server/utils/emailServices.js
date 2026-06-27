@@ -12,7 +12,7 @@ const isDev = process.env.NODE_ENV === "development";
 const devLogOnly = process.env.EMAIL_DEV_LOG_ONLY === "true";
 
 const transporter = createEmailTransporter();
-const emailFrom = () => `"Startup Connect" <${getEmailFromAddress()}>`;
+const emailFrom = () => `"StartupConnect" <${getEmailFromAddress()}>`;
 
 const buildVerificationLink = (token) => buildVerifyEmailCallbackUrl(token);
 
@@ -94,7 +94,7 @@ export const sendPasswordChangeConfirmationEmail = async (email) => {
     subject: "Your Password Has Been Changed",
     html: `
             <h2>Password Changed Successfully</h2>
-            <p>Your password for Startup Connect has been successfully updated.</p>
+            <p>Your password for StartupConnect has been successfully updated.</p>
             <p>If you did not perform this action, please contact support immediately.</p>
         `,
   };
@@ -429,10 +429,10 @@ export const sendInactiveAccountNoticeEmail = async ({ email, fullName }) => {
   const mailOptions = {
     from: emailFrom(),
     to: email,
-    subject: "Action required: your Startup Connect account may be removed",
+    subject: "Action required: your StartupConnect account may be removed",
     html: `
       <h2>Hi ${fullName || "there"},</h2>
-      <p>Your Startup Connect account has been inactive for more than 90 days.</p>
+      <p>Your StartupConnect account has been inactive for more than 90 days.</p>
       <p>Because your account is still <strong>Unverified</strong>, it will be permanently removed in <strong>7 days</strong> unless you sign in and take any meaningful action on the platform.</p>
       <p><a href="${getFrontendBaseUrl()}/login">Sign in to keep your account</a></p>
     `,
@@ -462,7 +462,7 @@ export const sendMilestonePublishedEmail = async ({
       <h2>Hi ${fullName || "there"},</h2>
       <p><strong>${companyName || "A startup"}</strong> you are connected with shared a milestone:</p>
       <p><strong>${headline}</strong></p>
-      <p><a href="${link}">View on StartHub</a></p>
+      <p><a href="${link}">View on StartupConnect</a></p>
     `,
   };
 

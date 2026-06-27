@@ -18,7 +18,7 @@ const TermsPage = () => (
   >
     <LegalSection title="1. Acceptance">
       <p>
-        By creating an account on StartHub Capital you agree to these terms. You
+        By creating an account on StartupConnect you agree to these terms. You
         must be at least 18 years old and provide accurate registration
         information.
       </p>
@@ -49,7 +49,7 @@ const TermsPage = () => (
 
     <LegalSection title="5. Disclaimer">
       <p>
-        StartHub Capital does not provide investment advice. All investment
+        StartupConnect does not provide investment advice. All investment
         decisions are your responsibility. AI-generated summaries are
         informational only.
       </p>

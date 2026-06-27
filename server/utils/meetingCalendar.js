@@ -43,7 +43,7 @@ export const buildMeetingIcs = ({
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Startup Connect//Meeting//EN",
+    "PRODID:-//StartupConnect//Meeting//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
