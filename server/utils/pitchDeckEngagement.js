@@ -9,19 +9,35 @@ const parseJsonField = (value, fallback) => {
   }
 };
 
-export const aggregatePitchDeckEngagement = (sessions = []) => {
+// Per-slide time totals for a set of sessions, sorted descending. Non-recursive
+// so it can be reused for both the overall deck and each investor's sessions
+// without re-entering aggregatePitchDeckEngagement.
+const computeSlideEngagement = (sessions) => {
   const slideTimeMs = {};
-  let completedSessions = 0;
-  const investorSessions = new Map();
-
   for (const session of sessions) {
-    if (session.completed) completedSessions += 1;
-
     const timePerPage = parseJsonField(session.time_per_page_ms, {});
     for (const [page, ms] of Object.entries(timePerPage)) {
       const key = String(page);
       slideTimeMs[key] = (slideTimeMs[key] || 0) + Number(ms || 0);
     }
+  }
+
+  return Object.entries(slideTimeMs)
+    .map(([slide, total_ms]) => ({
+      slide: Number(slide),
+      total_ms: Math.round(total_ms),
+      total_seconds: Math.round(total_ms / 1000),
+    }))
+    .filter((row) => row.slide > 0)
+    .sort((a, b) => b.total_ms - a.total_ms);
+};
+
+export const aggregatePitchDeckEngagement = (sessions = []) => {
+  let completedSessions = 0;
+  const investorSessions = new Map();
+
+  for (const session of sessions) {
+    if (session.completed) completedSessions += 1;
 
     const investorId = String(session.investor_user_id);
     if (!investorSessions.has(investorId)) {
@@ -47,14 +63,7 @@ export const aggregatePitchDeckEngagement = (sessions = []) => {
       ? Math.round((completedSessions / totalSessions) * 100)
       : null;
 
-  const slideEngagement = Object.entries(slideTimeMs)
-    .map(([slide, total_ms]) => ({
-      slide: Number(slide),
-      total_ms: Math.round(total_ms),
-      total_seconds: Math.round(total_ms / 1000),
-    }))
-    .filter((row) => row.slide > 0)
-    .sort((a, b) => b.total_ms - a.total_ms);
+  const slideEngagement = computeSlideEngagement(sessions);
 
   const topSlides = slideEngagement.slice(0, 5);
   const bottomSlides = [...slideEngagement]
@@ -63,21 +72,19 @@ export const aggregatePitchDeckEngagement = (sessions = []) => {
 
   const byInvestor = [...investorSessions.entries()].map(
     ([investorUserId, investorRows]) => {
-      const investorAgg = aggregatePitchDeckEngagement(investorRows);
+      const completedForInvestor = investorRows.filter(
+        (row) => row.completed,
+      ).length;
       return {
         investor_user_id: investorUserId,
         session_count: investorRows.length,
         revisit_count: Math.max(investorRows.length - 1, 0),
-        completed_sessions: investorRows.filter((row) => row.completed).length,
+        completed_sessions: completedForInvestor,
         completion_rate:
           investorRows.length > 0
-            ? Math.round(
-                (investorRows.filter((row) => row.completed).length /
-                  investorRows.length) *
-                  100,
-              )
+            ? Math.round((completedForInvestor / investorRows.length) * 100)
             : null,
-        top_slides: investorAgg.top_slides,
+        top_slides: computeSlideEngagement(investorRows).slice(0, 5),
         total_duration_ms: investorRows.reduce(
           (sum, row) => sum + Number(row.total_duration_ms || 0),
           0,
