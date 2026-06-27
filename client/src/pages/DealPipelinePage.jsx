@@ -193,19 +193,25 @@ const DealPipelinePage = () => {
     });
   };
 
-  const loadPipeline = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    const result = await dealPipelineService.getPipeline(period);
-    if (!result.success) {
-      setError(result.error);
-      setLoading(false);
-      return;
-    }
-    setCardsByStage(result.data.cards_by_stage || {});
-    setStats(result.data.stats || null);
-    setLoading(false);
-  }, [period]);
+  const loadPipeline = useCallback(
+    async ({ silent = false } = {}) => {
+      // `silent` skips the full-page spinner so a background refresh (e.g. after
+      // a drag-drop) updates the cards/stats in place instead of flashing the
+      // whole board.
+      if (!silent) setLoading(true);
+      setError("");
+      const result = await dealPipelineService.getPipeline(period);
+      if (!result.success) {
+        setError(result.error);
+        if (!silent) setLoading(false);
+        return;
+      }
+      setCardsByStage(result.data.cards_by_stage || {});
+      setStats(result.data.stats || null);
+      if (!silent) setLoading(false);
+    },
+    [period],
+  );
 
   useEffect(() => {
     loadPipeline();
@@ -228,12 +234,31 @@ const DealPipelinePage = () => {
       }
     }
 
+    if (!sourceStage || sourceStage === targetStage) return;
+
+    // Optimistic move: update local state immediately so only the cards shift,
+    // not the whole page. Snapshot first so we can revert if the API fails.
+    const previousState = cardsByStage;
+    setCardsByStage((prev) => {
+      const next = {};
+      for (const [stage, cards] of Object.entries(prev)) {
+        next[stage] = cards.filter((card) => card.id !== cardId);
+      }
+      next[targetStage] = [
+        ...(next[targetStage] || []),
+        { ...sourceCard, stage_entered_at: new Date().toISOString() },
+      ];
+      return next;
+    });
+
     const result = await dealPipelineService.moveCard(cardId, targetStage);
     if (!result.success) {
       setError(result.error);
+      setCardsByStage(previousState); // revert
       return;
     }
-    await loadPipeline();
+    // Background refresh to sync stats + server-computed fields, no spinner.
+    loadPipeline({ silent: true });
 
     if (
       targetStage === "DECISION" &&
