@@ -234,7 +234,7 @@ const ConnectionDdChecklistPanel = ({
               <div className="text-sm text-primary bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 flex items-center justify-between gap-3">
                 <span>{pipelineHint}</span>
                 <Link
-                  to="/pipeline"
+                  to="/analytics"
                   className="shrink-0 text-xs font-semibold underline"
                 >
                   Open pipeline

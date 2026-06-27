@@ -114,7 +114,7 @@ const StartupComparisonPage = () => {
             Back to discovery
           </Link>
           <Link
-            to="/pipeline"
+            to="/analytics"
             className="text-sm text-content-secondary hover:text-primary"
           >
             Deal pipeline

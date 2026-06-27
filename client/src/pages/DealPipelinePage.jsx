@@ -28,6 +28,7 @@ import {
 } from "../services/dealPipelineService";
 import IntentLevelControl from "../components/investor/IntentLevelControl";
 import PipelineCardNotesPanel from "../components/dealPipeline/PipelineCardNotesPanel";
+import WatchlistSection from "../components/investor/WatchlistSection";
 
 const STAGE_LABELS = {
   PRE_SEED: "Pre-seed",
@@ -283,9 +284,9 @@ const DealPipelinePage = () => {
           <span className={pageEyebrowClass}>Active Dealflow</span>
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <h1 className={pageHeadingClass}>Investor Pipeline</h1>
+              <h1 className={pageHeadingClass}>Analytics</h1>
               <p className={pageSubheadingClass}>
-                Drag startup cards between stages to track your deal flow.
+                Track your deal flow across stages and review your saved watchlist.
               </p>
             </div>
             <div className="flex rounded-xl border border-outline-variant/40 bg-surface-container p-1">
@@ -489,6 +490,10 @@ const DealPipelinePage = () => {
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="border-t border-line pt-8">
+          <WatchlistSection />
         </div>
       </div>
 

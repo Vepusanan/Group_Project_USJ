@@ -80,7 +80,11 @@ Be specific, professional, and balanced. Mention both alignment strengths and an
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.4,
-          maxOutputTokens: 220,
+          // 2.5+ models are "thinking" models that consume output tokens on
+          // internal reasoning. Disable thinking so the full budget goes to the
+          // visible answer, otherwise the explanation gets truncated mid-sentence.
+          thinkingConfig: { thinkingBudget: 0 },
+          maxOutputTokens: 400,
         },
       }),
     });
@@ -173,6 +177,7 @@ Include every standard section in sections_present. Be specific and professional
         ],
         generationConfig: {
           temperature: 0.35,
+          thinkingConfig: { thinkingBudget: 0 },
           maxOutputTokens: 900,
           responseMimeType: "application/json",
         },
@@ -285,6 +290,7 @@ If a section is not covered in the document, state that briefly rather than inve
         ],
         generationConfig: {
           temperature: 0.3,
+          thinkingConfig: { thinkingBudget: 0 },
           maxOutputTokens: 900,
           responseMimeType: "application/json",
         },
@@ -386,6 +392,7 @@ Map conversational stage names (e.g. seed, pre-seed) to the enum values.`;
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.2,
+          thinkingConfig: { thinkingBudget: 0 },
           maxOutputTokens: 400,
           responseMimeType: "application/json",
         },
@@ -477,6 +484,7 @@ Be concise, professional, and grounded in the provided data.`;
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.4,
+          thinkingConfig: { thinkingBudget: 0 },
           maxOutputTokens: 900,
           responseMimeType: "application/json",
         },

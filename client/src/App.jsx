@@ -55,7 +55,6 @@ import {
   StartupComparisonPage,
   StartupProfilePage,
   StartupsPage,
-  WatchlistPage,
 } from "./routes/lazyPages";
 import { getRoleHomePath } from "./utils/roleUtils";
 import { useAuth } from "./hooks/useAuth";
@@ -71,6 +70,17 @@ const AUTH_CHROMELESS_ROUTES = [
 const LazyPage = ({ children }) => (
   <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>{children}</Suspense>
 );
+
+// /analytics is shared: startups see their analytics dashboard, investors see
+// their deal pipeline + watchlist (formerly the separate "Pipeline" page).
+const RoleAnalyticsPage = () => {
+  const { user } = useAuth();
+  return user?.userType === "investor" ? (
+    <DealPipelinePage />
+  ) : (
+    <StartupAnalyticsPage />
+  );
+};
 
 const AppContent = () => {
   const location = useLocation();
@@ -221,8 +231,8 @@ const AppContent = () => {
               <Route
                 path="/analytics"
                 element={
-                  <RoleRoute allowedTypes={["startup"]}>
-                    <StartupAnalyticsPage />
+                  <RoleRoute allowedTypes={["startup", "investor"]}>
+                    <RoleAnalyticsPage />
                   </RoleRoute>
                 }
               />
@@ -246,13 +256,10 @@ const AppContent = () => {
               <Route path="/startups/:id/pitch-deck" element={<PitchDeckViewerPage />} />
               <Route path="/investors" element={<InvestorsPage />} />
               <Route path="/investors/:id" element={<InvestorProfilePage />} />
+              {/* Legacy routes — investor pipeline + watchlist now live on /analytics. */}
               <Route
                 path="/pipeline"
-                element={
-                  <RoleRoute allowedTypes={["investor"]}>
-                    <DealPipelinePage />
-                  </RoleRoute>
-                }
+                element={<Navigate to="/analytics" replace />}
               />
               <Route
                 path="/compare"
@@ -264,11 +271,7 @@ const AppContent = () => {
               />
               <Route
                 path="/watchlist"
-                element={
-                  <RoleRoute allowedTypes={["investor"]}>
-                    <WatchlistPage />
-                  </RoleRoute>
-                }
+                element={<Navigate to="/analytics" replace />}
               />
               <Route
                 path="/admin/analytics"

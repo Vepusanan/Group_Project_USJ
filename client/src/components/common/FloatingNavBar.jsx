@@ -89,23 +89,15 @@ const FloatingNavBar = () => {
         label: "Investors",
         isActive: (path) => path.startsWith("/investors"),
       },
-      ...(isInvestor
-        ? [
-            {
-              key: "pipeline",
-              to: "/pipeline",
-              label: "Pipeline",
-              isActive: (path) => path.startsWith("/pipeline"),
-            },
-          ]
-        : [
-            {
-              key: "analytics",
-              to: "/analytics",
-              label: "Analytics",
-              isActive: (path) => path.startsWith("/analytics"),
-            },
-          ]),
+      {
+        key: "analytics",
+        to: "/analytics",
+        label: "Analytics",
+        isActive: (path) =>
+          path.startsWith("/analytics") ||
+          path.startsWith("/pipeline") ||
+          path.startsWith("/watchlist"),
+      },
       {
         key: "connections",
         to: "/connections",
@@ -120,7 +112,7 @@ const FloatingNavBar = () => {
         isActive: (path) => path.startsWith("/messages"),
       },
     ],
-    [isInvestor, unreadMessages],
+    [unreadMessages],
   );
 
   const items = isLoggedIn ? authItems : publicItems;
