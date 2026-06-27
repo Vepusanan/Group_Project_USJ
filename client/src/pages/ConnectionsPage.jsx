@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { apiService } from "../services/apiService";
 import { useAuth } from "../hooks/useAuth";
+import { useConnectionNotifications } from "../hooks/useConnectionNotifications";
 import IntentLevelControl from "../components/investor/IntentLevelControl";
 import ConnectionNotesPanel from "../components/connections/ConnectionNotesPanel";
 import ConnectionMeetingsPanel from "../components/connections/ConnectionMeetingsPanel";
@@ -33,6 +34,11 @@ import {
 const connectionActionBtnClass =
   "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 border-content-muted/30 bg-surface text-sm font-medium text-content-secondary shadow-sm hover:text-primary hover:border-primary/60 hover:bg-primary/5 transition-colors";
 
+// Red activity dot for a connection action button (top-right corner).
+const ActionDot = () => (
+  <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-surface" />
+);
+
 const ConnectionsPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,6 +55,7 @@ const ConnectionsPage = () => {
   const [meetingsConnection, setMeetingsConnection] = useState(null);
   const [ddConnection, setDdConnection] = useState(null);
   const [qaConnection, setQaConnection] = useState(null);
+  const { flagsFor, markFeatureRead } = useConnectionNotifications();
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -306,35 +313,52 @@ const ConnectionsPage = () => {
                             <StickyNote className="w-4 h-4" />
                             Notes
                           </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setMeetingsConnection({
-                                ...connection,
-                                openRequestForm: isInvestor,
-                              })
-                            }
-                            className={connectionActionBtnClass}
-                          >
-                            <CalendarClock className="w-4 h-4" />
-                            {isInvestor ? "Request Meeting" : "Meetings"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDdConnection(connection)}
-                            className={connectionActionBtnClass}
-                          >
-                            <ClipboardList className="w-4 h-4" />
-                            DD Checklist
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setQaConnection(connection)}
-                            className={connectionActionBtnClass}
-                          >
-                            <MessageCircleQuestion className="w-4 h-4" />
-                            Q&amp;A
-                          </button>
+                          {(() => {
+                            const flags = flagsFor(connection.id);
+                            return (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    markFeatureRead(connection.id, "meetings");
+                                    setMeetingsConnection({
+                                      ...connection,
+                                      openRequestForm: isInvestor,
+                                    });
+                                  }}
+                                  className={`relative ${connectionActionBtnClass}`}
+                                >
+                                  <CalendarClock className="w-4 h-4" />
+                                  {isInvestor ? "Request Meeting" : "Meetings"}
+                                  {flags.meetings && <ActionDot />}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    markFeatureRead(connection.id, "dd");
+                                    setDdConnection(connection);
+                                  }}
+                                  className={`relative ${connectionActionBtnClass}`}
+                                >
+                                  <ClipboardList className="w-4 h-4" />
+                                  DD Checklist
+                                  {flags.dd && <ActionDot />}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    markFeatureRead(connection.id, "qa");
+                                    setQaConnection(connection);
+                                  }}
+                                  className={`relative ${connectionActionBtnClass}`}
+                                >
+                                  <MessageCircleQuestion className="w-4 h-4" />
+                                  Q&amp;A
+                                  {flags.qa && <ActionDot />}
+                                </button>
+                              </>
+                            );
+                          })()}
                           <button
                             type="button"
                             onClick={() => handleMessage(connection)}

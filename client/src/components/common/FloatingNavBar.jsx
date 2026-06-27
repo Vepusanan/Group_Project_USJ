@@ -5,6 +5,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { AUTH_STATUS } from "../../utils/authStateMachine.js";
 import { apiService } from "../../services/apiService";
 import { useProfileData } from "../../hooks/useProfileCache";
+import { useConnectionNotifications } from "../../hooks/useConnectionNotifications";
 
 const updateSlider = (container, activeEl, setSliderStyle) => {
   if (!container || !activeEl) return;
@@ -22,6 +23,7 @@ const FloatingNavBar = () => {
   const navigate = useNavigate();
   const { authStatus, user, logout, isLoading } = useAuth();
   const { profile } = useProfileData();
+  const { hasAnyActivity: hasConnectionActivity } = useConnectionNotifications();
   const containerRef = useRef(null);
   const itemRefs = useRef({});
   const [sliderStyle, setSliderStyle] = useState({ left: 0, width: 0, opacity: 0 });
@@ -102,6 +104,7 @@ const FloatingNavBar = () => {
         key: "connections",
         to: "/connections",
         label: "Connections",
+        dot: hasConnectionActivity,
         isActive: (path) => path.startsWith("/connections"),
       },
       {
@@ -112,7 +115,7 @@ const FloatingNavBar = () => {
         isActive: (path) => path.startsWith("/messages"),
       },
     ],
-    [unreadMessages],
+    [unreadMessages, hasConnectionActivity],
   );
 
   const items = isLoggedIn ? authItems : publicItems;
@@ -233,6 +236,9 @@ const FloatingNavBar = () => {
                   <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
                     {item.badge > 9 ? "9+" : item.badge}
                   </span>
+                )}
+                {item.dot && !item.badge && (
+                  <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-red-500" />
                 )}
               </Link>
             );
