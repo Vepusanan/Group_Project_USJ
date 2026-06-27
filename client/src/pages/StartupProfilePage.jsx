@@ -579,6 +579,23 @@ const StartupProfilePage = () => {
           </div>
         )}
 
+        {/* ── PITCH VIDEO ───────────────────────────────────────────────────── */}
+        {(profile.has_founder_video || profile.founder_video_url) && (
+          <SectionCard title="Pitch Video" icon={Video} accent="blue">
+            {profile.founder_video_url ? (
+              <video
+                src={profile.founder_video_url}
+                controls
+                playsInline
+                poster={profile.founder_video_thumbnail_url || undefined}
+                className="w-full rounded-xl border border-line max-h-[28rem] bg-black"
+              />
+            ) : (
+              <LockOverlay message="Connect with this startup to watch their pitch video" />
+            )}
+          </SectionCard>
+        )}
+
         {/* ── ABOUT ─────────────────────────────────────────────────────────── */}
         {(profile.detailed_description || profile.problem_statement || profile.solution) && (
           <SectionCard title="About" icon={BarChart2} accent="purple">
