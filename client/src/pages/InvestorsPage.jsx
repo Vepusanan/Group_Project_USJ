@@ -12,6 +12,7 @@ import {
   ArrowUpDown,
   X,
   DollarSign,
+  Users,
 } from "lucide-react";
 import { useDebounce } from "../hooks/useDebounce";
 import { apiService } from "../services/apiService";
@@ -59,6 +60,7 @@ const defaultFilters = {
   investment_stage: "",
   investment_min: "",
   investment_max: "",
+  connected_only: false,
   sort: "newest",
 };
 
@@ -522,7 +524,7 @@ const InvestorsPage = () => {
   }, [fetchInvestors]);
 
   const hasActiveFilters = Object.entries(filters).some(
-    ([k, v]) => k !== "sort" && v !== "",
+    ([k, v]) => k !== "sort" && v !== "" && v !== false,
   );
 
   return (
@@ -666,6 +668,22 @@ const InvestorsPage = () => {
             </div>
 
             <div className="flex items-center gap-2 lg:ml-auto">
+              {user && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleFilterChange("connected_only", !filters.connected_only)
+                  }
+                  aria-pressed={filters.connected_only}
+                  className={`flex items-center gap-1.5 h-10 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                    filters.connected_only
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-line bg-surface-alt text-content-secondary hover:text-content hover:border-line-strong"
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" /> Connected only
+                </button>
+              )}
               {hasActiveFilters && (
                 <button
                   type="button"
@@ -677,15 +695,21 @@ const InvestorsPage = () => {
               )}
               <div className="relative">
                 <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-content-muted pointer-events-none" />
-                <select
-                  value={filters.sort}
-                  onChange={(e) => handleFilterChange("sort", e.target.value)}
-                  className="h-10 appearance-none rounded-lg bg-surface-alt border border-line pl-9 pr-9 text-sm text-content focus:outline-none focus:border-primary-light/50 transition-colors"
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="alphabetical">Alphabetical</option>
-                  <option value="most_experienced">Most Experienced</option>
-                </select>
+                {filters.connected_only ? (
+                  <div className="h-10 flex items-center rounded-lg bg-surface-alt border border-line pl-9 pr-9 text-sm text-content-secondary opacity-60 cursor-not-allowed">
+                    Recently connected
+                  </div>
+                ) : (
+                  <select
+                    value={filters.sort}
+                    onChange={(e) => handleFilterChange("sort", e.target.value)}
+                    className="h-10 appearance-none rounded-lg bg-surface-alt border border-line pl-9 pr-9 text-sm text-content focus:outline-none focus:border-primary-light/50 transition-colors"
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="alphabetical">Alphabetical</option>
+                    <option value="most_experienced">Most Experienced</option>
+                  </select>
+                )}
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted pointer-events-none" />
               </div>
             </div>

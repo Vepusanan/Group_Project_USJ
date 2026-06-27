@@ -165,6 +165,11 @@ const verificationRankSql = `CASE COALESCE(u.verification_tier::text, 'UNVERIFIE
 END DESC`;
 
 const getSortClause = (sort, investorUserIdForScoring = null) => {
+  if (sort === "connection_recent") {
+    // conn.updated_at (acceptance time) comes from the connected-only INNER JOIN.
+    return `ORDER BY conn.updated_at DESC NULLS LAST, sp.startup_profile_id DESC`;
+  }
+
   if (sort === "match_score" && investorUserIdForScoring) {
     return `ORDER BY ${verificationRankSql}, cms.match_score DESC NULLS LAST, sp.created_at DESC NULLS LAST, sp.startup_profile_id DESC`;
   }
@@ -178,6 +183,28 @@ const getSortClause = (sort, investorUserIdForScoring = null) => {
     default:
       return `ORDER BY ${verificationRankSql}, sp.created_at DESC NULLS LAST, sp.startup_profile_id DESC`;
   }
+};
+
+// Builds an INNER JOIN onto public.connections that restricts results to the
+// requester's ACCEPTED connections and exposes `conn.connected_at` (acceptance
+// time) for sorting. Returns "" when not applicable. Handles both connection
+// schema variants.
+const buildConnectedOnlyJoin = (schemaType, requesterRef) => {
+  if (schemaType === "investor_startup") {
+    return `
+      INNER JOIN public.connections conn
+        ON conn.startup_id::text = sp.user_id::text
+       AND conn.investor_id::text = ${requesterRef}
+       AND LOWER(conn.status) IN ('accepted', 'connected')`;
+  }
+  // requester_receiver schema: the other party may be requester or receiver.
+  return `
+      INNER JOIN public.connections conn
+        ON (
+             (conn.requester_id::text = ${requesterRef} AND conn.receiver_id::text = sp.user_id::text)
+          OR (conn.receiver_id::text = ${requesterRef} AND conn.requester_id::text = sp.user_id::text)
+        )
+       AND LOWER(conn.status) IN ('accepted', 'connected')`;
 };
 
 export async function createStartupProfile(userId, payload) {
@@ -320,6 +347,7 @@ export async function listStartups(options = {}) {
     requesterUserId = null,
     investorUserIdForScoring = null,
     excludePassedForInvestorId = null,
+    connectedOnly = false,
   } = options;
 
   const industries = Array.isArray(industry)
@@ -343,8 +371,29 @@ export async function listStartups(options = {}) {
     excludePassedForInvestorId,
   });
 
+  // Connected-only restriction: INNER JOIN accepted connections. The join param
+  // (requesterUserId) is appended to the shared `values` array so the same
+  // placeholder is valid in both the select and count queries.
+  const connectionMeta =
+    connectedOnly && requesterUserId ? await getConnectionTableMeta() : null;
+  const useConnectedOnly = Boolean(connectionMeta?.available);
+  let connectedOnlyJoin = "";
+  if (useConnectedOnly) {
+    values.push(requesterUserId);
+    const requesterRef = `$${values.length}`;
+    connectedOnlyJoin = buildConnectedOnlyJoin(
+      connectionMeta.schemaType,
+      requesterRef,
+    );
+  }
+
+  // connection_recent sort is only meaningful with the connected-only join.
+  const effectiveSort =
+    sort === "connection_recent" && !useConnectedOnly ? "newest" : sort;
+
   const offset = (page - 1) * limit;
-  const useMatchScoreSort = sort === "match_score" && investorUserIdForScoring;
+  const useMatchScoreSort =
+    effectiveSort === "match_score" && investorUserIdForScoring;
 
   if (useMatchScoreSort) {
     await ensureCompatibilityTables();
@@ -370,9 +419,10 @@ export async function listStartups(options = {}) {
     FROM startup_profiles sp
     LEFT JOIN privacy_settings ps ON ps.user_id = sp.user_id
     LEFT JOIN users u ON u.id = sp.user_id
+    ${connectedOnlyJoin}
     ${matchScoreJoin}
     ${whereClause}
-    ${getSortClause(sort, investorUserIdForScoring)}
+    ${getSortClause(effectiveSort, investorUserIdForScoring)}
     LIMIT ${limitRef} OFFSET ${offsetRef}
   `;
 
@@ -381,6 +431,7 @@ export async function listStartups(options = {}) {
     FROM startup_profiles sp
     LEFT JOIN privacy_settings ps ON ps.user_id = sp.user_id
     LEFT JOIN users u ON u.id = sp.user_id
+    ${connectedOnlyJoin}
     ${whereClause}
   `;
 

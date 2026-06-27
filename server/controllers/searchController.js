@@ -28,12 +28,17 @@ const ALLOWED_SORTS = new Set([
   "alphabetical",
   "recently_updated",
   "match_score",
+  "connection_recent",
 ]);
 const ALLOWED_INVESTOR_SORTS = new Set([
   "newest",
   "alphabetical",
   "most_experienced",
+  "connection_recent",
 ]);
+
+const isTruthyParam = (value) =>
+  value === true || value === "true" || value === "1";
 
 const ALLOWED_INVESTOR_TYPES = new Set([
   "ANGEL",
@@ -78,7 +83,12 @@ export const getStartups = async (req, res, next) => {
     const limit = Math.min(requestedLimit, MAX_LIMIT);
     const isInvestorViewer = req.user?.user_type === "investor";
     const investorUserIdForScoring = isInvestorViewer ? req.user.id : null;
-    const sort = req.query.sort || (isInvestorViewer ? "match_score" : "newest");
+    // Connected-only requires a logged-in viewer and forces the most-recent
+    // connection sort.
+    const connectedOnly = isTruthyParam(req.query.connected_only) && !!req.user;
+    const sort = connectedOnly
+      ? "connection_recent"
+      : req.query.sort || (isInvestorViewer ? "match_score" : "newest");
 
     if (!ALLOWED_SORTS.has(sort)) {
       return res.status(400).json({
@@ -125,6 +135,7 @@ export const getStartups = async (req, res, next) => {
       requesterUserId: req.user?.id || null,
       investorUserIdForScoring,
       excludePassedForInvestorId: isInvestorViewer ? req.user.id : null,
+      connectedOnly,
     });
 
     const matchScoreMap = isInvestorViewer
@@ -199,7 +210,10 @@ export const getInvestors = async (req, res, next) => {
     const page = toPositiveInteger(req.query.page, DEFAULT_PAGE);
     const requestedLimit = toPositiveInteger(req.query.limit, DEFAULT_LIMIT);
     const limit = Math.min(requestedLimit, MAX_LIMIT);
-    const sort = req.query.sort || "newest";
+    const connectedOnly = isTruthyParam(req.query.connected_only) && !!req.user;
+    const sort = connectedOnly
+      ? "connection_recent"
+      : req.query.sort || "newest";
 
     if (!ALLOWED_INVESTOR_SORTS.has(sort)) {
       return res.status(400).json({
@@ -248,6 +262,7 @@ export const getInvestors = async (req, res, next) => {
       investment_max,
       sort,
       requesterUserId: req.user?.id || null,
+      connectedOnly,
     });
 
     const investorUserIds = result.rows.map((row) => row.user_id);

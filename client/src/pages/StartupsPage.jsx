@@ -45,6 +45,7 @@ const defaultFilters = {
   funding_stage: "",
   revenue_status: "",
   min_verification: "",
+  connected_only: false,
   sort: "newest",
 };
 
@@ -732,7 +733,7 @@ const StartupsPage = () => {
   }, [fetchStartups]);
 
   const hasActiveFilters = Object.entries(filters).some(
-    ([k, v]) => k !== "sort" && v !== ""
+    ([k, v]) => k !== "sort" && v !== "" && v !== false,
   );
 
   return (
@@ -891,30 +892,59 @@ const StartupsPage = () => {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-outline-variant/20">
-            {hasActiveFilters && (
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-outline-variant/20">
+            {user ? (
               <button
                 type="button"
-                onClick={clearFilters}
-                className="inline-flex items-center gap-1.5 h-11 px-4 rounded-xl border border-outline-variant/40 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
+                onClick={() =>
+                  handleFilterChange("connected_only", !filters.connected_only)
+                }
+                aria-pressed={filters.connected_only}
+                className={`inline-flex items-center gap-2 h-11 px-4 rounded-xl border text-sm font-medium transition-colors ${
+                  filters.connected_only
+                    ? "border-primary bg-primary-fixed text-primary"
+                    : "border-outline-variant/40 text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
+                }`}
               >
-                <X className="w-3.5 h-3.5" />
-                Clear
+                <Users className="w-4 h-4" />
+                Connected only
               </button>
+            ) : (
+              <span />
             )}
-            <div className="relative">
-              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-outline pointer-events-none" />
-              <select
-                value={filters.sort}
-                onChange={(e) => handleFilterChange("sort", e.target.value)}
-                className={`${filterFieldClass} w-auto min-w-[11rem] pl-9`}
-              >
-                {isInvestorViewer && <option value="match_score">Best Match</option>}
-                <option value="newest">Newest First</option>
-                <option value="alphabetical">Alphabetical</option>
-                <option value="recently_updated">Recently Updated</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline pointer-events-none" />
+            <div className="flex flex-wrap items-center gap-3">
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="inline-flex items-center gap-1.5 h-11 px-4 rounded-xl border border-outline-variant/40 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Clear
+                </button>
+              )}
+              <div className="relative">
+                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-outline pointer-events-none" />
+                {filters.connected_only ? (
+                  <div
+                    className={`${filterFieldClass} w-auto min-w-[11rem] pl-9 flex items-center text-on-surface-variant opacity-60 cursor-not-allowed`}
+                  >
+                    Recently connected
+                  </div>
+                ) : (
+                  <select
+                    value={filters.sort}
+                    onChange={(e) => handleFilterChange("sort", e.target.value)}
+                    className={`${filterFieldClass} w-auto min-w-[11rem] pl-9`}
+                  >
+                    {isInvestorViewer && <option value="match_score">Best Match</option>}
+                    <option value="newest">Newest First</option>
+                    <option value="alphabetical">Alphabetical</option>
+                    <option value="recently_updated">Recently Updated</option>
+                  </select>
+                )}
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline pointer-events-none" />
+              </div>
             </div>
           </div>
         </div>

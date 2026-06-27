@@ -70,44 +70,51 @@ const PipelineCard = ({
       onDragStart?.(card.id);
     }}
     onDragEnd={() => onDragStart?.(null)}
-    className={`${cardClass} p-4 cursor-grab active:cursor-grabbing transition-opacity ${
-      isDragging ? "opacity-50" : ""
+    className={`${cardClass} p-4 cursor-grab active:cursor-grabbing transition-all hover:shadow-md ${
+      isDragging ? "opacity-50 ring-2 ring-primary/40" : ""
     }`}
   >
-    <div className="flex items-start gap-2">
-      <GripVertical className="w-4 h-4 text-content-muted shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-2">
+    <div className="flex items-start gap-2.5">
+      <GripVertical className="w-4 h-4 text-content-muted/60 shrink-0 mt-1" />
+      <div className="flex-1 min-w-0 space-y-3">
+        {/* Header: logo + name */}
+        <div className="flex items-center gap-2.5">
           {card.startup_logo_url ? (
             <img
               src={card.startup_logo_url}
               alt=""
-              className="w-8 h-8 rounded-lg object-cover border border-line"
+              className="w-9 h-9 rounded-lg object-cover border border-line shrink-0"
             />
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center text-xs font-bold text-primary">
+            <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center text-sm font-bold text-primary shrink-0">
               {(card.startup_name || "S").charAt(0)}
             </div>
           )}
           <Link
             to={`/startups/${card.startup_profile_id}`}
-            className="font-semibold text-sm text-content hover:text-primary truncate"
+            className="font-semibold text-sm text-content hover:text-primary truncate leading-tight"
             onClick={(e) => e.stopPropagation()}
           >
             {card.startup_name || "Startup"}
           </Link>
         </div>
-        <p className="text-xs text-content-muted truncate">
-          {card.industry || "Industry N/A"}
-        </p>
-        <p className="text-xs text-content-secondary mt-0.5">
-          {STAGE_LABELS[card.funding_stage] || card.funding_stage || "Stage N/A"}
-        </p>
-        <p className="text-[10px] text-content-muted mt-2">
+
+        {/* Meta chips: industry + funding stage */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="inline-flex items-center rounded-full bg-surface-alt border border-line px-2 py-0.5 text-[11px] font-medium text-content-secondary">
+            {card.industry || "Industry N/A"}
+          </span>
+          <span className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[11px] font-medium text-primary">
+            {STAGE_LABELS[card.funding_stage] || card.funding_stage || "Stage N/A"}
+          </span>
+        </div>
+
+        <p className="text-[10px] text-content-muted">
           In stage since {formatStageDate(card.stage_entered_at)}
         </p>
+
+        {/* Intent control */}
         <div
-          className="mt-2"
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
@@ -118,41 +125,43 @@ const PipelineCard = ({
             compact
           />
         </div>
+
         {card.decision_outcome && (
-          <p className="text-[10px] text-primary mt-1 font-semibold uppercase">
+          <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
             {card.decision_outcome === "INVEST"
               ? "Proceed to invest"
               : card.decision_outcome === "DEFER"
                 ? "Deferred"
                 : "Passed"}
-          </p>
+          </span>
         )}
-        {card.private_notes && (
-          <p className="text-[10px] text-content-muted mt-1 line-clamp-1 italic">
-            Note saved
-          </p>
-        )}
-        {showCompare && (
-          <label className="mt-2 inline-flex items-center gap-1 text-[11px] text-content-muted cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isSelectedForCompare}
-              onChange={() => onToggleCompare?.(card.startup_profile_id)}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-              className="rounded border-line"
-            />
-            Compare
-          </label>
-        )}
-        <button
-          type="button"
-          onClick={() => onOpenNotes(card)}
-          className="mt-2 inline-flex items-center gap-1 text-[11px] text-content-muted hover:text-primary"
-        >
-          <StickyNote className="w-3 h-3" />
-          Notes
-        </button>
+
+        {/* Footer: compare + notes, divided from body */}
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-line">
+          {showCompare ? (
+            <label className="inline-flex items-center gap-1.5 text-[11px] text-content-muted cursor-pointer hover:text-content">
+              <input
+                type="checkbox"
+                checked={isSelectedForCompare}
+                onChange={() => onToggleCompare?.(card.startup_profile_id)}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                className="rounded border-line"
+              />
+              Compare
+            </label>
+          ) : (
+            <span />
+          )}
+          <button
+            type="button"
+            onClick={() => onOpenNotes(card)}
+            className="inline-flex items-center gap-1 text-[11px] text-content-muted hover:text-primary"
+          >
+            <StickyNote className="w-3 h-3" />
+            {card.private_notes ? "Note saved" : "Notes"}
+          </button>
+        </div>
       </div>
     </div>
   </div>

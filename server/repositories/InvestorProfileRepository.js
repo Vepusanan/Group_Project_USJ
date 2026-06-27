@@ -282,6 +282,11 @@ const investorVerificationRankSql = `CASE COALESCE(u.verification_tier::text, 'U
 END DESC`;
 
 const getInvestorSortClause = (sort) => {
+  if (sort === "connection_recent") {
+    // conn.updated_at (acceptance time) from the connected-only INNER JOIN.
+    return `ORDER BY conn.updated_at DESC NULLS LAST, ip.investor_profile_id DESC`;
+  }
+
   switch (sort) {
     case "alphabetical":
       return `ORDER BY ${investorVerificationRankSql}, ip.name_or_firm ASC NULLS LAST`;
@@ -290,6 +295,61 @@ const getInvestorSortClause = (sort) => {
     default:
       return `ORDER BY ${investorVerificationRankSql}, ip.investor_profile_id DESC`;
   }
+};
+
+let connectionTableMetaCache = null;
+
+// Mirrors the helper in StartupProfileRepository: detects the connections table
+// and which schema variant it uses, cached after first lookup.
+const getConnectionTableMeta = async () => {
+  if (connectionTableMetaCache !== null) return connectionTableMetaCache;
+
+  const tableResult = await pool.query(
+    `SELECT to_regclass('public.connections') AS table_name`,
+  );
+  if (!tableResult.rows[0]?.table_name) {
+    connectionTableMetaCache = { available: false };
+    return connectionTableMetaCache;
+  }
+
+  const columnResult = await pool.query(
+    `SELECT column_name FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'connections'`,
+  );
+  const columns = new Set(columnResult.rows.map((r) => r.column_name));
+  const hasInvestorStartup =
+    columns.has("investor_id") && columns.has("startup_id") && columns.has("status");
+  const hasRequesterReceiver =
+    columns.has("requester_id") && columns.has("receiver_id") && columns.has("status");
+
+  connectionTableMetaCache = {
+    available: hasInvestorStartup || hasRequesterReceiver,
+    schemaType: hasInvestorStartup
+      ? "investor_startup"
+      : hasRequesterReceiver
+        ? "requester_receiver"
+        : null,
+  };
+  return connectionTableMetaCache;
+};
+
+// INNER JOIN restricting investor rows to the requester's accepted connections,
+// exposing conn.updated_at for the connection_recent sort.
+const buildInvestorConnectedOnlyJoin = (schemaType, requesterRef) => {
+  if (schemaType === "investor_startup") {
+    return `
+      INNER JOIN public.connections conn
+        ON conn.investor_id::text = ip.user_id::text
+       AND conn.startup_id::text = ${requesterRef}
+       AND LOWER(conn.status) IN ('accepted', 'connected')`;
+  }
+  return `
+      INNER JOIN public.connections conn
+        ON (
+             (conn.requester_id::text = ${requesterRef} AND conn.receiver_id::text = ip.user_id::text)
+          OR (conn.receiver_id::text = ${requesterRef} AND conn.requester_id::text = ip.user_id::text)
+        )
+       AND LOWER(conn.status) IN ('accepted', 'connected')`;
 };
 
 export async function createInvestorProfile(userId, payload) {
@@ -431,6 +491,7 @@ export async function listInvestors(options = {}) {
     investment_max,
     sort = "newest",
     requesterUserId = null,
+    connectedOnly = false,
   } = options;
 
   const industries = Array.isArray(industryParam)
@@ -453,6 +514,23 @@ export async function listInvestors(options = {}) {
     requesterUserId,
   });
 
+  // Connected-only INNER JOIN; requesterUserId is appended to the shared values
+  // so its placeholder is valid in both select and count queries.
+  const connectionMeta =
+    connectedOnly && requesterUserId ? await getConnectionTableMeta() : null;
+  const useConnectedOnly = Boolean(connectionMeta?.available);
+  let connectedOnlyJoin = "";
+  if (useConnectedOnly) {
+    values.push(requesterUserId);
+    connectedOnlyJoin = buildInvestorConnectedOnlyJoin(
+      connectionMeta.schemaType,
+      `$${values.length}`,
+    );
+  }
+
+  const effectiveSort =
+    sort === "connection_recent" && !useConnectedOnly ? "newest" : sort;
+
   const offset = (page - 1) * limit;
   const paginationValues = [...values, limit, offset];
   const limitRef = `$${paginationValues.length - 1}`;
@@ -463,8 +541,9 @@ export async function listInvestors(options = {}) {
     FROM investor_profiles ip
     LEFT JOIN privacy_settings ps ON ps.user_id = ip.user_id
     LEFT JOIN users u ON u.id = ip.user_id
+    ${connectedOnlyJoin}
     ${whereClause}
-    ${getInvestorSortClause(sort)}
+    ${getInvestorSortClause(effectiveSort)}
     LIMIT ${limitRef} OFFSET ${offsetRef}
   `;
 
@@ -473,6 +552,7 @@ export async function listInvestors(options = {}) {
     FROM investor_profiles ip
     LEFT JOIN privacy_settings ps ON ps.user_id = ip.user_id
     LEFT JOIN users u ON u.id = ip.user_id
+    ${connectedOnlyJoin}
     ${whereClause}
   `;
 
