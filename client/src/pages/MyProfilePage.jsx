@@ -25,6 +25,24 @@ const parseJson = (value, fallback = null) => {
   try { return JSON.parse(value); } catch { return fallback; }
 };
 
+const SECTION_LABELS = {
+  required: "Required details",
+  important: "Key highlights",
+  optional: "Optional extras",
+};
+
+// incompleteSections from the API are objects ({ section, missingFields,
+// completionRate }); render a readable label instead of [object Object].
+const formatIncompleteSection = (entry) => {
+  if (!entry) return "";
+  if (typeof entry === "string") return entry;
+  const key = entry.section || entry.name || "";
+  const label = SECTION_LABELS[key] || key.replace(/_/g, " ");
+  return entry.completionRate != null
+    ? `${label} (${entry.completionRate}%)`
+    : label;
+};
+
 const formatDate = (value) => {
   if (!value) return null;
   const d = new Date(value);
@@ -291,7 +309,11 @@ const MyProfilePage = () => {
             </div>
             {completion.incompleteSections?.length > 0 && (
               <p className="text-xs text-content-muted w-full">
-                Consider completing: {completion.incompleteSections.join(", ")}
+                Consider completing:{" "}
+                {completion.incompleteSections
+                  .map(formatIncompleteSection)
+                  .filter(Boolean)
+                  .join(", ")}
               </p>
             )}
           </div>
