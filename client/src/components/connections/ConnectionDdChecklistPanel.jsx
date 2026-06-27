@@ -322,10 +322,20 @@ const ConnectionDdChecklistPanel = ({
                         {hasViewableResponse(item) && (
                           <div className="flex flex-wrap items-center gap-2">
                             {item.response_type === "data_room_folder" ? (
-                              <span className="inline-flex items-center gap-1 text-xs text-primary">
-                                <FolderOpen className="w-3 h-3" />
-                                Data room folder: {item.linked_folder_name || item.response_document_name}
-                              </span>
+                              startupProfileId ? (
+                                <Link
+                                  to={`/startups/${startupProfileId}/data-room`}
+                                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                >
+                                  <FolderOpen className="w-3 h-3" />
+                                  Data room folder: {item.linked_folder_name || item.response_document_name}
+                                </Link>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-xs text-primary">
+                                  <FolderOpen className="w-3 h-3" />
+                                  Data room folder: {item.linked_folder_name || item.response_document_name}
+                                </span>
+                              )
                             ) : (
                               <>
                                 {item.has_response_document && isPdfItem(item) && (
@@ -340,7 +350,8 @@ const ConnectionDdChecklistPanel = ({
                                 )}
                               </>
                             )}
-                            {item.response_type === "data_room_document" &&
+                            {(item.response_type === "data_room_document" ||
+                              item.response_type === "data_room_folder") &&
                               startupProfileId && (
                                 <Link
                                   to={`/startups/${startupProfileId}/data-room`}

@@ -1,5 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  User,
+  StickyNote,
+  CalendarClock,
+  ClipboardList,
+  MessageCircleQuestion,
+  MessageSquare,
+  UserMinus,
+} from "lucide-react";
 import { apiService } from "../services/apiService";
 import { useAuth } from "../hooks/useAuth";
 import IntentLevelControl from "../components/investor/IntentLevelControl";
@@ -19,6 +28,10 @@ import {
   pageSubheadingClass,
   tabNavClass,
 } from "../styles/theme";
+
+// Shared styling for the connection action buttons (icon + label pills).
+const connectionActionBtnClass =
+  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 border-content-muted/30 bg-surface text-sm font-medium text-content-secondary shadow-sm hover:text-primary hover:border-primary/60 hover:bg-primary/5 transition-colors";
 
 const ConnectionsPage = () => {
   const navigate = useNavigate();
@@ -279,16 +292,18 @@ const ConnectionsPage = () => {
                             <button
                               type="button"
                               onClick={() => navigate(profilePath)}
-                              className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm transition-colors"
+                              className={connectionActionBtnClass}
                             >
+                              <User className="w-4 h-4" />
                               View Profile
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => setNotesConnection(connection)}
-                            className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm"
+                            className={connectionActionBtnClass}
                           >
+                            <StickyNote className="w-4 h-4" />
                             Notes
                           </button>
                           <button
@@ -299,37 +314,42 @@ const ConnectionsPage = () => {
                                 openRequestForm: isInvestor,
                               })
                             }
-                            className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm"
+                            className={connectionActionBtnClass}
                           >
+                            <CalendarClock className="w-4 h-4" />
                             {isInvestor ? "Request Meeting" : "Meetings"}
                           </button>
                           <button
                             type="button"
                             onClick={() => setDdConnection(connection)}
-                            className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm"
+                            className={connectionActionBtnClass}
                           >
+                            <ClipboardList className="w-4 h-4" />
                             DD Checklist
                           </button>
                           <button
                             type="button"
                             onClick={() => setQaConnection(connection)}
-                            className="px-3 py-1.5 rounded-lg border border-line text-content-secondary hover:text-content text-sm"
+                            className={connectionActionBtnClass}
                           >
-                            Q&A
+                            <MessageCircleQuestion className="w-4 h-4" />
+                            Q&amp;A
                           </button>
                           <button
                             type="button"
                             onClick={() => handleMessage(connection)}
-                            className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-dark text-sm !text-content-inverse transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-dark text-sm font-medium !text-content-inverse transition-colors"
                           >
+                            <MessageSquare className="w-4 h-4" />
                             Message
                           </button>
                           <button
                             type="button"
                             onClick={() => handleRemoveConnection(connection.id)}
                             disabled={actionLoadingId === connection.id}
-                            className="px-3 py-1.5 rounded-lg border border-error/30 text-error hover:bg-error/10 text-sm disabled:opacity-50 transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-error/30 text-error hover:bg-error/10 text-sm font-medium disabled:opacity-50 transition-colors"
                           >
+                            <UserMinus className="w-4 h-4" />
                             {actionLoadingId === connection.id ? "…" : "Remove"}
                           </button>
                         </div>
