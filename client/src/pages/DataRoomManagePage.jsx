@@ -10,10 +10,17 @@ import {
   UserX,
   ScrollText,
   Lock,
+  Eye,
+  Download,
 } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import { SectionCard } from "../components/common/SectionCard";
 import { dataRoomService } from "../services/dataRoomService";
+import DataRoomPdfViewer from "../components/dataRoom/DataRoomPdfViewer";
+
+const isPdfDocument = (doc) =>
+  (doc?.mime_type || "").includes("pdf") ||
+  (doc?.name || doc?.file_name || "").toLowerCase().endsWith(".pdf");
 
 const formatBytes = (bytes) => {
   if (!bytes) return "—";
@@ -44,6 +51,7 @@ const DataRoomManagePage = () => {
   const [auditFilterInvestor, setAuditFilterInvestor] = useState("");
   const [auditFilterDocument, setAuditFilterDocument] = useState("");
   const [auditFilterAction, setAuditFilterAction] = useState("");
+  const [viewerDoc, setViewerDoc] = useState(null);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -189,6 +197,21 @@ const DataRoomManagePage = () => {
     setSelectedFile(null);
     setUploadDescription("");
     await loadAll();
+  };
+
+  const handleOpenDocument = async (doc) => {
+    if (isPdfDocument(doc)) {
+      setViewerDoc(doc);
+      return;
+    }
+    // Non-PDF files are not rendered in the in-platform viewer; download instead.
+    const result = await dataRoomService.downloadDocument(
+      doc.id,
+      doc.file_name || doc.name || "document",
+    );
+    if (!result.success) {
+      setError(result.error);
+    }
   };
 
   const handleDeleteDocument = async (documentId) => {
@@ -392,14 +415,34 @@ const DataRoomManagePage = () => {
                                 {formatBytes(doc.file_size_bytes)} · {doc.mime_type || "file"}
                               </p>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteDocument(doc.id)}
-                              className="text-error shrink-0 p-1"
-                              aria-label={`Delete ${doc.name}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDocument(doc)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs text-content-secondary hover:text-primary"
+                                aria-label={`${isPdfDocument(doc) ? "View" : "Download"} ${doc.name}`}
+                              >
+                                {isPdfDocument(doc) ? (
+                                  <>
+                                    <Eye className="w-3.5 h-3.5" />
+                                    View
+                                  </>
+                                ) : (
+                                  <>
+                                    <Download className="w-3.5 h-3.5" />
+                                    Download
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                className="text-error p-1"
+                                aria-label={`Delete ${doc.name}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -427,14 +470,34 @@ const DataRoomManagePage = () => {
                               {formatBytes(doc.file_size_bytes)} · {doc.mime_type || "file"}
                             </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteDocument(doc.id)}
-                            className="text-error shrink-0 p-1"
-                            aria-label={`Delete ${doc.name}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDocument(doc)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-xs text-content-secondary hover:text-primary"
+                              aria-label={`${isPdfDocument(doc) ? "View" : "Download"} ${doc.name}`}
+                            >
+                              {isPdfDocument(doc) ? (
+                                <>
+                                  <Eye className="w-3.5 h-3.5" />
+                                  View
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-3.5 h-3.5" />
+                                  Download
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDocument(doc.id)}
+                              className="text-error p-1"
+                              aria-label={`Delete ${doc.name}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -603,6 +666,13 @@ const DataRoomManagePage = () => {
           </SectionCard>
         )}
       </div>
+
+      <DataRoomPdfViewer
+        open={Boolean(viewerDoc)}
+        documentId={viewerDoc?.id}
+        documentName={viewerDoc?.name}
+        onClose={() => setViewerDoc(null)}
+      />
     </PageLayout>
   );
 };
