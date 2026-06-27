@@ -14,7 +14,7 @@ import { useAuth } from "../hooks/useAuth";
 import { AUTH_STATUS } from "../utils/authStateMachine.js";
 import PageLayout from "../components/layout/PageLayout";
 import { SectionCard } from "../components/common/SectionCard";
-import TrendChart from "../components/analytics/TrendChart";
+import TrendChart, { hasTrend } from "../components/analytics/TrendChart";
 import SlideHeatmap from "../components/analytics/SlideHeatmap";
 import {
   ANALYTICS_PERIODS,
@@ -34,14 +34,14 @@ const MetricCard = ({ icon: Icon, label, value, sub, changePct, accent = "primar
       : "bg-primary/10 text-primary border-primary/20";
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className={`p-2 rounded-xl border ${accentCls}`}>
-          <Icon className="w-5 h-5" />
+    <div className="rounded-xl border border-line bg-surface p-3.5">
+      <div className="flex items-start justify-between gap-2">
+        <div className={`p-1.5 rounded-lg border ${accentCls}`}>
+          <Icon className="w-4 h-4" />
         </div>
         {changePct != null && (
           <span
-            className={`text-xs font-medium ${
+            className={`text-[11px] font-medium ${
               changePct >= 0 ? "text-success" : "text-error"
             }`}
           >
@@ -49,9 +49,9 @@ const MetricCard = ({ icon: Icon, label, value, sub, changePct, accent = "primar
           </span>
         )}
       </div>
-      <p className="text-sm text-content-secondary mt-4">{label}</p>
-      <p className="text-3xl font-bold text-content mt-1 tabular-nums">{value}</p>
-      {sub && <p className="text-xs text-content-muted mt-1">{sub}</p>}
+      <p className="text-xs text-content-secondary mt-2.5">{label}</p>
+      <p className="text-2xl font-bold text-content mt-0.5 tabular-nums">{value}</p>
+      {sub && <p className="text-[11px] text-content-muted mt-0.5">{sub}</p>}
     </div>
   );
 };
@@ -311,37 +311,34 @@ const StartupAnalyticsPage = () => {
               </SectionCard>
             )}
 
-            <div>
-              <h2 className="text-lg font-semibold text-content mb-4">
-                Engagement trends
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <TrendChart
-                  title="Profile views"
-                  series={trends?.profile_views}
-                />
-                <TrendChart
-                  title="Pitch deck views"
-                  series={trends?.pitch_deck_views}
-                />
-                <TrendChart
-                  title="Connection requests received"
-                  series={trends?.connection_requests}
-                />
-                <TrendChart
-                  title="Connections accepted"
-                  series={trends?.connection_requests_accepted}
-                />
-                <TrendChart
-                  title="Data room requests"
-                  series={trends?.data_room_requests}
-                />
-                <TrendChart
-                  title="Data room grants"
-                  series={trends?.data_room_grants}
-                />
+            {[
+              trends?.profile_views,
+              trends?.pitch_deck_views,
+              trends?.connection_requests,
+              trends?.connection_requests_accepted,
+              trends?.data_room_requests,
+              trends?.data_room_grants,
+            ].some(hasTrend) && (
+              <div>
+                <h2 className="text-lg font-semibold text-content mb-4">
+                  Engagement trends
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <TrendChart title="Profile views" series={trends?.profile_views} />
+                  <TrendChart title="Pitch deck views" series={trends?.pitch_deck_views} />
+                  <TrendChart
+                    title="Connection requests received"
+                    series={trends?.connection_requests}
+                  />
+                  <TrendChart
+                    title="Connections accepted"
+                    series={trends?.connection_requests_accepted}
+                  />
+                  <TrendChart title="Data room requests" series={trends?.data_room_requests} />
+                  <TrendChart title="Data room grants" series={trends?.data_room_grants} />
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <MetricCard

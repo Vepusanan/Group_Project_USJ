@@ -9,11 +9,17 @@ import "react-pdf/dist/Page/TextLayer.css";
 
 setupPdfWorker();
 
+// Computed once. react-pdf reloads the document whenever the `options` prop
+// changes by reference, so a fresh object each render makes <Document> reload
+// mid-parse and surface "Failed to load PDF file".
+const PDF_DOCUMENT_OPTIONS = getPdfDocumentOptions();
+
 const PitchDeckSlidePreview = ({ startupProfileId, companyName }) => {
   const [pdfData, setPdfData] = useState(null);
   const [numPages, setNumPages] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [previewError, setPreviewError] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -57,21 +63,23 @@ const PitchDeckSlidePreview = ({ startupProfileId, companyName }) => {
 
   return (
     <div className="rounded-xl border border-line bg-surface-alt overflow-hidden">
-      <div className="flex flex-col sm:flex-row gap-4 p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4">
         <div className="w-full sm:w-44 flex-shrink-0">
           <div className="aspect-[4/3] rounded-lg border border-line bg-white overflow-hidden flex items-center justify-center">
             {loading ? (
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
-            ) : error || !pdfFile ? (
+            ) : error || !pdfFile || previewError ? (
               <BarChart2 className="w-8 h-8 text-content-muted/40" />
             ) : (
               <Document
                 file={pdfFile}
-                options={getPdfDocumentOptions()}
+                options={PDF_DOCUMENT_OPTIONS}
                 onLoadSuccess={(pdf) => setNumPages(pdf.numPages)}
+                onLoadError={() => setPreviewError(true)}
                 loading={
                   <Loader2 className="w-6 h-6 text-primary animate-spin" />
                 }
+                error={<BarChart2 className="w-8 h-8 text-content-muted/40" />}
                 className="w-full h-full flex items-center justify-center"
               >
                 <Page

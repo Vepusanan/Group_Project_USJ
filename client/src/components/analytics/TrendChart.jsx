@@ -1,16 +1,14 @@
 import React from "react";
 
-const TrendChart = ({ title, series = [], emptyLabel = "No data yet" }) => {
-  const maxValue = Math.max(...series.map((p) => p.value), 1);
+// A trend needs at least two points to be meaningful. With 0 or 1 points the
+// chart would just repeat the single total already shown in the metric cards
+// above, so we render nothing and let the parent omit it.
+export const hasTrend = (series) => Array.isArray(series) && series.length >= 2;
 
-  if (!series.length) {
-    return (
-      <div className="rounded-2xl border border-line bg-surface p-5">
-        <h3 className="text-sm font-semibold text-content mb-3">{title}</h3>
-        <p className="text-sm text-content-muted">{emptyLabel}</p>
-      </div>
-    );
-  }
+const TrendChart = ({ title, series = [] }) => {
+  if (!hasTrend(series)) return null;
+
+  const maxValue = Math.max(...series.map((p) => p.value), 1);
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-5">
