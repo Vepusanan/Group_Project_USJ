@@ -90,7 +90,12 @@ const AppContent = () => {
     location.pathname !== "/terms" &&
     location.pathname !== "/privacy";
 
-  const shouldShowChrome = !AUTH_CHROMELESS_ROUTES.includes(location.pathname);
+  // Full-screen viewers render their own header/controls, so the floating nav
+  // bar must be hidden — it overlaps and intercepts clicks on their controls.
+  const isChromelessViewer = /\/pitch-deck$/.test(location.pathname);
+
+  const shouldShowChrome =
+    !AUTH_CHROMELESS_ROUTES.includes(location.pathname) && !isChromelessViewer;
   const shouldShowBg = showBgRoutes;
 
   return (
