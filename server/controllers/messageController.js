@@ -1,10 +1,5 @@
 import * as MessageRepository from "../repositories/messageRepository.js";
-import {
-  getUserById,
-  isUsersConnected,
-} from "../repositories/ConnectionRepository.js";
-import { sendNewMessageEmail } from "../utils/emailServices.js";
-import { isUserRecentlyActive } from "../utils/userPresence.js";
+import { isUsersConnected } from "../repositories/ConnectionRepository.js";
 import { assertAllowedMessageAttachmentUrl } from "../utils/messageAttachmentUrl.js";
 
 // Send a new message
@@ -53,31 +48,6 @@ export const sendMessage = async (req, res) => {
       text: (text || "").trim(),
       attachmentUrl,
     });
-
-    // Email the recipient when they have not been active recently (Realtime presence).
-    if (!(await isUserRecentlyActive(receiverId))) {
-      (async () => {
-        try {
-          const [sender, receiver] = await Promise.all([
-            getUserById(senderId),
-            getUserById(receiverId),
-          ]);
-          if (receiver?.email) {
-            await sendNewMessageEmail(
-              receiver.email,
-              receiver.full_name,
-              sender?.full_name || "A connection",
-              messageData.text,
-            );
-          }
-        } catch (emailError) {
-          console.error(
-            "Failed to send new-message email:",
-            emailError.message,
-          );
-        }
-      })();
-    }
 
     res.status(201).json({
       success: true,
