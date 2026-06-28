@@ -30,6 +30,7 @@ const FloatingNavBar = () => {
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   const isInvestor = user?.userType === "investor";
+  const isAdmin = Boolean(user?.isAdmin);
   const profileImageUrl = isInvestor ? profile?.photo_url : profile?.logo_url;
   const isLoggedIn = !isLoading && authStatus === AUTH_STATUS.AUTHENTICATED_READY;
 
@@ -118,7 +119,31 @@ const FloatingNavBar = () => {
     [unreadMessages, hasConnectionActivity],
   );
 
-  const items = isLoggedIn ? authItems : publicItems;
+  const adminItems = useMemo(
+    () => [
+      {
+        key: "admin-dashboard",
+        to: "/admin/analytics",
+        label: "Admin Dashboard",
+        isActive: (path) => path.startsWith("/admin/analytics"),
+      },
+      {
+        key: "admin-verification",
+        to: "/admin/verification",
+        label: "Verification",
+        isActive: (path) => path.startsWith("/admin/verification"),
+      },
+      {
+        key: "admin-reports",
+        to: "/admin/reports",
+        label: "Fraud Reports",
+        isActive: (path) => path.startsWith("/admin/reports"),
+      },
+    ],
+    [],
+  );
+
+  const items = !isLoggedIn ? publicItems : isAdmin ? adminItems : authItems;
 
   const activeIndex = items.findIndex((item) =>
     item.isActive(location.pathname, location.hash),
@@ -147,7 +172,7 @@ const FloatingNavBar = () => {
   }, [location.pathname, location.hash]);
 
   useEffect(() => {
-    if (!isLoggedIn) return undefined;
+    if (!isLoggedIn || isAdmin) return undefined;
     let mounted = true;
     const loadUnread = async () => {
       try {
@@ -168,7 +193,7 @@ const FloatingNavBar = () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isAdmin]);
 
   const handleLogout = async () => {
     try {
@@ -269,21 +294,23 @@ const FloatingNavBar = () => {
 
         {isLoggedIn && (
           <div className="flex shrink-0 items-center gap-1.5">
-            <Link
-              to="/profile"
-              aria-label="Profile"
-              className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-colors hover:border-slate-300"
-            >
-              {profileImageUrl ? (
-                <img
-                  src={profileImageUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <User className="h-4 w-4 text-slate-600" />
-              )}
-            </Link>
+            {!isAdmin && (
+              <Link
+                to="/profile"
+                aria-label="Profile"
+                className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-colors hover:border-slate-300"
+              >
+                {profileImageUrl ? (
+                  <img
+                    src={profileImageUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User className="h-4 w-4 text-slate-600" />
+                )}
+              </Link>
+            )}
             <Link
               to="/settings"
               aria-label="Settings"
