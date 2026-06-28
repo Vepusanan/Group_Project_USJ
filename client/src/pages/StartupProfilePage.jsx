@@ -116,30 +116,55 @@ const DataRoomRequestButton = ({
   requestStatus,
   onRequested,
   busy,
-}) => (
-  <button
-    type="button"
-    disabled={busy || requestStatus === "pending"}
-    onClick={onRequested}
-    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border border-line bg-surface-alt hover:border-primary-light transition-all text-left disabled:opacity-60"
-  >
-    <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary-light flex items-center justify-center flex-shrink-0">
-      <Lock className="w-4 h-4 text-primary" />
-    </div>
-    <div className="min-w-0">
-      <span className="text-sm text-content-secondary block">
-        {requestStatus === "pending"
-          ? "Data room access requested"
-          : "Request data room access"}
-      </span>
-      <span className="text-[11px] text-content-muted">
-        {requestStatus === "pending"
-          ? "The startup will review your request"
-          : `Ask ${companyName || "this startup"} for due diligence documents`}
-      </span>
-    </div>
-  </button>
-);
+}) => {
+  const requested = requestStatus === "pending";
+  return (
+    <button
+      type="button"
+      disabled={busy || requested}
+      onClick={onRequested}
+      className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border transition-all text-left disabled:cursor-default ${
+        requested
+          ? "border-success/40 bg-success/10"
+          : "border-line bg-surface-alt hover:border-primary-light disabled:opacity-60"
+      }`}
+    >
+      <div
+        className={`w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0 ${
+          requested
+            ? "bg-success/15 border-success/40"
+            : "bg-primary/15 border-primary-light"
+        }`}
+      >
+        {requested ? (
+          <CheckCircle className="w-4 h-4 text-success" />
+        ) : busy ? (
+          <Clock className="w-4 h-4 text-primary animate-pulse" />
+        ) : (
+          <Lock className="w-4 h-4 text-primary" />
+        )}
+      </div>
+      <div className="min-w-0">
+        <span
+          className={`text-sm block font-medium ${
+            requested ? "text-success" : "text-content-secondary"
+          }`}
+        >
+          {requested
+            ? "Access requested"
+            : busy
+              ? "Requesting access…"
+              : "Request data room access"}
+        </span>
+        <span className="text-[11px] text-content-muted">
+          {requested
+            ? "The startup will review your request"
+            : `Ask ${companyName || "this startup"} for due diligence documents`}
+        </span>
+      </div>
+    </button>
+  );
+};
 
 const DataRoomLink = ({ startupProfileId, companyName, isOwner }) => (
   <Link
