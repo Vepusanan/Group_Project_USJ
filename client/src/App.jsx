@@ -36,6 +36,7 @@ import {
 } from "./routes/authPages";
 import {
   AdminAnalyticsPage,
+  AdminFraudReportsPage,
   AdminVerificationPage,
   ConnectionsPage,
   DataRoomManagePage,
@@ -291,6 +292,14 @@ const AppContent = () => {
                 element={
                   <AdminRoute>
                     <AdminVerificationPage />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/reports"
+                element={
+                  <AdminRoute>
+                    <AdminFraudReportsPage />
                   </AdminRoute>
                 }
               />

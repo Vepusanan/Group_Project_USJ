@@ -65,12 +65,14 @@ const AdminAnalyticsPage = () => {
               Platform health, growth, trust quality, and feature adoption.
             </p>
           </div>
-          <Link
-            to="/admin/verification"
-            className="text-sm text-primary hover:underline"
-          >
-            Verification queue →
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/admin/verification" className="text-sm text-primary hover:underline">
+              Verification queue →
+            </Link>
+            <Link to="/admin/reports" className="text-sm text-primary hover:underline">
+              Fraud reports →
+            </Link>
+          </div>
         </div>
 
         {loading ? (
