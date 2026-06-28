@@ -15,18 +15,42 @@ import {
 } from "../controllers/authController.js";
 import { protect, protectSession } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
+import { validate } from "../middleware/validation.js";
+import {
+  registerValidator,
+  loginValidator,
+  forgotPasswordValidator,
+  resetPasswordValidator,
+  resendVerificationValidator,
+} from "../validators/authValidators.js";
 
 const router = express.Router();
 
 // Public routes — credential-bearing and email-sending endpoints are
-// rate-limited by IP to slow down brute-force and email abuse.
-router.post("/register", authLimiter, register);
-router.post("/login", authLimiter, login);
+// rate-limited by IP to slow down brute-force and email abuse, and have their
+// input validated/sanitised before reaching the controller.
+router.post("/register", authLimiter, validate(registerValidator), register);
+router.post("/login", authLimiter, validate(loginValidator), login);
 router.get("/verify-email", verifyEmail);
-router.post("/resend-verification", authLimiter, resendVerification);
+router.post(
+  "/resend-verification",
+  authLimiter,
+  validate(resendVerificationValidator),
+  resendVerification,
+);
 router.post("/token", refreshToken);
-router.post("/forgot-password", authLimiter, forgotPassword);
-router.post("/reset-password", authLimiter, resetPassword);
+router.post(
+  "/forgot-password",
+  authLimiter,
+  validate(forgotPasswordValidator),
+  forgotPassword,
+);
+router.post(
+  "/reset-password",
+  authLimiter,
+  validate(resetPasswordValidator),
+  resetPassword,
+);
 router.post("/logout", protect, logout);
 router.post("/logout-all", protect, logoutAll);
 router.get("/sessions", protect, getActiveSessions);

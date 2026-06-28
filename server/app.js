@@ -35,6 +35,7 @@ import { generalLimiter } from "./middleware/rateLimiter.js";
 import { requestTiming } from "./middleware/requestTiming.js";
 import { hasEmailCredentials } from "./utils/emailTransport.js";
 import { getCorsOrigins } from "./utils/corsOrigins.js";
+import { buildCspDirectives } from "./utils/cspConfig.js";
 import { getAppUrlConfig } from "./utils/appUrls.js";
 import path from "path";
 import fs from "fs";
@@ -54,7 +55,20 @@ export function createApp() {
     app.set("trust proxy", 1);
   }
 
-  app.use(helmet());
+  // helmet sets the standard security headers; we supply an explicit
+  // Content-Security-Policy (NFR 17.2) tuned for this SPA's external deps
+  // (Supabase Storage, Google Fonts, PDF.js WASM/blob workers).
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: buildCspDirectives(),
+      },
+      // Cross-origin resources (Supabase storage assets, PDF.js worker) are
+      // loaded by the SPA, so don't clamp resource policy to same-origin.
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    }),
+  );
   app.use(
     cors({
       origin: (origin, callback) => {
