@@ -101,3 +101,141 @@ export async function countPendingReportsForUser(reportedUserId) {
 
   return result.rows[0]?.count || 0;
 }
+
+export async function listReports({ status } = {}) {
+  await ensureProfileReportTables();
+  await ensureUserActivityColumns();
+
+  const params = [];
+  let where = "";
+  if (status) {
+    params.push(status);
+    where = `WHERE pr.status = $1`;
+  }
+
+  const { rows } = await pool.query(
+    `
+      SELECT pr.id, pr.reason, pr.status, pr.created_at,
+             pr.reported_user_id,
+             ru.email AS reported_email,
+             ru.full_name AS reported_name,
+             ru.user_type AS reported_user_type,
+             ru.fraud_flagged,
+             ru.account_locked_until,
+             ru.deleted_at,
+             sp.startup_profile_id AS reported_startup_profile_id,
+             ip.investor_profile_id AS reported_investor_profile_id,
+             rp.email AS reporter_email
+      FROM public.profile_reports pr
+      JOIN public.users ru ON ru.id = pr.reported_user_id
+      JOIN public.users rp ON rp.id = pr.reporter_user_id
+      LEFT JOIN public.startup_profiles sp ON sp.user_id = pr.reported_user_id
+      LEFT JOIN public.investor_profiles ip ON ip.user_id = pr.reported_user_id
+      ${where}
+      ORDER BY pr.created_at DESC
+    `,
+    params,
+  );
+  return rows;
+}
+
+export async function getReportById(id) {
+  await ensureProfileReportTables();
+  const { rows } = await pool.query(
+    `SELECT * FROM public.profile_reports WHERE id = $1`,
+    [id],
+  );
+  return rows[0];
+}
+
+export async function resolveReportsForUser({ userId, status, reviewedBy }) {
+  await ensureProfileReportTables();
+  const { rowCount } = await pool.query(
+    `
+      UPDATE public.profile_reports
+      SET status = $2, reviewed_at = CURRENT_TIMESTAMP
+      WHERE reported_user_id = $1 AND status IN ('PENDING', 'UNDER_REVIEW')
+    `,
+    [userId, status],
+  );
+  // reviewedBy is recorded in the admin action log by the controller.
+  void reviewedBy;
+  return rowCount;
+}
+
+export async function dismissReport({ id, reviewedBy }) {
+  await ensureProfileReportTables();
+  const { rows } = await pool.query(
+    `
+      UPDATE public.profile_reports
+      SET status = 'DISMISSED', reviewed_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `,
+    [id],
+  );
+  // reviewedBy is recorded in the admin action log by the controller.
+  void reviewedBy;
+  const report = rows[0];
+  if (!report) return undefined;
+
+  // If no open reports remain, clear the auto-flag only. An admin suspension
+  // (account_locked_until) is deliberate and must persist — lifting it requires
+  // the explicit Reactivate action.
+  const remaining = await countPendingReportsForUser(report.reported_user_id);
+  if (remaining === 0) {
+    await pool.query(
+      `
+        UPDATE public.users
+        SET fraud_flagged = FALSE
+        WHERE id = $1 AND deleted_at IS NULL
+      `,
+      [report.reported_user_id],
+    );
+  }
+  return report;
+}
+
+export async function suspendUser(userId, days) {
+  await ensureUserActivityColumns();
+  const safeDays = Math.max(1, Math.min(365, Number(days) || 7));
+  const { rows } = await pool.query(
+    `
+      UPDATE public.users
+      SET fraud_flagged = TRUE,
+          account_locked_until = CURRENT_TIMESTAMP + ($2::int * INTERVAL '1 day')
+      WHERE id = $1
+      RETURNING id, account_locked_until, deleted_at, fraud_flagged
+    `,
+    [userId, safeDays],
+  );
+  return rows[0];
+}
+
+export async function deactivateUser(userId) {
+  await ensureUserActivityColumns();
+  const { rows } = await pool.query(
+    `
+      UPDATE public.users
+      SET deleted_at = CURRENT_TIMESTAMP, fraud_flagged = TRUE
+      WHERE id = $1
+      RETURNING id, account_locked_until, deleted_at, fraud_flagged
+    `,
+    [userId],
+  );
+  return rows[0];
+}
+
+export async function reactivateUser(userId) {
+  await ensureUserActivityColumns();
+  const { rows } = await pool.query(
+    `
+      UPDATE public.users
+      SET deleted_at = NULL, account_locked_until = NULL, fraud_flagged = FALSE
+      WHERE id = $1
+      RETURNING id, account_locked_until, deleted_at, fraud_flagged
+    `,
+    [userId],
+  );
+  return rows[0];
+}

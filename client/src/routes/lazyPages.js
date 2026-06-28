@@ -30,3 +30,4 @@ export const EditProfilePage = lazyWithRetry(() => import("../pages/EditProfileP
 export const SettingsPage = lazyWithRetry(() => import("../pages/SettingsPage"));
 export const AdminAnalyticsPage = lazyWithRetry(() => import("../pages/AdminAnalyticsPage"));
 export const AdminVerificationPage = lazyWithRetry(() => import("../pages/AdminVerificationPage"));
+export const AdminFraudReportsPage = lazyWithRetry(() => import("../pages/AdminFraudReportsPage"));

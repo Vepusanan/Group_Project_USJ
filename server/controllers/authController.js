@@ -466,7 +466,7 @@ export const login = async (req, res) => {
     const userAgent = req.headers["user-agent"] || null;
 
     const result = await pool.query(
-      "SELECT id, email, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until, created_at, deleted_at, onboarding_completed_at FROM users WHERE email = $1",
+      "SELECT id, email, password_hash, email_verified, full_name, user_type, failed_login_attempts, account_locked_until, created_at, deleted_at, deletion_scheduled_at, onboarding_completed_at FROM users WHERE email = $1",
       [email.toLowerCase()],
     );
 
@@ -536,7 +536,7 @@ export const login = async (req, res) => {
       );
     }
 
-    if (user.deleted_at) {
+    if (user.deleted_at && user.deletion_scheduled_at) {
       await pool.query(
         `UPDATE users SET deleted_at = NULL, deletion_scheduled_at = NULL WHERE id = $1`,
         [user.id],

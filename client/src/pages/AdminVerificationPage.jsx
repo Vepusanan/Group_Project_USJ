@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Shield } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowLeft, Shield } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import engagementService from "../services/engagementService";
 
@@ -55,15 +56,24 @@ const AdminVerificationPage = () => {
   return (
     <PageLayout>
       <div className="space-y-6 pb-12">
-        <div>
-          <div className="flex items-center gap-2 text-primary mb-1">
-            <Shield className="w-5 h-5" />
-            <span className="text-sm font-medium">Administrator</span>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-primary mb-1">
+              <Shield className="w-5 h-5" />
+              <span className="text-sm font-medium">Administrator</span>
+            </div>
+            <h1 className="text-3xl font-bold text-content">Verification review queue</h1>
+            <p className="text-content-secondary text-sm mt-1">
+              Approve or reject Business Verified documentation submissions.
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-content">Verification review queue</h1>
-          <p className="text-content-secondary text-sm mt-1">
-            Approve or reject Business Verified documentation submissions.
-          </p>
+          <Link
+            to="/admin/analytics"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Dashboard
+          </Link>
         </div>
 
         {error && (
