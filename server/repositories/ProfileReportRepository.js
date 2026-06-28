@@ -159,7 +159,7 @@ export async function resolveReportsForUser({ userId, status, reviewedBy }) {
   return rowCount;
 }
 
-export async function dismissReport({ id }) {
+export async function dismissReport({ id, reviewedBy }) {
   await ensureProfileReportTables();
   const { rows } = await pool.query(
     `
@@ -170,6 +170,8 @@ export async function dismissReport({ id }) {
     `,
     [id],
   );
+  // reviewedBy is recorded in the admin action log by the controller.
+  void reviewedBy;
   const report = rows[0];
   if (!report) return undefined;
 

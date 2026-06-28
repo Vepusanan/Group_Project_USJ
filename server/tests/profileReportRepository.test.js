@@ -8,6 +8,8 @@ import {
   suspendUser,
   deactivateUser,
   reactivateUser,
+  createProfileReport,
+  dismissReport,
 } from "../repositories/ProfileReportRepository.js";
 
 async function makeUser(type = "investor") {
@@ -55,5 +57,64 @@ test("listReports returns rows with reported user details", async () => {
     assert.ok(mine.reported_email);
   } finally {
     await pool.query(`DELETE FROM public.users WHERE id = ANY($1)`, [[reporter, reported]]).catch(() => {});
+  }
+});
+
+test("dismissReport clears fraud flag/lock only after the last open report is dismissed", async () => {
+  const reporterA = await makeUser();
+  const reporterB = await makeUser();
+  const reporterC = await makeUser();
+  const reported = await makeUser("startup");
+  try {
+    // Three reports trip the auto-flag threshold (fraud_flagged + account_locked_until).
+    const r1 = await createProfileReport({
+      reporterUserId: reporterA,
+      reportedUserId: reported,
+      reason: "Fake company details, looks fraudulent",
+    });
+    const r2 = await createProfileReport({
+      reporterUserId: reporterB,
+      reportedUserId: reported,
+      reason: "Suspicious activity, possible scam",
+    });
+    const r3 = await createProfileReport({
+      reporterUserId: reporterC,
+      reportedUserId: reported,
+      reason: "Impersonating a real startup",
+    });
+
+    const flagged = await pool.query(
+      `SELECT fraud_flagged, account_locked_until FROM public.users WHERE id = $1`,
+      [reported],
+    );
+    assert.equal(flagged.rows[0].fraud_flagged, true, "should be auto-flagged");
+    assert.ok(flagged.rows[0].account_locked_until, "should be auto-locked");
+
+    // Dismiss the first two: open reports remain, so flag/lock stay in place.
+    await dismissReport({ id: r1.report.id });
+    await dismissReport({ id: r2.report.id });
+
+    const stillFlagged = await pool.query(
+      `SELECT fraud_flagged, account_locked_until FROM public.users WHERE id = $1`,
+      [reported],
+    );
+    assert.equal(stillFlagged.rows[0].fraud_flagged, true, "still flagged with open reports");
+    assert.ok(stillFlagged.rows[0].account_locked_until, "still locked with open reports");
+
+    // Dismiss the last open report: flag/lock should be cleared.
+    await dismissReport({ id: r3.report.id });
+
+    const cleared = await pool.query(
+      `SELECT fraud_flagged, account_locked_until FROM public.users WHERE id = $1`,
+      [reported],
+    );
+    assert.equal(cleared.rows[0].fraud_flagged, false, "flag cleared after last dismissal");
+    assert.equal(cleared.rows[0].account_locked_until, null, "lock cleared after last dismissal");
+  } finally {
+    await pool
+      .query(`DELETE FROM public.users WHERE id = ANY($1)`, [
+        [reporterA, reporterB, reporterC, reported],
+      ])
+      .catch(() => {});
   }
 });
