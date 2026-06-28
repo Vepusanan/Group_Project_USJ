@@ -122,6 +122,18 @@ const FloatingNavBar = () => {
   const adminItems = useMemo(
     () => [
       {
+        key: "startups",
+        to: "/startups",
+        label: "Startups",
+        isActive: (path) => path.startsWith("/startups"),
+      },
+      {
+        key: "investors",
+        to: "/investors",
+        label: "Investors",
+        isActive: (path) => path.startsWith("/investors"),
+      },
+      {
         key: "admin-dashboard",
         to: "/admin/analytics",
         label: "Admin Dashboard",
