@@ -123,10 +123,14 @@ export async function listReports({ status } = {}) {
              ru.fraud_flagged,
              ru.account_locked_until,
              ru.deleted_at,
+             sp.startup_profile_id AS reported_startup_profile_id,
+             ip.investor_profile_id AS reported_investor_profile_id,
              rp.email AS reporter_email
       FROM public.profile_reports pr
       JOIN public.users ru ON ru.id = pr.reported_user_id
       JOIN public.users rp ON rp.id = pr.reporter_user_id
+      LEFT JOIN public.startup_profiles sp ON sp.user_id = pr.reported_user_id
+      LEFT JOIN public.investor_profiles ip ON ip.user_id = pr.reported_user_id
       ${where}
       ORDER BY pr.created_at DESC
     `,

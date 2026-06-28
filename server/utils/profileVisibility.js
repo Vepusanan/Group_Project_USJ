@@ -1,9 +1,19 @@
 import { getPrivacySettingsByUserId } from "../repositories/PrivacySettingsRepository.js";
 import { isUsersConnected } from "../repositories/ConnectionRepository.js";
 
-export const canViewProfile = async (profileUserId, requestingUserId) => {
+export const canViewProfile = async (
+  profileUserId,
+  requestingUserId,
+  { requesterIsAdmin = false } = {},
+) => {
   if (requestingUserId && profileUserId === requestingUserId) {
     return { canView: true, isOwner: true, isConnected: false };
+  }
+
+  // Admins can view any profile (including private ones) for moderation —
+  // e.g. inspecting a reported account from the fraud-reports queue.
+  if (requesterIsAdmin) {
+    return { canView: true, isOwner: false, isConnected: false };
   }
 
   const connected = requestingUserId

@@ -1,8 +1,27 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ShieldAlert, Ban, Clock, CheckCircle2, RotateCcw } from "lucide-react";
+import {
+  ShieldAlert,
+  Ban,
+  Clock,
+  CheckCircle2,
+  RotateCcw,
+  ExternalLink,
+} from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import { adminFraudService } from "../services/adminFraudService";
+
+// Reports carry the reported user's profile id (per type). Build the public
+// profile URL so the admin can inspect the account before acting.
+const reportedProfilePath = (row) => {
+  if (row.reported_user_type === "startup" && row.reported_startup_profile_id) {
+    return `/startups/${row.reported_startup_profile_id}`;
+  }
+  if (row.reported_user_type === "investor" && row.reported_investor_profile_id) {
+    return `/investors/${row.reported_investor_profile_id}`;
+  }
+  return null;
+};
 
 const StatusBadge = ({ row }) => {
   if (row.deleted_at)
@@ -129,6 +148,17 @@ const AdminFraudReportsPage = () => {
                         Reported by {row.reporter_email} ·{" "}
                         {new Date(row.created_at).toLocaleString()} · {row.status}
                       </p>
+                      {reportedProfilePath(row) && (
+                        <Link
+                          to={reportedProfilePath(row)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          View reported profile
+                        </Link>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {(suspended || row.deleted_at) ? (

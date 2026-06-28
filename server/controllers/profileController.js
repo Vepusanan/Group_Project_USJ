@@ -17,6 +17,7 @@ import {
   isUsersConnected,
 } from "../repositories/ConnectionRepository.js";
 import { canViewProfile } from "../utils/profileVisibility.js";
+import { isAdminUser } from "../middleware/admin.js";
 import {
   ensureInvestorMatchScores,
   invalidateInvestorMatchScores,
@@ -394,6 +395,7 @@ export const getProfile = async (req, res, next) => {
     const { canView, isOwner } = await canViewProfile(
       profile.user_id,
       requestingUserId,
+      { requesterIsAdmin: isAdminUser(req.user) },
     );
 
     if (!canView) {
@@ -716,6 +718,7 @@ export const getInvestorProfileController = async (req, res, next) => {
     const { canView, isOwner, isConnected } = await canViewProfile(
       profile.user_id,
       requestingUserId,
+      { requesterIsAdmin: isAdminUser(req.user) },
     );
 
     if (!canView) {
