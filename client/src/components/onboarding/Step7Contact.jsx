@@ -20,7 +20,8 @@ const SocialField = ({ label, icon: Icon, value, onChange, placeholder }) => (
   <div className="relative">
     <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
       <input
-        type="url"
+        type="text"
+        inputMode="url"
         id={`onboarding-social-${label.toLowerCase().replace(/\s+/g, "-")}`}
         name={`social_${label.toLowerCase().replace(/\s+/g, "_")}`}
         autoComplete="url"

@@ -85,7 +85,8 @@ const InvestorStep7Contact = ({ formData, updateFormData, errors }) => (
         <div className="relative">
           <Linkedin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
-            type="url"
+            type="text"
+            inputMode="url"
             placeholder="https://linkedin.com/in/..."
             value={formData.social_media?.linkedin || ""}
             onChange={(e) => updateFormData({ social_media: { ...formData.social_media, linkedin: e.target.value } })}
@@ -96,7 +97,8 @@ const InvestorStep7Contact = ({ formData, updateFormData, errors }) => (
         <div className="relative">
           <Twitter className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
-            type="url"
+            type="text"
+            inputMode="url"
             placeholder="https://x.com/..."
             value={formData.social_media?.twitter || ""}
             onChange={(e) => updateFormData({ social_media: { ...formData.social_media, twitter: e.target.value } })}

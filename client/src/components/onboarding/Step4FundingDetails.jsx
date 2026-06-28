@@ -40,7 +40,8 @@ const UrlField = ({ label, value, onChange, placeholder }) => (
     <div className="relative">
       <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
       <input
-        type="url"
+        type="text"
+        inputMode="url"
         id={`onboarding-funding-url-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
         name={`funding_url_${label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`}
         autoComplete="url"

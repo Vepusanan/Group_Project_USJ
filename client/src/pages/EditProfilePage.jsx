@@ -569,13 +569,13 @@ const EditProfilePage = () => {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="LinkedIn URL">
-                    <input type="url" value={inv.social_linkedin} onChange={inv2("social_linkedin")} placeholder="https://linkedin.com/in/..." className={inputCls} />
+                    <input type="text" inputMode="url" value={inv.social_linkedin} onChange={inv2("social_linkedin")} placeholder="https://linkedin.com/in/..." className={inputCls} />
                   </Field>
                   <Field label="Twitter / X URL">
-                    <input type="url" value={inv.social_twitter} onChange={inv2("social_twitter")} placeholder="https://x.com/..." className={inputCls} />
+                    <input type="text" inputMode="url" value={inv.social_twitter} onChange={inv2("social_twitter")} placeholder="https://x.com/..." className={inputCls} />
                   </Field>
                   <Field label="Website URL">
-                    <input type="url" value={inv.social_website} onChange={inv2("social_website")} placeholder="https://yourfirm.com" className={inputCls} />
+                    <input type="text" inputMode="url" value={inv.social_website} onChange={inv2("social_website")} placeholder="https://yourfirm.com" className={inputCls} />
                   </Field>
                 </div>
               </Section>
@@ -694,13 +694,13 @@ const EditProfilePage = () => {
                     </div>
                   </Field>
                   <Field label="Pitch Deck URL (optional fallback)">
-                    <input type="url" value={sf.pitch_deck_url} onChange={sf2("pitch_deck_url")} placeholder="https://..." className={inputCls} />
+                    <input type="text" inputMode="url" value={sf.pitch_deck_url} onChange={sf2("pitch_deck_url")} placeholder="https://..." className={inputCls} />
                   </Field>
                   <Field label="Business Plan URL">
-                    <input type="url" value={sf.business_plan_url} onChange={sf2("business_plan_url")} placeholder="https://..." className={inputCls} />
+                    <input type="text" inputMode="url" value={sf.business_plan_url} onChange={sf2("business_plan_url")} placeholder="https://..." className={inputCls} />
                   </Field>
                   <Field label="Product Demo URL">
-                    <input type="url" value={sf.product_demo_url} onChange={sf2("product_demo_url")} placeholder="https://loom.com/..." className={inputCls} />
+                    <input type="text" inputMode="url" value={sf.product_demo_url} onChange={sf2("product_demo_url")} placeholder="https://loom.com/..." className={inputCls} />
                   </Field>
                   <Field label="Founder Video Introduction" hint="— max 3 min, MP4">
                     <div className="space-y-2">
@@ -747,21 +747,21 @@ const EditProfilePage = () => {
                     <input id="edit-city" name="location_city" autoComplete="address-level2" value={sf.location_city} onChange={sf2("location_city")} placeholder="e.g., San Francisco" className={inputCls} />
                   </Field>
                   <Field label="Website URL" htmlFor="edit-website">
-                    <input id="edit-website" name="website_url" type="url" autoComplete="url" value={sf.website_url} onChange={sf2("website_url")} placeholder="https://yourcompany.com" className={inputCls} />
+                    <input id="edit-website" name="website_url" type="text" inputMode="url" autoComplete="url" value={sf.website_url} onChange={sf2("website_url")} placeholder="https://yourcompany.com" className={inputCls} />
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="LinkedIn URL" htmlFor="edit-linkedin">
-                    <input id="edit-linkedin" name="social_linkedin" type="url" autoComplete="url" value={sf.social_linkedin} onChange={sf2("social_linkedin")} placeholder="https://linkedin.com/company/..." className={inputCls} />
+                    <input id="edit-linkedin" name="social_linkedin" type="text" inputMode="url" autoComplete="url" value={sf.social_linkedin} onChange={sf2("social_linkedin")} placeholder="https://linkedin.com/company/..." className={inputCls} />
                   </Field>
                   <Field label="Twitter / X URL" htmlFor="edit-twitter">
-                    <input id="edit-twitter" name="social_twitter" type="url" autoComplete="url" value={sf.social_twitter} onChange={sf2("social_twitter")} placeholder="https://x.com/..." className={inputCls} />
+                    <input id="edit-twitter" name="social_twitter" type="text" inputMode="url" autoComplete="url" value={sf.social_twitter} onChange={sf2("social_twitter")} placeholder="https://x.com/..." className={inputCls} />
                   </Field>
                   <Field label="Facebook URL" htmlFor="edit-facebook">
-                    <input id="edit-facebook" name="social_facebook" type="url" autoComplete="url" value={sf.social_facebook} onChange={sf2("social_facebook")} placeholder="https://facebook.com/..." className={inputCls} />
+                    <input id="edit-facebook" name="social_facebook" type="text" inputMode="url" autoComplete="url" value={sf.social_facebook} onChange={sf2("social_facebook")} placeholder="https://facebook.com/..." className={inputCls} />
                   </Field>
                   <Field label="Instagram URL" htmlFor="edit-instagram">
-                    <input id="edit-instagram" name="social_instagram" type="url" autoComplete="url" value={sf.social_instagram} onChange={sf2("social_instagram")} placeholder="https://instagram.com/..." className={inputCls} />
+                    <input id="edit-instagram" name="social_instagram" type="text" inputMode="url" autoComplete="url" value={sf.social_instagram} onChange={sf2("social_instagram")} placeholder="https://instagram.com/..." className={inputCls} />
                   </Field>
                 </div>
               </Section>

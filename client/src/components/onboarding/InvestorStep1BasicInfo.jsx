@@ -173,7 +173,8 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => {
         <div className="relative">
           <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
-            type="url"
+            type="text"
+            inputMode="url"
             placeholder="https://yourfirm.com"
             value={formData.website_url || ""}
             onChange={(e) => updateFormData({ website_url: e.target.value })}
@@ -186,7 +187,8 @@ const InvestorStep1BasicInfo = ({ formData, updateFormData, errors }) => {
         <div className="relative">
           <Linkedin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-content-muted w-[18px] h-[18px]" />
           <input
-            type="url"
+            type="text"
+            inputMode="url"
             placeholder="https://linkedin.com/in/..."
             value={formData.linkedin_url || ""}
             onChange={(e) => updateFormData({ linkedin_url: e.target.value })}

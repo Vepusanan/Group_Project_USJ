@@ -208,7 +208,8 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
             <input
               id="onboarding-website"
               name="website_url"
-              type="url"
+              type="text"
+              inputMode="url"
               autoComplete="url"
               placeholder="https://yourcompany.com"
               value={formData.website_url || ""}
@@ -224,7 +225,8 @@ const Step1BasicInfo = ({ formData, updateFormData, errors }) => {
             <input
               id="onboarding-linkedin"
               name="linkedin_url"
-              type="url"
+              type="text"
+              inputMode="url"
               autoComplete="url"
               placeholder="https://linkedin.com/company/your-company"
               value={formData.linkedin_url || ""}
