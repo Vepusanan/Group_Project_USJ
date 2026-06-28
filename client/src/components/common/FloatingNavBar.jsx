@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LogOut, User } from "lucide-react";
+import { LogOut, Settings, User } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { AUTH_STATUS } from "../../utils/authStateMachine.js";
 import { apiService } from "../../services/apiService";
@@ -283,6 +283,17 @@ const FloatingNavBar = () => {
               ) : (
                 <User className="h-4 w-4 text-slate-600" />
               )}
+            </Link>
+            <Link
+              to="/settings"
+              aria-label="Settings"
+              className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-colors ${
+                location.pathname.startsWith("/settings")
+                  ? "border-blue-500/40 text-blue-600"
+                  : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-midnight-navy"
+              }`}
+            >
+              <Settings className="h-4 w-4" />
             </Link>
             <button
               type="button"

@@ -138,13 +138,17 @@ p {
 }
 
 @layer base {
-  a {
+  /* :where() gives these base link styles zero specificity, so any utility
+     class on an anchor (e.g. a button styled with text-content-inverse) wins —
+     including on hover. Without this, the global a:hover color override turned
+     button text invisible against its background. */
+  :where(a) {
     color: var(--color-primary);
     text-decoration: none;
     transition: color 0.2s ease;
   }
 
-  a:hover {
+  :where(a:hover) {
     color: var(--color-primary-dark);
   }
 }

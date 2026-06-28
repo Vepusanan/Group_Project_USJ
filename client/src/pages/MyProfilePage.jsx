@@ -16,8 +16,11 @@ import {
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useProfileData } from "../hooks/useProfileCache";
+import { useVerificationStatus } from "../hooks/useVerificationStatus";
 import MilestoneManageSection from "../components/milestones/MilestoneManageSection";
 import TeamMembersDisplay from "../components/profile/TeamMembersDisplay";
+import VerificationBadge from "../components/common/VerificationBadge";
+import ProfileVerificationCard from "../components/profile/ProfileVerificationCard";
 
 const parseJson = (value, fallback = null) => {
   if (value == null) return fallback;
@@ -134,7 +137,10 @@ const SocialLinks = ({ links, platform }) => {
 const MyProfilePage = () => {
   const { user } = useAuth();
   const { profile, isReady, error, invalidate } = useProfileData();
+  const { status: verificationStatus } = useVerificationStatus();
   const [completion, setCompletion] = useState(null);
+
+  const verificationTier = verificationStatus?.verification_tier || "UNVERIFIED";
 
   useEffect(() => {
     if (user?.userType !== "startup" || !profile) return;
@@ -197,7 +203,10 @@ const MyProfilePage = () => {
                   : <User className="w-12 h-12 text-content-muted" />}
               </div>
               <div className={`flex-1 min-w-0 ${cardIdentityClass}`}>
-                <h1 className="text-3xl font-bold text-content leading-none truncate">{profile.name_or_firm || "—"}</h1>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-3xl font-bold text-content leading-none truncate">{profile.name_or_firm || "—"}</h1>
+                  <VerificationBadge tier={verificationTier} size="lg" />
+                </div>
                 <p className={profileIdentitySubtitleClass}>
                   {profile.investor_type?.replace(/_/g, " ")}
                   {profile.years_of_experience ? ` · ${profile.years_of_experience} yrs experience` : ""}
@@ -208,6 +217,8 @@ const MyProfilePage = () => {
               </Link>
             </div>
           </div>
+
+          <ProfileVerificationCard status={verificationStatus} />
 
           <Section title="Investment Focus">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -276,7 +287,10 @@ const MyProfilePage = () => {
                 : <Building2 className="w-12 h-12 text-content-muted" />}
             </div>
             <div className={cardIdentityClass}>
-              <h1 className="text-3xl font-bold text-content leading-none truncate">{profile.company_name || "—"}</h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-3xl font-bold text-content leading-none truncate">{profile.company_name || "—"}</h1>
+                <VerificationBadge tier={verificationTier} size="lg" />
+              </div>
               {profile.tagline && <p className={profileIdentitySubtitleMutedClass}>{profile.tagline}</p>}
               <div className="flex flex-wrap items-center gap-2 mt-3">
                 {profile.industry && (
@@ -318,6 +332,8 @@ const MyProfilePage = () => {
             )}
           </div>
         )}
+
+        <ProfileVerificationCard status={verificationStatus} />
 
         <Section title="Company Overview">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
