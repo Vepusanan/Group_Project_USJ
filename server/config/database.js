@@ -15,10 +15,26 @@ dotenv.config({
   quiet: true,
 });
 
+// Detect a serverless runtime (Vercel functions). Each concurrent function
+// instance creates its OWN pool, so on a small shared Postgres ceiling
+// (Supabase Free caps the pooler at ~15 clients) a large per-instance `max`
+// multiplied across instances exhausts the server → "max clients reached"
+// (EMAXCONNSESSION) and every query 500s. Keep the per-instance pool tiny in
+// serverless and release idle connections fast so other instances can connect.
+const isServerless = () =>
+  process.env.VERCEL === "1" || process.env.VERCEL === "true";
+
 function buildPoolConfig() {
+  // Default to 3 connections per instance in serverless (so even ~4 warm
+  // instances stay under the 15-client Supabase Free ceiling), 10 locally.
+  // Override explicitly with DB_POOL_MAX if you run a single long-lived server.
+  const defaultMax = isServerless() ? 3 : 10;
+
   const sharedOptions = {
-    max: Number(process.env.DB_POOL_MAX || 10),
-    idleTimeoutMillis: 30000,
+    max: Number(process.env.DB_POOL_MAX || defaultMax),
+    // Release idle connections quickly in serverless so they free up for other
+    // function instances; keep them longer for a single local dev server.
+    idleTimeoutMillis: isServerless() ? 10000 : 30000,
     connectionTimeoutMillis: 10000,
     keepAlive: true,
     ssl: {
