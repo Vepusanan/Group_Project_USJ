@@ -175,7 +175,9 @@ export async function dismissReport({ id, reviewedBy }) {
   const report = rows[0];
   if (!report) return undefined;
 
-  // If no open reports remain for that user, clear the auto-flag + auto-lock.
+  // If no open reports remain, clear the auto-flag only. An admin suspension
+  // (account_locked_until) is deliberate and must persist — lifting it requires
+  // the explicit Reactivate action.
   const remaining = await countPendingReportsForUser(report.reported_user_id);
   if (remaining === 0) {
     await pool.query(
