@@ -1,7 +1,9 @@
 import api from "./apiClient";
 
-const API_BASE = import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? "/api" : "http://localhost:5001/api");
+// Same-origin "/api" is correct for both the Vite dev proxy and the Vercel
+// deploy (vercel.json sets VITE_API_URL=/api). Avoid a hard-coded localhost
+// fallback so a production build never points at a dev port.
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 export const pitchDeckService = {
   getMeta: async (startupProfileId) => {

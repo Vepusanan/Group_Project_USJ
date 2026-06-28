@@ -86,6 +86,70 @@ test("getFrontendBaseUrl defaults to localhost in development", async () => {
   }
 });
 
+test("getBackendBaseUrl matches the frontend origin (same-origin on Vercel)", async () => {
+  const saved = snapshotEnv();
+  try {
+    process.env.NODE_ENV = "production";
+    process.env.FRONTEND_URL = "https://app.example.com";
+    delete process.env.VERCEL;
+
+    const { getBackendBaseUrl, getFrontendBaseUrl } = await loadAppUrls();
+    assert.equal(getBackendBaseUrl(), getFrontendBaseUrl());
+  } finally {
+    restoreEnv(saved);
+  }
+});
+
+test("getAppUrlConfig reports productionSafe=true for a real https origin", async () => {
+  const saved = snapshotEnv();
+  try {
+    process.env.NODE_ENV = "production";
+    process.env.FRONTEND_URL = "https://app.example.com";
+    delete process.env.VERCEL;
+
+    const { getAppUrlConfig } = await loadAppUrls();
+    const cfg = getAppUrlConfig();
+    assert.equal(cfg.frontend, "https://app.example.com");
+    assert.equal(cfg.backend, "https://app.example.com");
+    assert.equal(cfg.frontendSource, "FRONTEND_URL");
+    assert.equal(cfg.productionSafe, true);
+  } finally {
+    restoreEnv(saved);
+  }
+});
+
+test("getAppUrlConfig is productionSafe=true in local dev even on localhost", async () => {
+  const saved = snapshotEnv();
+  try {
+    process.env.NODE_ENV = "development";
+    delete process.env.VERCEL;
+    delete process.env.FRONTEND_URL;
+
+    const { getAppUrlConfig } = await loadAppUrls();
+    const cfg = getAppUrlConfig();
+    assert.equal(cfg.frontend, "http://localhost:3000");
+    assert.equal(cfg.frontendSource, "default");
+    assert.equal(cfg.productionSafe, true);
+  } finally {
+    restoreEnv(saved);
+  }
+});
+
+test("resolveFrontendUrl prefers BASE_URL fallback in dev when FRONTEND_URL unset", async () => {
+  const saved = snapshotEnv();
+  try {
+    process.env.NODE_ENV = "development";
+    delete process.env.VERCEL;
+    delete process.env.FRONTEND_URL;
+    process.env.BASE_URL = "https://staging.example.com";
+
+    const { getFrontendBaseUrl } = await loadAppUrls();
+    assert.equal(getFrontendBaseUrl(), "https://staging.example.com");
+  } finally {
+    restoreEnv(saved);
+  }
+});
+
 test("buildVerifyEmailCallbackUrl uses production frontend origin", async () => {
   const saved = snapshotEnv();
   try {

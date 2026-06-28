@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildPitchDeckAnalysisFallback,
+  buildFinancialDocAnalysisFallback,
   buildDiscoveryFiltersFallback,
   buildMeetingBriefFallback,
   AI_UNAVAILABLE_MESSAGE,
@@ -32,4 +33,20 @@ test("redactPii removes email addresses", () => {
   const out = redactPii("Contact john@example.com today");
   assert.ok(!out.includes("john@example.com"));
   assert.ok(out.includes("redacted"));
+});
+
+test("financial doc fallback marks degraded and names the document", () => {
+  const result = buildFinancialDocAnalysisFallback("CapTable.pdf", "Acme Inc");
+  assert.equal(result.degraded, true);
+  assert.equal(result.source, "fallback");
+  assert.equal(result.message, AI_UNAVAILABLE_MESSAGE);
+  assert.ok(result.summary.includes("CapTable.pdf"));
+  assert.ok(result.summary.includes("Acme Inc"));
+  assert.ok(Array.isArray(result.key_risks));
+});
+
+test("financial doc fallback degrades gracefully with no args", () => {
+  const result = buildFinancialDocAnalysisFallback();
+  assert.equal(result.degraded, true);
+  assert.ok(result.summary.includes("this document"));
 });
