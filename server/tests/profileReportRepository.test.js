@@ -101,7 +101,8 @@ test("dismissReport clears fraud flag/lock only after the last open report is di
     assert.equal(stillFlagged.rows[0].fraud_flagged, true, "still flagged with open reports");
     assert.ok(stillFlagged.rows[0].account_locked_until, "still locked with open reports");
 
-    // Dismiss the last open report: flag/lock should be cleared.
+    // Dismiss the last open report: flag should be cleared but auto-lock persists
+    // (only an explicit admin Reactivate action clears account_locked_until).
     await dismissReport({ id: r3.report.id });
 
     const cleared = await pool.query(
@@ -109,7 +110,7 @@ test("dismissReport clears fraud flag/lock only after the last open report is di
       [reported],
     );
     assert.equal(cleared.rows[0].fraud_flagged, false, "flag cleared after last dismissal");
-    assert.equal(cleared.rows[0].account_locked_until, null, "lock cleared after last dismissal");
+    assert.ok(cleared.rows[0].account_locked_until, "auto-lock persists after dismissal (requires admin reactivate)");
   } finally {
     await pool
       .query(`DELETE FROM public.users WHERE id = ANY($1)`, [

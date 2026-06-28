@@ -181,8 +181,7 @@ export async function dismissReport({ id, reviewedBy }) {
     await pool.query(
       `
         UPDATE public.users
-        SET fraud_flagged = FALSE,
-            account_locked_until = NULL
+        SET fraud_flagged = FALSE
         WHERE id = $1 AND deleted_at IS NULL
       `,
       [report.reported_user_id],
