@@ -2,9 +2,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Activity,
+  ArrowRight,
   BarChart3,
   Bot,
   Shield,
+  ShieldAlert,
+  ShieldCheck,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -65,12 +68,22 @@ const AdminAnalyticsPage = () => {
               Platform health, growth, trust quality, and feature adoption.
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <Link to="/admin/verification" className="text-sm text-primary hover:underline">
-              Verification queue →
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              to="/admin/verification"
+              className="group inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Verification queue
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
-            <Link to="/admin/reports" className="text-sm text-primary hover:underline">
-              Fraud reports →
+            <Link
+              to="/admin/reports"
+              className="group inline-flex items-center gap-2 rounded-xl border border-error/20 bg-error/5 px-3.5 py-2 text-sm font-medium text-error transition-colors hover:bg-error/10"
+            >
+              <ShieldAlert className="w-4 h-4" />
+              Fraud reports
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
         </div>
