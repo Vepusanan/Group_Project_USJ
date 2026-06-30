@@ -627,28 +627,27 @@ const HomePage = () => {
             <p className="text-slate-600 text-base md:text-lg leading-relaxed">
               Explore the customized workspace panels and analytics pipelines we've built specifically for startup fundraising and venture capital deployment.
             </p>
-            
-            {/* Interactive Toggle Switcher */}
+                 {/* Interactive Toggle Switcher */}
             <div className="flex justify-center mt-10">
-              <div className="relative flex bg-slate-200/80 p-1 rounded-2xl border border-slate-300/50 shadow-inner w-72">
+              <div className="relative flex bg-slate-300/30 backdrop-blur-md p-1 rounded-2xl border border-slate-200/40 shadow-lg w-72">
                 {/* Switch sliding indicator */}
                 <div 
-                  className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-xl shadow-md transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                  className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white/90 backdrop-blur-sm rounded-xl shadow-md transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                     showroomTab === "founder" ? "left-1" : "left-[calc(50%+2px)]"
                   }`}
                 />
                 <button
                   onClick={() => setShowroomTab("founder")}
-                  className={`relative z-10 flex-1 py-2.5 text-xs font-bold font-label uppercase tracking-wider rounded-xl transition-colors duration-300 ${
-                    showroomTab === "founder" ? "text-blue-600" : "text-slate-600 hover:text-slate-900"
+                  className={`relative z-10 flex-1 py-2.5 text-xs font-bold font-label uppercase tracking-wider rounded-xl transition-colors duration-305 ${
+                    showroomTab === "founder" ? "text-blue-600" : "text-slate-700 hover:text-slate-950"
                   }`}
                 >
                   Founders
                 </button>
                 <button
                   onClick={() => setShowroomTab("investor")}
-                  className={`relative z-10 flex-1 py-2.5 text-xs font-bold font-label uppercase tracking-wider rounded-xl transition-colors duration-300 ${
-                    showroomTab === "investor" ? "text-blue-600" : "text-slate-600 hover:text-slate-900"
+                  className={`relative z-10 flex-1 py-2.5 text-xs font-bold font-label uppercase tracking-wider rounded-xl transition-colors duration-305 ${
+                    showroomTab === "investor" ? "text-blue-600" : "text-slate-700 hover:text-slate-955"
                   }`}
                 >
                   Investors
@@ -659,17 +658,43 @@ const HomePage = () => {
 
           {/* Showroom Content Card */}
           <ScrollReveal direction="none" delay={150} className="w-full">
-            <div className="bg-white border border-slate-200/60 rounded-[2.5rem] p-8 md:p-12 shadow-xl overflow-hidden min-h-[480px] flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
-              
+            <div 
+              className={`group relative border-4 border-white/95 rounded-[2.5rem] p-8 md:p-12 shadow-2xl overflow-hidden min-h-[480px] flex flex-col lg:flex-row items-center gap-12 lg:gap-16 transition-all duration-700 ${
+                showroomTab === "founder" 
+                  ? "bg-gradient-to-br from-blue-500 via-indigo-650 to-purple-800" 
+                  : "bg-gradient-to-br from-purple-500 via-indigo-650 to-blue-800"
+              }`}
+            >
+              {/* Glassmorphic Background overlay clipped to expose the top-right color quadrant */}
+              <div 
+                className="absolute inset-0 bg-white/75 backdrop-blur-xl z-0 pointer-events-none" 
+                style={{ clipPath: "url(#glass-clip)" }}
+              />
+
+              {/* White Highlight Border Stroke matching the custom cutout curve */}
+              <svg 
+                className="absolute inset-0 w-full h-full pointer-events-none z-10" 
+                viewBox="0 0 100 100" 
+                preserveAspectRatio="none"
+              >
+                <path 
+                  d="M 54,0 Q 58,0 58,5 L 58,36 Q 58,45 67,45 L 100,45" 
+                  fill="none" 
+                  stroke="rgba(255,255,255,0.75)" 
+                  strokeWidth="1.5" 
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+
               {/* Left Column: Features info */}
-              <div className="w-full lg:w-1/2 flex flex-col justify-center">
-                <span className="inline-flex text-xs font-bold font-label text-blue-600 uppercase tracking-widest mb-4">
+              <div className="w-full lg:w-1/2 flex flex-col justify-center relative z-20">
+                <span className="inline-flex px-3.5 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-white/80 border border-slate-200/40 text-slate-700 shadow-sm w-max mb-5">
                   {SHOWROOM_DATA[showroomTab].badge}
                 </span>
-                <h3 className="text-2xl md:text-3.5xl font-bold text-midnight-navy mb-5 tracking-tight transition-all duration-305">
+                <h3 className="text-2xl md:text-3.5xl font-bold text-slate-900 mb-5 tracking-tight transition-all duration-300">
                   {SHOWROOM_DATA[showroomTab].title}
                 </h3>
-                <p className="text-slate-600 text-sm md:text-base leading-relaxed mb-8">
+                <p className="text-slate-700 text-sm md:text-base leading-relaxed mb-8">
                   {SHOWROOM_DATA[showroomTab].description}
                 </p>
 
@@ -679,14 +704,14 @@ const HomePage = () => {
                     const IconComp = feat.icon;
                     return (
                       <div key={feat.title} className="flex gap-4 group">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-50/80 border border-blue-100/30 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
                           <IconComp className="h-5 w-5" />
                         </div>
                         <div>
-                          <h4 className="text-base font-bold text-midnight-navy group-hover:text-blue-600 transition-colors duration-200">
+                          <h4 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors duration-200">
                             {feat.title}
                           </h4>
-                          <p className="text-xs md:text-sm text-slate-500 mt-1 leading-relaxed">
+                          <p className="text-xs md:text-sm text-slate-600 mt-1 leading-relaxed">
                             {feat.desc}
                           </p>
                         </div>
@@ -697,10 +722,10 @@ const HomePage = () => {
               </div>
 
               {/* Right Column: Premium Mock Dashboard Graphic */}
-              <div className="w-full lg:w-1/2 flex items-center justify-center relative">
+              <div className="w-full lg:w-1/2 flex items-center justify-center relative z-20">
                 {/* Glowing decorative gradient behind mock UI */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 to-indigo-500/5 rounded-3xl blur-2xl pointer-events-none" />
-                <div className="w-full max-w-md transition-all duration-500 transform hover:scale-[1.02]">
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-white/5 rounded-3xl blur-2xl pointer-events-none" />
+                <div className="w-full max-w-md transition-all duration-500 transform hover:scale-[1.02] shadow-2xl rounded-3xl">
                   {SHOWROOM_DATA[showroomTab].dashboardMock}
                 </div>
               </div>
