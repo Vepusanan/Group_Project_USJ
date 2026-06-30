@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Eye,
   Users,
+  Link2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { AUTH_STATUS } from "../utils/authStateMachine.js";
@@ -19,6 +20,54 @@ import ScrollReveal from "../components/ScrollReveal";
 import step01Image from "../assets/home/pipeline/step-01-create-profile.png";
 import step02Image from "../assets/home/pipeline/step-02-discover-connect.png";
 import step03Image from "../assets/home/pipeline/step-03-collaborate-grow.png";
+const LightMeshSVG = () => (
+  <svg className="w-full h-full opacity-[0.22] text-slate-400" viewBox="0 0 100 100" fill="none" stroke="currentColor">
+    <path d="M0,0 L30,20 L50,0 L80,30 L100,10 M30,20 L60,50 L80,30 M0,50 L30,20 L30,70 M30,70 L60,50 L50,100 M60,50 L100,60 L80,30 M100,60 L100,10 M30,70 L0,100 L50,100 M100,60 L100,100 L50,100" strokeWidth="0.5" />
+    <circle cx="30" cy="20" r="1.2" fill="currentColor" />
+    <circle cx="50" cy="0" r="1.2" fill="currentColor" />
+    <circle cx="80" cy="30" r="1.2" fill="currentColor" />
+    <circle cx="60" cy="50" r="1.2" fill="currentColor" />
+    <circle cx="30" cy="70" r="1.2" fill="currentColor" />
+    <circle cx="100" cy="60" r="1.2" fill="currentColor" />
+  </svg>
+);
+
+const GlobeNetworkSVG = () => (
+  <div className="w-full h-full bg-[#0a1128]/90 rounded-3xl relative overflow-hidden flex items-center justify-center border border-blue-500/20 shadow-md">
+    <div className="absolute w-20 h-20 bg-blue-500/10 rounded-full blur-xl" />
+    <svg className="w-4/5 h-4/5 stroke-blue-400/40" viewBox="0 0 100 100" fill="none">
+      <circle cx="50" cy="50" r="35" stroke="rgba(59,130,246,0.12)" strokeWidth="1" />
+      <circle cx="50" cy="50" r="25" stroke="rgba(59,130,246,0.08)" strokeWidth="1" />
+      <path d="M50,15 L35,30 L65,30 L50,15 M35,30 L25,50 L50,50 L35,30 M65,30 L75,50 L50,50 L65,30 M25,50 L35,70 L65,70 L75,50 M35,70 L50,85 L65,70" strokeWidth="0.5" />
+      <path d="M50,15 L50,85 M25,50 L75,50" strokeWidth="0.5" strokeDasharray="1,2" />
+      <circle cx="50" cy="15" r="1.5" fill="#60a5fa" />
+      <circle cx="35" cy="30" r="1.5" fill="#60a5fa" />
+      <circle cx="65" cy="30" r="1.5" fill="#60a5fa" />
+      <circle cx="25" cy="50" r="1.5" fill="#60a5fa" />
+      <circle cx="75" cy="50" r="1.5" fill="#60a5fa" />
+      <circle cx="35" cy="70" r="1.5" fill="#60a5fa" />
+      <circle cx="65" cy="70" r="1.5" fill="#60a5fa" />
+      <circle cx="50" cy="85" r="1.5" fill="#60a5fa" />
+      <circle cx="50" cy="50" r="2" fill="#3b82f6" className="animate-pulse" />
+    </svg>
+  </div>
+);
+
+const LandscapeMeshSVG = () => (
+  <div className="w-full h-full bg-[#080d1e]/90 rounded-3xl relative overflow-hidden flex items-center justify-center border border-indigo-500/20 shadow-md">
+    <div className="absolute w-20 h-20 bg-indigo-500/10 rounded-full blur-xl" />
+    <svg className="w-full h-full opacity-70 stroke-indigo-400/45" viewBox="0 0 100 60" fill="none">
+      <path d="M0,40 Q25,25 50,40 T100,35 M0,47 Q25,32 50,47 T100,42 M0,54 Q25,39 50,54 T100,49" strokeWidth="0.5" />
+      <path d="M10,60 L20,32 M30,60 L40,35 M50,60 L50,40 M70,60 L60,35 M90,60 L80,32" strokeWidth="0.5" />
+      <circle cx="20" cy="32" r="1" fill="#818cf8" />
+      <circle cx="40" cy="35" r="1" fill="#818cf8" />
+      <circle cx="50" cy="40" r="1" fill="#818cf8" />
+      <circle cx="60" cy="35" r="1" fill="#818cf8" />
+      <circle cx="80" cy="32" r="1" fill="#818cf8" />
+    </svg>
+  </div>
+);
+
 const CountUp = ({ end, duration = 2000, suffix = "" }) => {
   const [count, setCount] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
@@ -345,51 +394,107 @@ const HomePage = () => {
       {/* About */}
       <section
         id="about"
-        className="scroll-mt-24 px-5 py-24 sm:py-28 md:px-16 flex justify-center bg-slate-50"
+        className="scroll-mt-24 px-5 py-24 sm:py-28 md:px-16 flex justify-center bg-[#faf8f5] border-t border-slate-100"
       >
-        <ScrollReveal direction="up" className="w-full max-w-5xl">
-          <div className="relative bg-[#fdfbf7] border border-[#f0ebd8]/80 rounded-[2.5rem] p-8 md:p-16 shadow-[0_12px_40px_rgba(240,235,216,0.35)] overflow-hidden transition-all duration-500 hover:shadow-[0_20px_60px_rgba(240,235,216,0.5)] hover:-translate-y-1">
-            {/* Content Wrapper */}
-            <div className="relative z-10 flex flex-col">
-              {/* Title */}
-              <h2 className="text-3xl md:text-[2.75rem] font-bold leading-[1.15] text-[#18181b] tracking-tight mb-6 max-w-2xl">
-                Building Solutions, Expanding
-                <br className="hidden md:inline" /> Horizons
+        <div className="w-full max-w-container-max flex flex-col lg:flex-row gap-12 lg:gap-16 items-center">
+          
+          {/* Left Column: Details */}
+          <div className="w-full lg:w-[38%] flex flex-col justify-start">
+            <ScrollReveal direction="left" className="w-full">
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 uppercase tracking-widest font-label w-max mb-4 inline-block">
+                About Us
+              </span>
+              <h2 className="text-3.5xl md:text-[2.75rem] font-bold leading-[1.1] text-midnight-navy tracking-tight mb-6 font-display">
+                Bridging the Gap in Venture Financing
               </h2>
-              
-              {/* Subtitle */}
-              <p className="text-[#71717a] text-base md:text-lg leading-relaxed max-w-3xl mb-12">
-                StartupConnect bridges the gap between ambitious founders and strategic
-                investors through a seamless, secure verification engine.
+              <p className="text-slate-600 text-sm md:text-base leading-relaxed mb-8 text-justify">
+                StartupConnect matches high-growth startups with strategic capitals, and strategic investors. We believe the next through an integrated vetting, evaluation, and secure compliance environment. We remove operational friction so you can focus on building relationships.
               </p>
-
-              {/* Cards Grid */}
-              <div className="flex flex-col md:flex-row justify-between w-full gap-8 mt-4">
-                {/* Card 1: Verified Ecosystem */}
-                <div className="w-full md:w-[46%] bg-[#fdfbf7] border border-[#f0ebd8] rounded-[1.5rem] p-8 flex flex-col items-start transition-all duration-300 hover:shadow-xl hover:-translate-y-2 group">
-                  <Check className="h-6 w-6 text-[#18181b] mb-5 stroke-[2.5] transition-all duration-300 group-hover:scale-125 group-hover:rotate-12" />
-                  <h4 className="text-lg md:text-xl font-bold text-[#18181b] mb-2">
-                    Verified Ecosystem
-                  </h4>
-                  <p className="text-[#71717a] text-sm md:text-base leading-relaxed">
-                    Rigorous vetting for every startup and strategic investor.
-                  </p>
+              
+              <div className="space-y-4 mb-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0">
+                    <Check className="h-3 w-3 stroke-[3]" />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-700">Accredited and vetted investor pool</span>
                 </div>
-
-                {/* Card 2: Rapid Deployment */}
-                <div className="w-full md:w-[46%] bg-[#fdfbf7] border border-[#f0ebd8] rounded-[1.5rem] p-8 flex flex-col items-start transition-all duration-300 hover:shadow-xl hover:-translate-y-2 group">
-                  <Zap className="h-6 w-6 text-amber-500 fill-amber-500 mb-5 stroke-[1.5] transition-all duration-300 group-hover:scale-125 group-hover:rotate-12" />
-                  <h4 className="text-lg md:text-xl font-bold text-[#18181b] mb-2">
-                    Rapid Deployment
-                  </h4>
-                  <p className="text-[#71717a] text-sm md:text-base leading-relaxed">
-                    Accelerate capital allocation with automated workflows.
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0">
+                    <Check className="h-3 w-3 stroke-[3]" />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-700">SEC and regulatory compliance safeguards</span>
                 </div>
               </div>
-            </div>
+
+              {/* Key Platform Pillars with line & diamond */}
+              <div className="flex items-center gap-4">
+                <span className="font-display text-base font-bold text-midnight-navy tracking-tight whitespace-nowrap">
+                  Key Platform Pillars
+                </span>
+                <div className="h-[1px] flex-grow bg-slate-200 relative">
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rotate-45 border border-slate-300 bg-[#faf8f5]" />
+                </div>
+              </div>
+            </ScrollReveal>
           </div>
-        </ScrollReveal>
+
+          {/* Right Column: 3 Content Cards */}
+          <div className="w-full lg:w-[62%] grid grid-cols-1 sm:grid-cols-3 gap-6">
+            
+            {/* Card 1: Building Solutions */}
+            <ScrollReveal direction="up" delay={100} className="h-full">
+              <div className="glassmorphic-panel bg-amber-500/[0.04] border border-amber-500/20 shadow-[0_8px_30px_rgb(245,158,11,0.02)] backdrop-blur-md rounded-3xl p-8 flex flex-col h-full justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_12px_40px_rgba(245,158,11,0.1)] group">
+                <div>
+                  <div className="w-12 h-12 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center mb-6 shadow-md transition-all duration-300 group-hover:scale-110">
+                    <Link2 className="h-5 w-5 rotate-45" />
+                  </div>
+                  <h3 className="text-xl font-bold text-midnight-navy mb-4 font-display">
+                    Building Solutions,<br />Expanding Horizons
+                  </h3>
+                </div>
+                <p className="text-slate-600 text-sm leading-relaxed mt-4 text-justify">
+                  StartupConnect bridges the gap between ambitious founders and strategic investors. We believe the next generation of deep tech and software innovations shouldn't be stalled by access to capital.
+                </p>
+              </div>
+            </ScrollReveal>
+
+            {/* Card 2: Verified Ecosystem */}
+            <ScrollReveal direction="up" delay={200} className="h-full">
+              <div className="bg-[#1e1e24] border border-slate-800 shadow-[0_12px_30px_rgba(0,0,0,0.25)] rounded-3xl p-8 flex flex-col h-full justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.4)] group relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-amber-500/10 to-transparent pointer-events-none" />
+                <div>
+                  <div className="w-10 h-10 rounded-xl bg-transparent border border-amber-500/30 text-amber-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <ShieldCheck className="h-5 w-5 stroke-[1.5]" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-4 font-display">
+                    Verified Ecosystem
+                  </h3>
+                </div>
+                <p className="text-slate-400 text-sm leading-relaxed mt-4 text-justify">
+                  Every participant undergoes rigorous background checks and accreditation verification to ensure high-stakes professional integrity. Our secure framework checks credentials, verifies investor status, and validates startup histories to foster trust and accelerate high-value dealmaking.
+                </p>
+              </div>
+            </ScrollReveal>
+
+            {/* Card 3: Rapid Deployment */}
+            <ScrollReveal direction="up" delay={300} className="h-full">
+              <div className="bg-[#dcd6cd]/30 border border-[#c5bcb0]/40 rounded-3xl rounded-tl-[3.5rem] p-8 flex flex-col h-full justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_12px_40px_rgba(197,188,176,0.25)] group">
+                <div>
+                  <div className="w-10 h-10 rounded-full bg-[#14532d] text-white flex items-center justify-center mb-6 shadow-md group-hover:scale-110 transition-transform">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-850 mb-4 font-display">
+                    Rapid Deployment
+                  </h3>
+                </div>
+                <p className="text-slate-650 text-sm leading-relaxed mt-4 text-justify">
+                  Accelerate the fundraising process from months to weeks using our targeted matching algorithms and deal pipeline automation. Connect instantly with active venture capital firms, manage document shares, and streamline communications to close funding rounds faster.
+                </p>
+              </div>
+            </ScrollReveal>
+
+          </div>
+        </div>
       </section>
 
       {/* Platform Showroom Section */}

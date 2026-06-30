@@ -47,8 +47,8 @@
   --radius-3xl: 30px;
 
   --font-family-inter: 'Inter', system-ui, sans-serif;
-  --font-family-display: 'Hanken Grotesk', 'Inter', system-ui, sans-serif;
-  --font-family-label: 'JetBrains Mono', ui-monospace, monospace;
+  --font-family-display: 'Inter', system-ui, sans-serif;
+  --font-family-label: 'Inter', system-ui, sans-serif;
 
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;

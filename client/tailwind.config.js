@@ -59,9 +59,9 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
-        display: ["Hanken Grotesk", "Inter", "system-ui", "sans-serif"],
-        headline: ["Hanken Grotesk", "Inter", "system-ui", "sans-serif"],
-        label: ["JetBrains Mono", "ui-monospace", "monospace"],
+        display: ["Inter", "system-ui", "sans-serif"],
+        headline: ["Inter", "system-ui", "sans-serif"],
+        label: ["Inter", "system-ui", "sans-serif"],
       },
       fontSize: {
         "display-hero": ["64px", { lineHeight: "72px", letterSpacing: "-0.02em", fontWeight: "700" }],
