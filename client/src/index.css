@@ -1040,6 +1040,7 @@ button:focus {
 }
 
 /* Page hero background used below the header on most pages */
+/* Page hero background used below the header on most pages */
 .page-hero-bg {
   position: absolute;
   top: 0;
@@ -1050,4 +1051,145 @@ button:focus {
   pointer-events: none;
   z-index: 0;
 }
+
+/* ===================================
+   MODERN UI REDESIGN ANIMATIONS
+   =================================== */
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up-fade {
+  animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+/* Glassmorphic Panel styles */
+.glassmorphic-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 
+    0 4px 30px rgba(15, 23, 42, 0.03),
+    0 1px 3px rgba(15, 23, 42, 0.02);
+}
+
+.glassmorphic-panel-dark {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Interactive Hover Scale & Glow */
+.interactive-hover-glow {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.interactive-hover-glow:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 
+    0 20px 30px -10px rgba(0, 74, 198, 0.15),
+    0 0 1px 1px rgba(0, 74, 198, 0.1) !important;
+  border-color: rgba(0, 74, 198, 0.25) !important;
+}
+
+/* Button Glow Pulse keyframes */
+@keyframes buttonGlowPulse {
+  0%, 100% {
+    box-shadow: 0 4px 14px 0 rgba(0, 74, 198, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 28px 8px rgba(0, 74, 198, 0.5);
+  }
+}
+
+.animate-btn-glow {
+  animation: buttonGlowPulse 3s infinite ease-in-out;
+}
+
+/* Image zoom utility */
+.hover-zoom-container {
+  overflow: hidden;
+}
+
+.hover-zoom-img {
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-zoom-container:hover .hover-zoom-img {
+  transform: scale(1.06);
+}
+
+/* Custom dashboard tab slide transition */
+.tab-transition-enter {
+  opacity: 0;
+  transform: translateY(8px) scale(0.99);
+}
+
+.tab-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity 400ms ease-out, transform 400ms ease-out;
+}
+
+/* Pulsing active green/blue indicator */
+.badge-active-dot {
+  position: relative;
+}
+
+.badge-active-dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background-color: #10b981;
+  border-radius: 9999px;
+  box-shadow: 0 0 8px #10b981;
+  animation: dotPulse 2s infinite ease-in-out;
+}
+
+@keyframes dotPulse {
+  0%, 100% {
+    transform: translateY(-50%) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-50%) scale(1.4);
+    opacity: 1;
+    box-shadow: 0 0 12px 2px #10b981;
+  }
+}
+
+
 
