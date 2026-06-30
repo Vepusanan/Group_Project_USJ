@@ -4,7 +4,7 @@ const ScrollReveal = ({
   children,
   className = "",
   direction = "up", // 'up' | 'down' | 'left' | 'right' | 'none'
-  duration = 800, // in ms
+  duration = 950, // in ms
   delay = 0, // in ms
   threshold = 0.1,
   once = true,
@@ -48,12 +48,12 @@ const ScrollReveal = ({
       case "down":
         return "opacity-0 -translate-y-12 scale-[0.98]";
       case "left":
-        return "opacity-0 translate-x-12";
+        return "opacity-0 translate-x-12 scale-[0.98]";
       case "right":
-        return "opacity-0 -translate-x-12";
+        return "opacity-0 -translate-x-12 scale-[0.98]";
       case "none":
       default:
-        return "opacity-0";
+        return "opacity-0 scale-[0.98]";
     }
   };
 
