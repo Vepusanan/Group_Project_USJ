@@ -1,10 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
-  BadgeCheck,
+  Check,
   CheckCircle2,
-  Gauge,
   Network,
+  Zap,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { AUTH_STATUS } from "../utils/authStateMachine.js";
@@ -119,57 +119,166 @@ const HomePage = () => {
       {/* About */}
       <section
         id="about"
-        className="scroll-mt-24 overflow-hidden px-5 py-20 sm:py-24 md:px-16 md:py-32"
+        className="scroll-mt-24 px-5 py-20 sm:py-24 md:px-16 flex justify-center bg-slate-50"
       >
-        <div className="mx-auto grid max-w-container-max items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          <div className="relative">
-            <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-blue-500/5 blur-[100px]" />
-            <h2 className="relative mb-6 text-3xl font-bold leading-tight text-midnight-navy sm:mb-8 sm:text-4xl md:text-5xl">
-              Building Solutions,
-              <br />
-              Expanding Horizons
-            </h2>
-            <p className="relative mb-8 text-base leading-relaxed text-slate-600 sm:text-lg">
-              StartupConnect bridges the gap between ambitious founders and strategic
-              investors. We believe the next generation of deep tech and software
-              innovations shouldn&apos;t be stalled by access to capital.
-            </p>
-            <div className="relative space-y-4">
-              <div className="flex items-start gap-4">
-                <BadgeCheck className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
-                <div>
-                  <h4 className="text-lg font-semibold text-midnight-navy">
-                    Verified Ecosystem
-                  </h4>
-                  <p className="text-slate-600">
-                    Every participant undergoes rigorous vetting to ensure
-                    high-stakes professional integrity.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <Gauge className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
-                <div>
-                  <h4 className="text-lg font-semibold text-midnight-navy">
-                    Rapid Deployment
-                  </h4>
-                  <p className="text-slate-600">
-                    Accelerate the fundraising process from months to weeks with
-                    targeted matching algorithms.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="relative w-full max-w-5xl bg-[#fdfbf7] border border-[#f0ebd8] rounded-[2.5rem] p-8 md:p-16 shadow-[0_8px_30px_rgb(240,235,216,0.5)] overflow-hidden">
+          {/* SVG Network Background - Visible on md and up */}
+          <svg
+            className="hidden md:block absolute inset-0 w-full h-full pointer-events-none z-0"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Dashed Connecting Lines */}
+            {/* Top horizontal connection */}
+            <line
+              x1="42.5%"
+              y1="23%"
+              x2="57.5%"
+              y2="23%"
+              stroke="#f0ebd8"
+              strokeWidth="2"
+              strokeDasharray="6 6"
+            />
+            {/* Left vertical connection */}
+            <line
+              x1="42.5%"
+              y1="23%"
+              x2="42.5%"
+              y2="58%"
+              stroke="#f0ebd8"
+              strokeWidth="2"
+              strokeDasharray="6 6"
+            />
+            {/* Right vertical connection */}
+            <line
+              x1="57.5%"
+              y1="23%"
+              x2="57.5%"
+              y2="58%"
+              stroke="#f0ebd8"
+              strokeWidth="2"
+              strokeDasharray="6 6"
+            />
+            
+            {/* Diagonal connections to Center node */}
+            <line
+              x1="42.5%"
+              y1="23%"
+              x2="50%"
+              y2="41%"
+              stroke="#f0ebd8"
+              strokeWidth="2"
+              strokeDasharray="6 6"
+            />
+            <line
+              x1="57.5%"
+              y1="23%"
+              x2="50%"
+              y2="41%"
+              stroke="#f0ebd8"
+              strokeWidth="2"
+              strokeDasharray="6 6"
+            />
+            <line
+              x1="42.5%"
+              y1="58%"
+              x2="50%"
+              y2="41%"
+              stroke="#f0ebd8"
+              strokeWidth="2"
+              strokeDasharray="6 6"
+            />
+            <line
+              x1="57.5%"
+              y1="58%"
+              x2="50%"
+              y2="41%"
+              stroke="#f0ebd8"
+              strokeWidth="2"
+              strokeDasharray="6 6"
+            />
+            
+            {/* Diagonal connections to Bottom-center node */}
+            <line
+              x1="42.5%"
+              y1="58%"
+              x2="50%"
+              y2="65%"
+              stroke="#f0ebd8"
+              strokeWidth="2"
+              strokeDasharray="6 6"
+            />
+            <line
+              x1="57.5%"
+              y1="58%"
+              x2="50%"
+              y2="65%"
+              stroke="#f0ebd8"
+              strokeWidth="2"
+              strokeDasharray="6 6"
+            />
+            {/* Vertical connection from Center to Bottom-center */}
+            <line
+              x1="50%"
+              y1="41%"
+              x2="50%"
+              y2="65%"
+              stroke="#f0ebd8"
+              strokeWidth="2"
+              strokeDasharray="6 6"
+            />
 
-          <div className="group relative">
-            <div className="absolute inset-0 rounded-[2rem] bg-blue-500/5 opacity-0 blur-3xl transition-opacity duration-1000 group-hover:opacity-100" />
-            <div className="relative aspect-video overflow-hidden rounded-[2rem] border border-slate-200 shadow-xl lg:aspect-square">
-              <img
-                src="/images/home/about-solutions.png"
-                alt="Growth and strategic vision for founders and investors"
-                className="h-full w-full scale-[1.15] object-cover object-center transition-all duration-700 group-hover:scale-110"
-              />
+            {/* Nodes (Circles) */}
+            {/* Top-left node */}
+            <circle cx="42.5%" cy="23%" r="7" fill="#18181b" />
+            {/* Top-right node */}
+            <circle cx="57.5%" cy="23%" r="7" fill="#18181b" />
+            {/* Large Center node */}
+            <circle cx="50%" cy="41%" r="15" fill="#18181b" />
+            {/* Left-middle node (overlaps Card 1 right edge) */}
+            <circle cx="42.5%" cy="58%" r="7" fill="#18181b" />
+            {/* Right-middle node (overlaps Card 2 left edge) */}
+            <circle cx="57.5%" cy="58%" r="7" fill="#18181b" />
+            {/* Bottom-center node */}
+            <circle cx="50%" cy="65%" r="7" fill="#18181b" />
+          </svg>
+
+          {/* Content Wrapper */}
+          <div className="relative z-10 flex flex-col">
+            {/* Title */}
+            <h2 className="text-3xl md:text-[2.75rem] font-bold leading-[1.15] text-[#18181b] tracking-tight mb-6 max-w-2xl">
+              Building Solutions, Expanding
+              <br className="hidden md:inline" /> Horizons
+            </h2>
+            
+            {/* Subtitle */}
+            <p className="text-[#71717a] text-base md:text-lg leading-relaxed max-w-3xl mb-12">
+              StartupConnect bridges the gap between ambitious founders and strategic
+              investors through a seamless, secure verification engine.
+            </p>
+
+            {/* Cards Grid */}
+            <div className="flex flex-col md:flex-row justify-between w-full gap-8 mt-4">
+              {/* Card 1: Verified Ecosystem */}
+              <div className="w-full md:w-[42.5%] bg-[#fdfbf7] border border-[#f0ebd8] rounded-[1.5rem] p-8 flex flex-col items-start transition-all duration-300 hover:shadow-md">
+                <Check className="h-6 w-6 text-[#18181b] mb-5 stroke-[2.5]" />
+                <h4 className="text-lg md:text-xl font-bold text-[#18181b] mb-2">
+                  Verified Ecosystem
+                </h4>
+                <p className="text-[#71717a] text-sm md:text-base leading-relaxed">
+                  Rigorous vetting for every startup and strategic investor.
+                </p>
+              </div>
+
+              {/* Card 2: Rapid Deployment */}
+              <div className="w-full md:w-[42.5%] bg-[#fdfbf7] border border-[#f0ebd8] rounded-[1.5rem] p-8 flex flex-col items-start transition-all duration-300 hover:shadow-md">
+                <Zap className="h-6 w-6 text-amber-500 fill-amber-500 mb-5 stroke-[1.5]" />
+                <h4 className="text-lg md:text-xl font-bold text-[#18181b] mb-2">
+                  Rapid Deployment
+                </h4>
+                <p className="text-[#71717a] text-sm md:text-base leading-relaxed">
+                  Accelerate capital allocation with automated workflows.
+                </p>
+              </div>
             </div>
           </div>
         </div>
