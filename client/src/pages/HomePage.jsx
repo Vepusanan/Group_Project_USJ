@@ -16,6 +16,7 @@ import {
   UserPlus,
   Compass,
   Handshake,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { AUTH_STATUS } from "../utils/authStateMachine.js";
@@ -384,7 +385,7 @@ const HomePage = () => {
       {/* Stats */}
       <section className="relative z-20 -mt-16 px-5 sm:-mt-20 md:-mt-24 md:px-16">
         <ScrollReveal direction="up" delay={200} className="w-full">
-          <div className="glassmorphic-panel mx-auto grid max-w-container-max grid-cols-2 gap-6 rounded-[2.5rem] p-6 sm:gap-8 sm:p-8 md:grid-cols-4 md:gap-12 md:p-12 border border-white/40 shadow-2xl relative z-10">
+          <div className="bg-white mx-auto grid max-w-container-max grid-cols-2 gap-6 rounded-[2.5rem] p-6 sm:gap-8 sm:p-8 md:grid-cols-4 md:gap-12 md:p-12 border border-slate-200/60 shadow-2xl relative z-10">
             {STATS.map(({ end, suffix, label }) => (
               <div key={label} className="flex flex-col items-center text-center group transition-all duration-300">
                 <div className="font-label text-2xl font-bold text-blue-600 sm:text-3xl md:text-4xl transition-all duration-300 group-hover:scale-110 group-hover:text-midnight-navy">
@@ -659,15 +660,20 @@ const HomePage = () => {
           {/* Showroom Content Card */}
           <ScrollReveal direction="none" delay={150} className="w-full">
             <div 
-              className={`group relative border-4 border-white/95 rounded-[2.5rem] p-8 md:p-12 shadow-2xl overflow-hidden min-h-[480px] flex flex-col lg:flex-row items-center gap-12 lg:gap-16 transition-all duration-700 ${
-                showroomTab === "founder" 
-                  ? "bg-gradient-to-br from-blue-500 via-indigo-650 to-purple-800" 
-                  : "bg-gradient-to-br from-purple-500 via-indigo-650 to-blue-800"
-              }`}
+              className="group relative border-4 border-white/95 rounded-[2.5rem] p-8 md:p-12 shadow-2xl overflow-hidden min-h-[480px] flex flex-col lg:flex-row items-center gap-12 lg:gap-16 bg-white"
             >
+              {/* Soft background color gradient layer with opacity */}
+              <div 
+                className={`absolute inset-0 transition-all duration-700 opacity-40 ${
+                  showroomTab === "founder" 
+                    ? "bg-gradient-to-br from-blue-500 via-indigo-650 to-purple-800" 
+                    : "bg-gradient-to-br from-purple-500 via-indigo-650 to-blue-800"
+                }`}
+              />
+
               {/* Glassmorphic Background overlay clipped to expose the top-right color quadrant */}
               <div 
-                className="absolute inset-0 bg-white/75 backdrop-blur-xl z-0 pointer-events-none" 
+                className="absolute inset-0 bg-white/80 backdrop-blur-xl z-0 pointer-events-none" 
                 style={{ clipPath: "url(#glass-clip)" }}
               />
 
@@ -899,50 +905,57 @@ const HomePage = () => {
       {/* Final CTA */}
       <section
         id="cta"
-        className="relative scroll-mt-24 overflow-hidden px-5 py-20 sm:py-24 md:px-16 md:py-32 bg-slate-50"
+        className="relative scroll-mt-24 overflow-hidden px-5 py-20 sm:py-24 md:px-16 md:py-32 bg-[#faf8f5]"
       >
         <div className="absolute inset-0 z-0 pointer-events-none">
-          <div className="absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[130px] sm:h-[900px] sm:w-[900px]" />
+          <div className="absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/5 blur-[130px] sm:h-[900px] sm:w-[900px]" />
         </div>
 
         <ScrollReveal direction="up" className="w-full">
-          <div className="relative z-10 mx-auto max-w-4xl rounded-[2.5rem] bg-gradient-to-br from-[#0f172a] to-[#1e293b] p-8 text-center sm:p-12 md:p-16 shadow-[0_20px_50px_rgba(15,23,42,0.35)] overflow-hidden border border-slate-800">
-            <div className="absolute -left-16 -top-16 w-40 h-40 bg-blue-600/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute -right-16 -bottom-16 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="relative z-10 mx-auto max-w-4xl rounded-[2.5rem] bg-white/70 backdrop-blur-xl p-8 text-center sm:p-12 md:p-16 shadow-xl border border-slate-200/60 overflow-hidden">
+            {/* Background decorative glow */}
+            <div className="absolute -left-16 -top-16 w-40 h-40 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -right-16 -bottom-16 w-40 h-40 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
 
-            <h2 className="mb-4 text-3xl font-extrabold text-white sm:mb-6 sm:text-4xl md:text-5xl tracking-tight leading-tight">
-              Raise the bar for your
-              <br />
-              <span className="bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">venture portfolio</span>
-            </h2>
-            <p className="mx-auto mb-8 max-w-xl text-base text-slate-300 sm:text-lg leading-relaxed">
-              Join the exclusive ecosystem where high-growth visionaries and
-              institutional capital unite to build the future.
-            </p>
-            
-            <div className="flex justify-center">
-              <Link
-                to="/signup"
-                className="inline-flex items-center justify-center rounded-2xl bg-blue-600 hover:bg-blue-500 px-10 py-4.5 text-base font-bold text-white no-underline shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 animate-btn-glow sm:px-12 sm:py-5"
-              >
-                Join the Pipeline
-              </Link>
+            {/* Content Layers */}
+            <div className="relative z-20 flex flex-col items-center">
+              <div className="max-w-2xl text-center w-full">
+                <h2 className="mb-4 text-3xl font-extrabold text-slate-900 sm:mb-6 sm:text-4xl md:text-5xl tracking-tight leading-tight">
+                  Raise the bar for your
+                  <br />
+                  <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">venture portfolio</span>
+                </h2>
+                <p className="mx-auto mb-8 max-w-xl text-sm sm:text-base text-slate-650 leading-relaxed">
+                  Join the exclusive ecosystem where high-growth visionaries and
+                  institutional capital unite to build the future.
+                </p>
+                
+                <div className="flex justify-center">
+                  <Link
+                    to="/signup"
+                    className="inline-flex items-center justify-center rounded-2xl bg-blue-600 hover:bg-blue-500 px-10 py-4 text-base font-bold text-white no-underline shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 animate-btn-glow sm:px-12 sm:py-4.5"
+                  >
+                    Join the Pipeline
+                  </Link>
+                </div>
+
+                <div className="mt-10 flex flex-col items-center justify-center gap-4 font-label text-xs uppercase tracking-wider text-slate-500 sm:flex-row sm:gap-8">
+                  <span className="inline-flex items-center gap-2 hover:text-emerald-600 transition-colors">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    No upfront fees
+                  </span>
+                  <span className="inline-flex items-center gap-2 hover:text-emerald-600 transition-colors">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    SEC Compliant
+                  </span>
+                  <span className="inline-flex items-center gap-2 hover:text-emerald-600 transition-colors">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    $120M+ Capital Deployed
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 font-label text-xs uppercase tracking-wider text-slate-400 sm:flex-row sm:gap-8">
-              <span className="inline-flex items-center gap-2 hover:text-emerald-400 transition-colors">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                No upfront fees
-              </span>
-              <span className="inline-flex items-center gap-2 hover:text-emerald-400 transition-colors">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                SEC Compliant
-              </span>
-              <span className="inline-flex items-center gap-2 hover:text-emerald-400 transition-colors">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                $120M+ Capital Deployed
-              </span>
-            </div>
           </div>
         </ScrollReveal>
       </section>
