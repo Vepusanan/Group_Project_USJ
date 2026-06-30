@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   Check,
@@ -19,12 +19,64 @@ import ScrollReveal from "../components/ScrollReveal";
 import step01Image from "../assets/home/pipeline/step-01-create-profile.png";
 import step02Image from "../assets/home/pipeline/step-02-discover-connect.png";
 import step03Image from "../assets/home/pipeline/step-03-collaborate-grow.png";
+const CountUp = ({ end, duration = 2000, suffix = "" }) => {
+  const [count, setCount] = useState(0);
+  const [hasStarted, setHasStarted] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasStarted(true);
+          if (containerRef.current) {
+            observer.unobserve(containerRef.current);
+          }
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => {
+      if (containerRef.current) {
+        observer.unobserve(containerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasStarted) return;
+
+    let startTimestamp = null;
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const easedProgress = progress * (2 - progress); // easeOutQuad
+      
+      setCount(Math.floor(easedProgress * end));
+
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      } else {
+        setCount(end);
+      }
+    };
+
+    window.requestAnimationFrame(step);
+  }, [hasStarted, end, duration]);
+
+  return <span ref={containerRef}>{count}{suffix}</span>;
+};
 
 const STATS = [
-  { value: "500+", label: "Startups" },
-  { value: "200+", label: "Investors" },
-  { value: "1500+", label: "Connections" },
-  { value: "50+", label: "Industries" },
+  { end: 500, suffix: "+", label: "Startups" },
+  { end: 200, suffix: "+", label: "Investors" },
+  { end: 1500, suffix: "+", label: "Connections" },
+  { end: 50, suffix: "+", label: "Industries" },
 ];
 
 const PIPELINE_STEPS = [
@@ -276,10 +328,10 @@ const HomePage = () => {
       <section className="relative z-20 -mt-16 px-5 sm:-mt-20 md:-mt-24 md:px-16">
         <ScrollReveal direction="up" delay={200} className="w-full">
           <div className="glassmorphic-panel mx-auto grid max-w-container-max grid-cols-2 gap-6 rounded-[2.5rem] p-6 sm:gap-8 sm:p-8 md:grid-cols-4 md:gap-12 md:p-12 border border-white/40 shadow-2xl relative z-10">
-            {STATS.map(({ value, label }) => (
+            {STATS.map(({ end, suffix, label }) => (
               <div key={label} className="flex flex-col items-center text-center group transition-all duration-300">
                 <div className="font-label text-2xl font-bold text-blue-600 sm:text-3xl md:text-4xl transition-all duration-300 group-hover:scale-110 group-hover:text-midnight-navy">
-                  {value}
+                  <CountUp end={end} suffix={suffix} />
                 </div>
                 <div className="mt-2 font-label text-[10px] uppercase tracking-wider text-slate-500 font-semibold sm:text-xs">
                   {label}
