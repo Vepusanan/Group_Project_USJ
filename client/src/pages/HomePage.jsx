@@ -328,6 +328,18 @@ const HomePage = () => {
 
   return (
     <div className="overflow-x-hidden bg-slate-50 font-sans text-slate-900">
+      {/* Global SVG clip-path for double-layered glassmorphic cutout layout */}
+      <svg className="absolute w-0 h-0" width="0" height="0">
+        <defs>
+          <clipPath id="glass-clip" clipPathUnits="objectBoundingBox">
+            <path d="M 0,0 L 0.54,0 Q 0.58,0 0.58,0.05 L 0.58,0.36 Q 0.58,0.45 0.67,0.45 L 1,0.45 L 1,1 L 0,1 Z" />
+          </clipPath>
+          <clipPath id="about-glass-clip" clipPathUnits="objectBoundingBox">
+            {/* Optimized for narrower 3-column cards */}
+            <path d="M 0,0 L 0.66,0 Q 0.70,0 0.70,0.05 L 0.70,0.26 Q 0.70,0.32 0.80,0.32 L 1,0.32 L 1,1 L 0,1 Z" />
+          </clipPath>
+        </defs>
+      </svg>
       <section className="relative flex w-full flex-col min-h-[100dvh] lg:h-[100dvh] lg:min-h-0">
         <img
           src="/images/hero-background/hero-vortex.png"
@@ -433,59 +445,165 @@ const HomePage = () => {
               </div>
             </ScrollReveal>
           </div>
-
           {/* Right Column: 3 Content Cards */}
           <div className="w-full lg:w-[62%] grid grid-cols-1 sm:grid-cols-3 gap-6">
             
             {/* Card 1: Building Solutions */}
             <ScrollReveal direction="up" delay={100} className="h-full">
-              <div className="glassmorphic-panel bg-amber-500/[0.04] border border-amber-500/20 shadow-[0_8px_30px_rgb(245,158,11,0.02)] backdrop-blur-md rounded-3xl p-8 flex flex-col h-full justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_12px_40px_rgba(245,158,11,0.1)] group">
-                <div>
-                  <div className="w-12 h-12 rounded-full bg-[#1e3a8a] text-white flex items-center justify-center mb-6 shadow-md transition-all duration-300 group-hover:scale-110">
-                    <Link2 className="h-5 w-5 rotate-45" />
+              <div
+                className="group relative h-[440px] bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between"
+              >
+                {/* Glassmorphic Background overlay clipped to expose the top-right color quadrant */}
+                <div 
+                  className="absolute inset-0 bg-white/75 backdrop-blur-lg z-0" 
+                  style={{ clipPath: "url(#about-glass-clip)" }}
+                />
+
+                {/* White Highlight Border Stroke matching the custom cutout curve */}
+                <svg 
+                  className="absolute inset-0 w-full h-full pointer-events-none z-10" 
+                  viewBox="0 0 100 100" 
+                  preserveAspectRatio="none"
+                >
+                  <path 
+                    d="M 66,0 Q 70,0 70,5 L 70,26 Q 70,32 80,32 L 100,32" 
+                    fill="none" 
+                    stroke="rgba(255,255,255,0.75)" 
+                    strokeWidth="1.5" 
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+
+                {/* Content Layers */}
+                <div className="relative z-20 flex flex-col justify-between h-full w-full">
+                  <div className="flex justify-between items-start">
+                    <div className="w-[64%]">
+                      <span className="px-3.5 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-white/80 border border-slate-200/40 text-slate-700 shadow-sm">
+                        FOUNDATION
+                      </span>
+                      <h3 className="text-lg font-bold text-slate-900 mt-4 leading-tight tracking-tight">
+                        Building Solutions, Expanding Horizons
+                      </h3>
+                    </div>
+
+                    {/* Icon placed inside the exposed color quadrant */}
+                    <div className="absolute top-0 right-0 w-[30%] h-[30%] flex items-center justify-end mt-4 mr-4">
+                      <div className="w-12 h-12 rounded-2xl bg-white/90 shadow-lg border border-amber-200/40 flex items-center justify-center group-hover:scale-110 transition-all duration-500">
+                        <Link2 className="h-5.5 w-5.5 text-amber-600 rotate-45" />
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-midnight-navy mb-4 font-display">
-                    Building Solutions,<br />Expanding Horizons
-                  </h3>
+
+                  <p className="text-sm text-slate-700 leading-relaxed text-justify font-normal mt-auto pr-1">
+                    StartupConnect bridges the gap between ambitious founders and strategic investors. We believe the next generation of deep tech and software innovations shouldn't be stalled by access to capital.
+                  </p>
                 </div>
-                <p className="text-slate-600 text-sm leading-relaxed mt-4 text-justify">
-                  StartupConnect bridges the gap between ambitious founders and strategic investors. We believe the next generation of deep tech and software innovations shouldn't be stalled by access to capital.
-                </p>
               </div>
             </ScrollReveal>
 
             {/* Card 2: Verified Ecosystem */}
             <ScrollReveal direction="up" delay={200} className="h-full">
-              <div className="bg-[#1e1e24] border border-slate-800 shadow-[0_12px_30px_rgba(0,0,0,0.25)] rounded-3xl p-8 flex flex-col h-full justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.4)] group relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-amber-500/10 to-transparent pointer-events-none" />
-                <div>
-                  <div className="w-10 h-10 rounded-xl bg-transparent border border-amber-500/30 text-amber-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <ShieldCheck className="h-5 w-5 stroke-[1.5]" />
+              <div
+                className="group relative h-[440px] bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between"
+              >
+                {/* Glassmorphic Background overlay clipped to expose the top-right color quadrant */}
+                <div 
+                  className="absolute inset-0 bg-white/75 backdrop-blur-lg z-0" 
+                  style={{ clipPath: "url(#about-glass-clip)" }}
+                />
+
+                {/* White Highlight Border Stroke matching the custom cutout curve */}
+                <svg 
+                  className="absolute inset-0 w-full h-full pointer-events-none z-10" 
+                  viewBox="0 0 100 100" 
+                  preserveAspectRatio="none"
+                >
+                  <path 
+                    d="M 66,0 Q 70,0 70,5 L 70,26 Q 70,32 80,32 L 100,32" 
+                    fill="none" 
+                    stroke="rgba(255,255,255,0.75)" 
+                    strokeWidth="1.5" 
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+
+                {/* Content Layers */}
+                <div className="relative z-20 flex flex-col justify-between h-full w-full">
+                  <div className="flex justify-between items-start">
+                    <div className="w-[64%]">
+                      <span className="px-3.5 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-white/80 border border-slate-200/40 text-slate-700 shadow-sm">
+                        TRUST
+                      </span>
+                      <h3 className="text-lg font-bold text-slate-900 mt-4 leading-tight tracking-tight">
+                        Verified Ecosystem
+                      </h3>
+                    </div>
+
+                    {/* Icon placed inside the exposed color quadrant */}
+                    <div className="absolute top-0 right-0 w-[30%] h-[30%] flex items-center justify-end mt-4 mr-4">
+                      <div className="w-12 h-12 rounded-2xl bg-white/90 shadow-lg border border-blue-200/40 flex items-center justify-center group-hover:scale-110 transition-all duration-500">
+                        <ShieldCheck className="h-5.5 w-5.5 text-blue-600" />
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-4 font-display">
-                    Verified Ecosystem
-                  </h3>
+
+                  <p className="text-sm text-slate-700 leading-relaxed text-justify font-normal mt-auto pr-1">
+                    Every participant undergoes rigorous background checks and accreditation verification to ensure high-stakes professional integrity. Our secure framework checks credentials, verifies investor status, and validates startup histories to foster trust and accelerate high-value dealmaking.
+                  </p>
                 </div>
-                <p className="text-slate-400 text-sm leading-relaxed mt-4 text-justify">
-                  Every participant undergoes rigorous background checks and accreditation verification to ensure high-stakes professional integrity. Our secure framework checks credentials, verifies investor status, and validates startup histories to foster trust and accelerate high-value dealmaking.
-                </p>
               </div>
             </ScrollReveal>
 
             {/* Card 3: Rapid Deployment */}
             <ScrollReveal direction="up" delay={300} className="h-full">
-              <div className="bg-[#dcd6cd]/30 border border-[#c5bcb0]/40 rounded-3xl rounded-tl-[3.5rem] p-8 flex flex-col h-full justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_12px_40px_rgba(197,188,176,0.25)] group">
-                <div>
-                  <div className="w-10 h-10 rounded-full bg-[#14532d] text-white flex items-center justify-center mb-6 shadow-md group-hover:scale-110 transition-transform">
-                    <TrendingUp className="h-5 w-5" />
+              <div
+                className="group relative h-[440px] bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between"
+              >
+                {/* Glassmorphic Background overlay clipped to expose the top-right color quadrant */}
+                <div 
+                  className="absolute inset-0 bg-white/75 backdrop-blur-lg z-0" 
+                  style={{ clipPath: "url(#about-glass-clip)" }}
+                />
+
+                {/* White Highlight Border Stroke matching the custom cutout curve */}
+                <svg 
+                  className="absolute inset-0 w-full h-full pointer-events-none z-10" 
+                  viewBox="0 0 100 100" 
+                  preserveAspectRatio="none"
+                >
+                  <path 
+                    d="M 66,0 Q 70,0 70,5 L 70,26 Q 70,32 80,32 L 100,32" 
+                    fill="none" 
+                    stroke="rgba(255,255,255,0.75)" 
+                    strokeWidth="1.5" 
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+
+                {/* Content Layers */}
+                <div className="relative z-20 flex flex-col justify-between h-full w-full">
+                  <div className="flex justify-between items-start">
+                    <div className="w-[64%]">
+                      <span className="px-3.5 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-white/80 border border-slate-200/40 text-slate-700 shadow-sm">
+                        SPEED
+                      </span>
+                      <h3 className="text-lg font-bold text-slate-900 mt-4 leading-tight tracking-tight">
+                        Rapid Deployment
+                      </h3>
+                    </div>
+
+                    {/* Icon placed inside the exposed color quadrant */}
+                    <div className="absolute top-0 right-0 w-[30%] h-[30%] flex items-center justify-end mt-4 mr-4">
+                      <div className="w-12 h-12 rounded-2xl bg-white/90 shadow-lg border border-emerald-200/40 flex items-center justify-center group-hover:scale-110 transition-all duration-500">
+                        <TrendingUp className="h-5.5 w-5.5 text-emerald-600" />
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-slate-850 mb-4 font-display">
-                    Rapid Deployment
-                  </h3>
+
+                  <p className="text-sm text-slate-700 leading-relaxed text-justify font-normal mt-auto pr-1">
+                    Accelerate the fundraising process from months to weeks using our targeted matching algorithms and deal pipeline automation. Connect instantly with active venture capital firms, manage document shares, and streamline communications to close funding rounds faster.
+                  </p>
                 </div>
-                <p className="text-slate-650 text-sm leading-relaxed mt-4 text-justify">
-                  Accelerate the fundraising process from months to weeks using our targeted matching algorithms and deal pipeline automation. Connect instantly with active venture capital firms, manage document shares, and streamline communications to close funding rounds faster.
-                </p>
               </div>
             </ScrollReveal>
 
@@ -597,15 +715,7 @@ const HomePage = () => {
         id="how-it-works"
         className="scroll-mt-24 bg-[#faf8f5] px-5 py-24 sm:py-28 md:px-16 md:py-32 border-t border-slate-100 relative overflow-hidden"
       >
-        {/* Responsive clip-path mask injected inline to clip the glassmorphic overlay precisely */}
-        <svg className="absolute w-0 h-0" width="0" height="0">
-          <defs>
-            <clipPath id="glass-clip" clipPathUnits="objectBoundingBox">
-              {/* Left side and bottom area covered by glass, top-right cut out */}
-              <path d="M 0,0 L 0.54,0 Q 0.58,0 0.58,0.05 L 0.58,0.36 Q 0.58,0.45 0.67,0.45 L 1,0.45 L 1,1 L 0,1 Z" />
-            </clipPath>
-          </defs>
-        </svg>
+
 
         {/* Background glow decorators */}
         <div className="absolute -left-40 top-40 w-96 h-96 bg-blue-500/5 rounded-full blur-[120px] pointer-events-none" />
