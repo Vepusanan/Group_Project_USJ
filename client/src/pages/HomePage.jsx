@@ -13,13 +13,13 @@ import {
   Eye,
   Users,
   Link2,
+  UserPlus,
+  Compass,
+  Handshake,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { AUTH_STATUS } from "../utils/authStateMachine.js";
 import ScrollReveal from "../components/ScrollReveal";
-import step01Image from "../assets/home/pipeline/step-01-create-profile.png";
-import step02Image from "../assets/home/pipeline/step-02-discover-connect.png";
-import step03Image from "../assets/home/pipeline/step-03-collaborate-grow.png";
 const LightMeshSVG = () => (
   <svg className="w-full h-full opacity-[0.22] text-slate-400" viewBox="0 0 100 100" fill="none" stroke="currentColor">
     <path d="M0,0 L30,20 L50,0 L80,30 L100,10 M30,20 L60,50 L80,30 M0,50 L30,20 L30,70 M30,70 L60,50 L50,100 M60,50 L100,60 L80,30 M100,60 L100,10 M30,70 L0,100 L50,100 M100,60 L100,100 L50,100" strokeWidth="0.5" />
@@ -134,28 +134,24 @@ const PIPELINE_STEPS = [
     title: "Create Your Profile",
     description:
       "Build a comprehensive data-rich presence. Highlighting your KPIs, vision, and institutional-ready metrics for potential partners.",
-    image: step01Image,
-    imageAlt: "Professional founder building a polished institutional profile",
-    imageClass: "object-cover object-top",
+    image: "/images/home/card1.png",
+    imageAlt: "Create profile illustration",
   },
   {
     step: "02.",
     title: "Discover & Connect",
     description:
       "Leverage our proprietary matching to identify the perfect partner. Filter by industry, stage, and strategic alignment in real-time.",
-    image: step02Image,
-    imageAlt: "Investor surveying opportunities to discover the right match",
-    imageClass: "object-cover object-top",
-    featured: true,
+    image: "/images/home/card3.png",
+    imageAlt: "Discover and connect illustration",
   },
   {
     step: "03.",
     title: "Collaborate & Grow",
     description:
       "Finalize terms within secure data rooms. Access legal toolkits and post-funding support to scale your horizons.",
-    image: step03Image,
-    imageAlt: "Founders and investors collaborating on a growth partnership",
-    imageClass: "object-cover object-top",
+    image: "/images/home/card2.png",
+    imageAlt: "Collaborate and grow illustration",
   },
 ];
 
@@ -599,64 +595,167 @@ const HomePage = () => {
       {/* How it works */}
       <section
         id="how-it-works"
-        className="scroll-mt-24 bg-slate-50 px-5 py-24 sm:py-28 md:px-16 md:py-32"
+        className="scroll-mt-24 bg-[#faf8f5] px-5 py-24 sm:py-28 md:px-16 md:py-32 border-t border-slate-100 relative overflow-hidden"
       >
-        <div className="mx-auto max-w-container-max">
+        {/* Responsive clip-path mask injected inline to clip the glassmorphic overlay precisely */}
+        <svg className="absolute w-0 h-0" width="0" height="0">
+          <defs>
+            <clipPath id="glass-clip" clipPathUnits="objectBoundingBox">
+              {/* Left side and bottom area covered by glass, top-right cut out */}
+              <path d="M 0,0 L 0.54,0 Q 0.58,0 0.58,0.05 L 0.58,0.36 Q 0.58,0.45 0.67,0.45 L 1,0.45 L 1,1 L 0,1 Z" />
+            </clipPath>
+          </defs>
+        </svg>
+
+        {/* Background glow decorators */}
+        <div className="absolute -left-40 top-40 w-96 h-96 bg-blue-500/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute -right-40 bottom-20 w-96 h-96 bg-amber-500/5 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="mx-auto max-w-container-max relative z-10">
           <ScrollReveal direction="up" className="mb-16 text-center sm:mb-20">
-            <h2 className="mb-4 text-3xl font-bold text-midnight-navy sm:text-4xl md:text-5xl tracking-tight">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 uppercase tracking-widest font-label w-max mb-4 inline-block">
+              Platform Workflow
+            </span>
+            <h2 className="mb-4 text-3.5xl md:text-[2.75rem] font-bold text-midnight-navy sm:text-4xl md:text-5xl tracking-tight font-display">
               The Pipeline to Success
             </h2>
-            <p className="mx-auto max-w-2xl text-base text-slate-600 sm:text-lg">
-              Our streamlined process connects vision with resources through
-              three critical phases.
+            <p className="mx-auto max-w-2xl text-sm md:text-base text-slate-655">
+              Our streamlined matching pipeline connects ambitious vision with strategic resources through three transparent, security-first phases.
             </p>
           </ScrollReveal>
 
-          <div className="grid gap-8 md:grid-cols-3 md:gap-10 relative">
+          <div className="grid gap-16 lg:grid-cols-3 lg:gap-10 relative">
             {PIPELINE_STEPS.map(
-              ({ step, title, description, image, imageAlt, imageClass, featured }, index) => (
-                <ScrollReveal
-                  key={step}
-                  direction="up"
-                  delay={index * 150}
-                  className="h-full"
-                >
-                  <div
-                    className={`interactive-hover-glow h-full bg-white border border-slate-100 hover:border-blue-200/50 rounded-[2rem] p-8 sm:p-10 relative overflow-hidden group shadow-[0_4px_24px_rgba(15,23,42,0.02)] ${
-                      featured ? "md:-mt-2 ring-2 ring-blue-600/10 shadow-lg" : ""
-                    }`}
+              ({ step, title, description, image, imageAlt }, index) => {
+                const stepNum = step.replace(".", "");
+
+                // Premium base/watermark colors corresponding to step index
+                const stepColors = [
+                  {
+                    cardBg: "from-blue-500 to-indigo-650",
+                    watermarkText: "text-blue-950/20",
+                    bulletText: "text-blue-600",
+                  },
+                  {
+                    cardBg: "from-amber-500 to-orange-655",
+                    watermarkText: "text-amber-955/20",
+                    bulletText: "text-amber-600",
+                  },
+                  {
+                    cardBg: "from-emerald-500 to-teal-655",
+                    watermarkText: "text-emerald-955/20",
+                    bulletText: "text-emerald-600",
+                  },
+                ][index];
+
+                const pipelineFeatures = [
+                  [
+                    "Data-Rich Pitch Decks",
+                    "Verified Key Metrics",
+                    "Institutional-Ready Profiles"
+                  ],
+                  [
+                    "Proprietary Matchmaking",
+                    "Real-Time Inboxes",
+                    "Calendar Connections"
+                  ],
+                  [
+                    "Secure Data Rooms",
+                    "Legal Frameworks",
+                    "Post-Funding Analytics"
+                  ]
+                ];
+
+                return (
+                  <ScrollReveal
+                    key={step}
+                    direction="up"
+                    delay={index * 150}
+                    className="h-full relative"
                   >
                     {/* Step Connector Line on Desktop */}
                     {index < 2 && (
-                      <div className="hidden md:block absolute top-12 -right-6 w-12 h-0.5 border-t-2 border-dashed border-slate-200 z-0" />
-                    )}
-
-                    {featured && (
-                      <div className="pointer-events-none absolute right-0 top-0 p-4">
-                        <Network className="h-16 w-16 text-blue-500/15 transition-transform duration-500 group-hover:scale-125 group-hover:rotate-45" />
+                      <div className="hidden lg:block absolute top-[50%] -right-12 w-14 h-24 z-0 pointer-events-none -translate-y-1/2">
+                        <svg className="w-full h-full text-slate-200" viewBox="0 0 60 100" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M 0 75 Q 15 75 15 60 L 15 30 Q 15 15 30 15 L 45 15" />
+                        </svg>
                       </div>
                     )}
-                    
-                    <div className="mb-6 inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-50 font-label text-lg font-bold text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
-                      {step.replace(".", "")}
-                    </div>
-                    
-                    <h3 className="mb-3 text-xl font-bold text-midnight-navy sm:mb-4 group-hover:text-blue-600 transition-colors duration-300">
-                      {title}
-                    </h3>
-                    <p className="mb-6 text-slate-600 text-sm sm:text-base sm:mb-8 leading-relaxed">{description}</p>
-                    
-                    <div className="h-40 w-full overflow-hidden rounded-2xl border border-slate-100 sm:h-48 shadow-inner bg-slate-50 relative hover-zoom-container">
-                      <img
-                        src={image}
-                        alt={imageAlt}
-                        className={`hover-zoom-img h-full w-full ${imageClass}`}
-                        loading="lazy"
+
+                    <div
+                      className={`group relative h-[475px] bg-gradient-to-br ${stepColors.cardBg} rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between`}
+                    >
+                      {/* Glassmorphic Background overlay clipped to expose the top-right color quadrant */}
+                      <div 
+                        className="absolute inset-0 bg-white/75 backdrop-blur-lg z-0" 
+                        style={{ clipPath: "url(#glass-clip)" }}
                       />
+
+                      {/* White Highlight Border Stroke matching the custom cutout curve */}
+                      <svg 
+                        className="absolute inset-0 w-full h-full pointer-events-none z-10" 
+                        viewBox="0 0 100 100" 
+                        preserveAspectRatio="none"
+                      >
+                        <path 
+                          d="M 54,0 Q 58,0 58,5 L 58,36 Q 58,45 67,45 L 100,45" 
+                          fill="none" 
+                          stroke="rgba(255,255,255,0.75)" 
+                          strokeWidth="1.5" 
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      </svg>
+
+                      {/* Content Layers on top of glass */}
+                      <div className="relative z-20 flex flex-col justify-between h-full w-full">
+                        {/* Top Area */}
+                        <div className="flex justify-between items-start">
+                          {/* Title + Badging */}
+                          <div className="w-[54%]">
+                            <div className="flex items-center gap-3 mb-4">
+                              <span className="px-3.5 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-white/80 border border-slate-200/40 text-slate-700 shadow-sm">
+                                STEP {stepNum}
+                              </span>
+                              <span className={`text-4xl font-extrabold font-sans leading-none select-none ${stepColors.watermarkText}`}>
+                                {stepNum}
+                              </span>
+                            </div>
+                            <h3 className="text-2.5xl font-bold text-slate-900 leading-tight tracking-tight">
+                              {title}
+                            </h3>
+                          </div>
+
+                          {/* Image placed inside the exposed color quadrant */}
+                          <div className="absolute top-0 right-0 w-[42%] h-[40%] flex items-center justify-end">
+                            <img
+                              src={image}
+                              alt={imageAlt}
+                              className="max-w-full max-h-full object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                              loading="lazy"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Bottom Area */}
+                        <div className="space-y-4 pt-6 mt-auto">
+                          <p className="text-sm text-slate-700 leading-relaxed text-justify font-normal pr-1">
+                            {description}
+                          </p>
+                          <div className="border-t border-slate-200/60 w-full" />
+                          <ul className="space-y-3">
+                            {pipelineFeatures[index].map((feature, fIdx) => (
+                              <li key={fIdx} className="flex items-center gap-3 text-xs font-bold text-slate-800">
+                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] bg-white border border-slate-200/40 shadow-sm ${stepColors.bulletText}`}>✓</span>
+                                {feature}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </ScrollReveal>
-              ),
+                  </ScrollReveal>
+                );
+              },
             )}
           </div>
         </div>
