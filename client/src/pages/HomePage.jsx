@@ -385,7 +385,7 @@ const HomePage = () => {
       {/* Stats */}
       <section className="relative z-20 -mt-16 px-5 sm:-mt-20 md:-mt-24 md:px-16">
         <ScrollReveal direction="up" delay={200} className="w-full">
-          <div className="bg-white mx-auto grid max-w-container-max grid-cols-2 gap-6 rounded-[2.5rem] p-6 sm:gap-8 sm:p-8 md:grid-cols-4 md:gap-12 md:p-12 border border-slate-200/60 shadow-2xl relative z-10">
+          <div className="bg-white mx-auto grid max-w-container-max grid-cols-2 gap-4 sm:gap-8 rounded-[2.5rem] p-5 sm:p-8 md:grid-cols-4 md:gap-12 md:p-12 border border-slate-200/60 shadow-2xl relative z-10">
             {STATS.map(({ end, suffix, label }) => (
               <div key={label} className="flex flex-col items-center text-center group transition-all duration-300">
                 <div className="font-label text-2xl font-bold text-blue-600 sm:text-3xl md:text-4xl transition-all duration-300 group-hover:scale-110 group-hover:text-midnight-navy">
@@ -452,7 +452,7 @@ const HomePage = () => {
             {/* Card 1: Building Solutions */}
             <ScrollReveal direction="up" delay={100} className="h-full">
               <div
-                className="group relative h-[440px] bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between"
+                className="group relative h-auto min-h-[380px] sm:h-[440px] bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between"
               >
                 {/* Glassmorphic Background overlay clipped to expose the top-right color quadrant */}
                 <div 
@@ -505,7 +505,7 @@ const HomePage = () => {
             {/* Card 2: Verified Ecosystem */}
             <ScrollReveal direction="up" delay={200} className="h-full">
               <div
-                className="group relative h-[440px] bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between"
+                className="group relative h-auto min-h-[380px] sm:h-[440px] bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between"
               >
                 {/* Glassmorphic Background overlay clipped to expose the top-right color quadrant */}
                 <div 
@@ -558,7 +558,7 @@ const HomePage = () => {
             {/* Card 3: Rapid Deployment */}
             <ScrollReveal direction="up" delay={300} className="h-full">
               <div
-                className="group relative h-[440px] bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between"
+                className="group relative h-auto min-h-[380px] sm:h-[440px] bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between"
               >
                 {/* Glassmorphic Background overlay clipped to expose the top-right color quadrant */}
                 <div 
@@ -824,7 +824,7 @@ const HomePage = () => {
                     )}
 
                     <div
-                      className={`group relative h-[475px] bg-gradient-to-br ${stepColors.cardBg} rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between`}
+                      className={`group relative h-auto min-h-[420px] sm:h-[475px] bg-gradient-to-br ${stepColors.cardBg} rounded-[2.5rem] p-8 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl border-4 border-white/90 overflow-hidden flex flex-col justify-between`}
                     >
                       {/* Glassmorphic Background overlay clipped to expose the top-right color quadrant */}
                       <div 
